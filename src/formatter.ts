@@ -273,7 +273,8 @@ export class VerilogFormatter
     // 支持 (* mark_debug = "true" *) 等综合属性前缀，以及 signed/unsigned 修饰符
     private alignPortDeclarations(code: string): string {
         const RE = /^(\s*)(\(\*[^*]*\*\)\s*)?(input|output|inout)\b\s*(wire|reg|logic)?\s*(signed|unsigned)?\s*(\[[^\]]*\])?\s*([\w_]+)\s*(,?)\s*(\/\/.*)?$/;
-        return this.processBlocks(code, RE, (block) => this.formatPortBlock(block, RE));
+        // 端口块内允许空行和注释行，整个端口列表统一对齐
+        return this.processBlocksWithGaps(code, RE, (block) => this.formatPortBlock(block, RE));
     }
 
     private formatPortBlock(lines: string[], RE: RegExp): string[] {
@@ -370,6 +371,48 @@ export class VerilogFormatter
             const comment = line.substring(idx);
             return codeParts[i].padEnd(commentCol) + comment;
         });
+    }
+
+    // ---- 通用：找到匹配正则的连续行块并批量处理（允许空行/注释行作为间隔）----//
+    // 遇到空行或注释行时向前预看，后面仍有匹配行则将间隔行纳入同一 block
+    private processBlocksWithGaps(
+        code: string,
+        re: RegExp,
+        handler: (block: string[]) => string[]
+    ): string {
+        const isGap = (l: string) => l.trim() === '' || /^\s*\/\//.test(l);
+        const lines  = code.split('\n');
+        const result: string[] = [];
+        let   i      = 0;
+
+        while (i < lines.length) {
+            if (!re.test(lines[i])) {
+                result.push(lines[i]);
+                i++;
+                continue;
+            }
+            const block: string[] = [];
+            while (i < lines.length) {
+                if (re.test(lines[i])) {
+                    block.push(lines[i++]);
+                } else if (isGap(lines[i])) {
+                    // 预看：跳过连续 gap 行，看后面是否还有匹配行
+                    let j = i + 1;
+                    while (j < lines.length && isGap(lines[j])) { j++; }
+                    if (j < lines.length && re.test(lines[j])) {
+                        // 后面还有端口行，把 gap 行也收入 block
+                        while (i < j) { block.push(lines[i++]); }
+                    } else {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            }
+            result.push(...handler(block));
+        }
+
+        return result.join('\n');
     }
 
     // ---- 通用：找到匹配正则的连续行块并批量处理 ----//
