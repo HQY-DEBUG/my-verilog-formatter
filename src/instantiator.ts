@@ -91,9 +91,9 @@ function generateInstance(info: ModuleInfo): string {
     const lines: string[] = [];
     const instName = `u_${info.name}`;
 
-    // 对齐端口名宽度
-    const allPortNames = info.ports.flatMap(p => p.names);
-    const maxPortLen   = allPortNames.reduce((m, n) => Math.max(m, n.length), 0);
+    // 端口映射：对齐格式  .portName  ( signalName ),  // dir
+    const flatPorts  = info.ports.flatMap(p => p.names.map(n => ({ name: n, dir: p.dir })));
+    const maxPortLen = flatPorts.reduce((m, p) => Math.max(m, p.name.length), 0);
 
     // 参数例化
     if (info.params.length > 0) {
@@ -107,12 +107,14 @@ function generateInstance(info: ModuleInfo): string {
         lines.push(`${info.name} ${instName} (`);
     }
 
-    // 端口映射
-    const flatPorts = info.ports.flatMap(p => p.names.map(n => ({ name: n, dir: p.dir })));
     flatPorts.forEach((port, i) => {
-        const comma = i < flatPorts.length - 1 ? ',' : '';
-        const dir   = port.dir === 'input' ? '// i' : port.dir === 'output' ? '// o' : '// io';
-        lines.push(`    .${port.name.padEnd(maxPortLen)}  (${port.name})${comma}  ${dir}`);
+        const isLast  = i === flatPorts.length - 1;
+        const dir     = port.dir === 'input' ? '// i' : port.dir === 'output' ? '// o' : '// io';
+        const portPad = port.name.padEnd(maxPortLen);
+        const sigPad  = port.name.padEnd(maxPortLen);
+        // 最后一行无逗号，用空格保持注释列对齐
+        const trail   = isLast ? `   ` : `,  `;
+        lines.push(`    .${portPad}  ( ${sigPad})${trail}${dir}`);
     });
 
     lines.push(');');

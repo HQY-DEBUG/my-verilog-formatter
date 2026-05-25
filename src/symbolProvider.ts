@@ -23,17 +23,40 @@ interface SymbolInfo {
     text    : string; // 原始行内容（用于悬停显示）
 }
 
-// ---- 解析规则 ----//
-const PATTERNS: { re: RegExp; kind: SymbolInfo['kind'] }[] = [
-    { re: /^\s*module\s+(\w+)/,                               kind: 'module' },
-    { re: /^\s*(input|output|inout)\b.*\b(\w+)\s*[,;)]/,      kind: 'port'   },
-    { re: /^\s*(reg|wire|logic|integer)\b.*\b(\w+)\s*[;=,]/,  kind: 'signal' },
-    { re: /^\s*(parameter|localparam)\s+\b(\w+)\s*=/,         kind: 'param'  },
-    { re: /^`define\s+(\w+)/,                                 kind: 'define' },
-];
+// ---- 信号名称提取辅助 ----//
+// 从单行 reg/wire/logic/integer 声明中提取所有信号名
+// 支持：多名称逗号分隔、带初值赋值、综合属性前缀
+const RE_SIGNAL_LINE = /^\s*(?:\(\*[^*]*\*\)\s*)?(reg|wire|logic|integer)\b\s*(?:signed|unsigned)?\s*(?:\[[^\]]*\])?\s*(.+?)\s*;?\s*(?:\/\/.*)?$/;
+
+function extractSignalNamesFromLine(line: string): string[] {
+    const noComment = line.replace(/\/\/.*$/, '');
+    const m = noComment.match(RE_SIGNAL_LINE);
+    if (!m) { return []; }
+    const namesPart = m[2];
+    // 按逗号分割，去掉 = 后面的初值，提取标识符
+    return namesPart.split(',')
+        .map(part => {
+            const stripped = part.replace(/\s*=\s*[^,;]+/, '').trim();
+            const nm = stripped.match(/(\w+)\s*(?:\[[^\]]*\])?\s*$/);
+            return nm ? nm[1] : '';
+        })
+        .filter(n => n.length > 0 && !/^(reg|wire|logic|integer|signed|unsigned)$/.test(n));
+}
+
+// 从单行端口声明中提取所有端口名（支持多名称）
+const RE_PORT_LINE = /^\s*(?:\(\*[^*]*\*\)\s*)?(input|output|inout)\b\s*(?:wire|reg|logic)?\s*(?:signed|unsigned)?\s*(?:\[[^\]]*\])?\s*(.+?)\s*[,;)]\s*(?:\/\/.*)?$/;
+
+function extractPortNamesFromLine(line: string): string[] {
+    const noComment = line.replace(/\/\/.*$/, '');
+    const m = noComment.match(RE_PORT_LINE);
+    if (!m) { return []; }
+    return m[2].split(',')
+        .map(p => p.trim().match(/(\w+)\s*(?:\[[^\]]*\])?\s*$/)?.[ 1] ?? '')
+        .filter(n => n.length > 0);
+}
 
 /**
- * @brief 从单个文件提取所有符号
+ * @brief 从单个文件提取所有符号（正确处理多名称声明和带初值信号）
  */
 function extractSymbols(filePath: string): SymbolInfo[] {
     let text: string;
@@ -43,16 +66,43 @@ function extractSymbols(filePath: string): SymbolInfo[] {
     const symbols : SymbolInfo[] = [];
 
     for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        for (const { re, kind } of PATTERNS) {
-            const m = line.match(re);
-            if (!m) { continue; }
-            // m[1] 可能是关键字（module/input/...），m[2] 是名称；
-            // 对于 module/define，m[1] 是名称
-            const name = kind === 'module' || kind === 'define' ? m[1] : m[2] ?? m[1];
-            if (!name) { continue; }
-            symbols.push({ name, kind, filePath, line: i, text: line.trimEnd() });
-            break; // 一行只匹配一条规则
+        const line    = lines[i];
+        const trimmed = line.trimStart();
+
+        // module 声明
+        const modM = trimmed.match(/^module\s+(\w+)/);
+        if (modM) {
+            symbols.push({ name: modM[1], kind: 'module', filePath, line: i, text: line.trimEnd() });
+            continue;
+        }
+
+        // `define
+        const defM = trimmed.match(/^`define\s+(\w+)/);
+        if (defM) {
+            symbols.push({ name: defM[1], kind: 'define', filePath, line: i, text: line.trimEnd() });
+            continue;
+        }
+
+        // parameter / localparam
+        const paramM = trimmed.match(/^(?:parameter|localparam)\s+(?:\[[^\]]*\]\s*)?(\w+)\s*=/);
+        if (paramM) {
+            symbols.push({ name: paramM[1], kind: 'param', filePath, line: i, text: line.trimEnd() });
+            continue;
+        }
+
+        // 端口声明（多名称）
+        if (/^\s*(?:\(\*[^*]*\*\)\s*)?(?:input|output|inout)\b/.test(line)) {
+            for (const name of extractPortNamesFromLine(line)) {
+                symbols.push({ name, kind: 'port', filePath, line: i, text: line.trimEnd() });
+            }
+            continue;
+        }
+
+        // 信号声明（多名称，支持初值）
+        if (/^\s*(?:\(\*[^*]*\*\)\s*)?(?:reg|wire|logic|integer)\b/.test(line)) {
+            for (const name of extractSignalNamesFromLine(line)) {
+                symbols.push({ name, kind: 'signal', filePath, line: i, text: line.trimEnd() });
+            }
         }
     }
     return symbols;
