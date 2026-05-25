@@ -79,6 +79,7 @@ export class VerilogFormatter
             r = this.splitBeginToNewline(r);
         }
         r = this.reindent(r, config.indentSize);
+        r = this.alignLocalparams(r);
         r = this.alignSignalDeclarations(r);
         r = this.alignPortDeclarations(r);
         if (config.alignPortComment) {
@@ -222,6 +223,58 @@ export class VerilogFormatter
             } else if (/^else\b/.test(line)) {
                 pendingExtra = true;
             }
+        }
+
+        return result.join('\n');
+    }
+
+    // ---- 对齐 localparam 多参数块 ----//
+    // 第一行：localparam  NAME = value,  // comment
+    // 续行：  <对齐到首个参数名>NAME = value,  // comment
+    private alignLocalparams(code: string): string {
+        const FIRST_RE = /^(\s*)(localparam)\s+(\w+)\s*=\s*([^,;]+?)\s*([,;])\s*(\/\/.*)?$/;
+        const CONT_RE  = /^(\s*)(\w+)\s*=\s*([^,;]+?)\s*([,;])\s*(\/\/.*)?$/;
+        interface Entry { name: string; value: string; term: string; comment: string; }
+
+        const lines  = code.split('\n');
+        const result: string[] = [];
+        let   i      = 0;
+
+        while (i < lines.length) {
+            const fm = lines[i].match(FIRST_RE);
+            if (!fm) { result.push(lines[i++]); continue; }
+
+            const baseIndent = fm[1];
+            const keyword    = fm[2];
+            const entries: Entry[] = [{ name: fm[3], value: fm[4].trim(), term: fm[5], comment: fm[6] ?? '' }];
+            i++;
+
+            // 若首行已用 ; 结束，单参数 localparam，直接格式化
+            if (fm[5] !== ';') {
+                while (i < lines.length) {
+                    const cm = lines[i].match(CONT_RE);
+                    if (!cm) { break; }
+                    entries.push({ name: cm[2], value: cm[3].trim(), term: cm[4], comment: cm[5] ?? '' });
+                    i++;
+                    if (cm[4] === ';') { break; }
+                }
+            }
+
+            // 对齐输出：续行缩进 = baseIndent + keyword + 2 空格
+            const contIndent = baseIndent + ' '.repeat(keyword.length + 2);
+            const maxName    = Math.max(...entries.map(e => e.name.length));
+            const maxValue   = Math.max(...entries.map(e => e.value.length));
+
+            entries.forEach((e, idx) => {
+                const n = e.name.padEnd(maxName);
+                const v = e.value.padEnd(maxValue);
+                const c = e.comment ? ` ${e.comment}` : '';
+                if (idx === 0) {
+                    result.push(`${baseIndent}${keyword}  ${n} = ${v}${e.term}${c}`);
+                } else {
+                    result.push(`${contIndent}${n} = ${v}${e.term}${c}`);
+                }
+            });
         }
 
         return result.join('\n');
