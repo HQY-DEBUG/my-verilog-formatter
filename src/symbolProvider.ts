@@ -201,6 +201,85 @@ export class VerilogHoverProvider implements vscode.HoverProvider {
     }
 }
 
+// ---- Document Symbol Provider（大纲面板）----//
+export class VerilogDocumentSymbolProvider implements vscode.DocumentSymbolProvider {
+    provideDocumentSymbols(document: vscode.TextDocument): vscode.DocumentSymbol[] {
+        const lines  = document.getText().split(/\r?\n/);
+        const result : vscode.DocumentSymbol[] = [];
+        let   mod    : vscode.DocumentSymbol | null = null;
+
+        // 关键字黑名单，避免将控制语句误识别为例化
+        const KW = /^(always|initial|if|else|for|case|casez|casex|begin|end|assign|module|endmodule|parameter|localparam|reg|wire|logic|input|output|inout|integer|generate|endgenerate|task|function|endtask|endfunction)$/;
+
+        for (let i = 0; i < lines.length; i++) {
+            const line    = lines[i];
+            const trimmed = line.trimStart();
+            const range   = new vscode.Range(i, 0, i, line.length);
+
+            // module 声明
+            const modM = trimmed.match(/^module\s+(\w+)/);
+            if (modM) {
+                mod = new vscode.DocumentSymbol(modM[1], 'module', vscode.SymbolKind.Module, range, range);
+                result.push(mod);
+                continue;
+            }
+
+            // endmodule — 扩展 module 范围结束
+            if (/^endmodule\b/.test(trimmed)) {
+                if (mod) {
+                    mod.range = new vscode.Range(mod.range.start, range.end);
+                    mod = null;
+                }
+                continue;
+            }
+
+            if (!mod) { continue; }
+
+            // parameter / localparam
+            const paramM = trimmed.match(/^(?:localparam|parameter)\b\s*(?:\[[^\]]*\]\s*)?(\w+)\s*[=,]/);
+            if (paramM) {
+                mod.children.push(new vscode.DocumentSymbol(
+                    paramM[1], 'parameter', vscode.SymbolKind.Constant, range, range,
+                ));
+                continue;
+            }
+
+            // 端口声明
+            if (/^\s*(?:\(\*[^*]*\*\)\s*)?(?:input|output|inout)\b/.test(line)) {
+                for (const name of extractPortNamesFromLine(line)) {
+                    mod.children.push(new vscode.DocumentSymbol(
+                        name, 'port', vscode.SymbolKind.Field, range, range,
+                    ));
+                }
+                continue;
+            }
+
+            // 信号声明
+            if (/^\s*(?:\(\*[^*]*\*\)\s*)?(?:reg|wire|logic|integer)\b/.test(line)) {
+                for (const name of extractSignalNamesFromLine(line)) {
+                    mod.children.push(new vscode.DocumentSymbol(
+                        name, 'signal', vscode.SymbolKind.Variable, range, range,
+                    ));
+                }
+                continue;
+            }
+
+            // 模块例化：ModuleName  u_inst_name  ( 或 ModuleName #( ...
+            const instM = trimmed.match(/^(\w+)\s+(\w+)\s*[#(]/);
+            if (instM && !KW.test(instM[1]) && !KW.test(instM[2])) {
+                mod.children.push(new vscode.DocumentSymbol(
+                    `${instM[2]}  (${instM[1]})`,
+                    'instantiation',
+                    vscode.SymbolKind.Object,
+                    range, range,
+                ));
+            }
+        }
+
+        return result;
+    }
+}
+
 // ---- 注册函数 ----//
 const VERILOG_SELECTOR = [
     { language: 'verilog'       },
@@ -208,7 +287,7 @@ const VERILOG_SELECTOR = [
 ];
 
 /**
- * @brief 注册语法跳转与悬停 Provider
+ * @brief 注册语法跳转、悬停与大纲 Provider
  * @param context 扩展上下文
  */
 export function registerSymbolProviders(context: vscode.ExtensionContext): void {
@@ -239,5 +318,6 @@ export function registerSymbolProviders(context: vscode.ExtensionContext): void 
     context.subscriptions.push(
         vscode.languages.registerDefinitionProvider(VERILOG_SELECTOR, new VerilogDefinitionProvider(index)),
         vscode.languages.registerHoverProvider(VERILOG_SELECTOR, new VerilogHoverProvider(index)),
+        vscode.languages.registerDocumentSymbolProvider(VERILOG_SELECTOR, new VerilogDocumentSymbolProvider()),
     );
 }
