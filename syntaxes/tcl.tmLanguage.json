@@ -1,0 +1,46 @@
+{
+  "name": "Tcl",
+  "scopeName": "source.tcl",
+  "fileTypes": ["tcl"],
+  "patterns": [
+    { "include": "#line_comment" },
+    { "include": "#string" },
+    { "include": "#variable" },
+    { "include": "#command_substitution" },
+    { "include": "#keyword" },
+    { "include": "#number" }
+  ],
+  "repository": {
+    "line_comment": {
+      "name": "comment.line.hash.tcl",
+      "match": "(?:^|(?<=[;\\[\\{\\s]))#.*$"
+    },
+    "string": {
+      "name": "string.quoted.double.tcl",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        { "include": "#variable" },
+        { "name": "constant.character.escape.tcl", "match": "\\\\." }
+      ]
+    },
+    "variable": {
+      "name": "variable.other.tcl",
+      "match": "\\$(?:\\{[^}]*\\}|\\w+(?:::\\w+)*)"
+    },
+    "command_substitution": {
+      "name": "meta.embedded.tcl",
+      "begin": "\\[",
+      "end": "\\]",
+      "patterns": [{ "include": "$self" }]
+    },
+    "keyword": {
+      "name": "keyword.control.tcl",
+      "match": "\\b(if|else|elseif|while|for|foreach|break|continue|return|proc|namespace|package|source|set|unset|incr|append|lappend|lindex|lrange|llength|lsort|lreplace|lset|linsert|lsearch|split|join|string|regexp|regsub|format|scan|puts|gets|read|open|close|eof|flush|seek|tell|exec|catch|error|throw|try|list|dict|array|info|global|variable|upvar|uplevel|after|vwait|update|event|trace|rename|interp|load|unload|encoding|fconfigure|fcopy|file|cd|pwd|glob|env)\\b"
+    },
+    "number": {
+      "name": "constant.numeric.tcl",
+      "match": "\\b-?\\d+(\\.\\d+)?(e[+-]?\\d+)?\\b|\\b0x[0-9a-fA-F]+\\b"
+    }
+  }
+}

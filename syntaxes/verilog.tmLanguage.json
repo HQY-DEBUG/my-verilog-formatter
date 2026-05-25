@@ -1,0 +1,88 @@
+{
+  "name": "Verilog",
+  "scopeName": "source.verilog",
+  "fileTypes": ["v", "vh"],
+  "patterns": [
+    { "include": "#block_comment" },
+    { "include": "#line_comment" },
+    { "include": "#attribute" },
+    { "include": "#preprocessor" },
+    { "include": "#system_task" },
+    { "include": "#string" },
+    { "include": "#number" },
+    { "include": "#keyword_type" },
+    { "include": "#keyword_control" },
+    { "include": "#keyword_misc" },
+    { "include": "#operator" }
+  ],
+  "repository": {
+    "block_comment": {
+      "name": "comment.block.verilog",
+      "begin": "/\\*",
+      "end": "\\*/"
+    },
+    "line_comment": {
+      "name": "comment.line.double-slash.verilog",
+      "match": "//.*$"
+    },
+    "attribute": {
+      "name": "meta.attribute.verilog",
+      "begin": "\\(\\*",
+      "end": "\\*\\)",
+      "patterns": [
+        { "include": "#string" },
+        {
+          "name": "entity.other.attribute-name.verilog",
+          "match": "\\b\\w+\\b"
+        }
+      ]
+    },
+    "preprocessor": {
+      "name": "meta.preprocessor.verilog",
+      "match": "`\\s*(define|include|ifdef|ifndef|elsif|else|endif|undef|timescale|default_nettype|resetall|celldefine|endcelldefine|unconnected_drive|nounconnected_drive)\\b",
+      "captures": {
+        "0": { "name": "keyword.control.preprocessor.verilog" }
+      }
+    },
+    "system_task": {
+      "name": "support.function.system.verilog",
+      "match": "\\$\\w+"
+    },
+    "string": {
+      "name": "string.quoted.double.verilog",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        { "name": "constant.character.escape.verilog", "match": "\\\\." }
+      ]
+    },
+    "number": {
+      "patterns": [
+        {
+          "name": "constant.numeric.sized.verilog",
+          "match": "\\b(\\d+)'([bBoOdDhH])([0-9a-fA-FxXzZ_?]+)\\b"
+        },
+        {
+          "name": "constant.numeric.decimal.verilog",
+          "match": "\\b\\d[0-9_]*\\b"
+        }
+      ]
+    },
+    "keyword_type": {
+      "name": "storage.type.verilog",
+      "match": "\\b(input|output|inout|wire|reg|logic|integer|real|realtime|time|event|supply0|supply1|tri|tri0|tri1|triand|trior|trireg|wand|wor|genvar|parameter|localparam|defparam|specparam|signed|unsigned)\\b"
+    },
+    "keyword_control": {
+      "name": "keyword.control.verilog",
+      "match": "\\b(module|endmodule|macromodule|primitive|endprimitive|package|endpackage|interface|endinterface|program|endprogram|begin|end|fork|join|join_any|join_none|if|else|case|casex|casez|endcase|for|foreach|while|repeat|forever|do|break|continue|return|always|always_ff|always_comb|always_latch|initial|final|function|endfunction|task|endtask|generate|endgenerate|table|endtable|specify|endspecify|config|endconfig|assign|force|release|deassign|posedge|negedge|edge|wait|disable|#|@|->|->>)\\b"
+    },
+    "keyword_misc": {
+      "name": "keyword.other.verilog",
+      "match": "\\b(default|unique|priority|virtual|static|automatic|extern|protected|local|const|ref|var|type|typedef|enum|struct|union|class|endclass|extends|implements|super|this|new|null|import|export|bind|clocking|endclocking|property|endproperty|sequence|endsequence|checker|endchecker|covergroup|endgroup|coverpoint|cross|constraint|modport|pure|forkjoin|expect|assert|assume|cover|restrict|void|chandle|string|bit|byte|shortint|int|longint|shortreal|interconnect|nettype)\\b"
+    },
+    "operator": {
+      "name": "keyword.operator.verilog",
+      "match": "(===|!==|==|!=|<=|>=|<|>|&&|\\|\\||\\!|&|\\||\\^|~|\\+|-|\\*|/|%|<<|>>|<<<|>>>|\\?|:|=|#)"
+    }
+  }
+}

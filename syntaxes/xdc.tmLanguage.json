@@ -1,0 +1,46 @@
+{
+  "name": "XDC Constraint",
+  "scopeName": "source.xdc",
+  "fileTypes": ["xdc"],
+  "patterns": [
+    { "include": "#line_comment" },
+    { "include": "#block_comment" },
+    { "include": "#string" },
+    { "include": "#tcl_command" },
+    { "include": "#xdc_option" },
+    { "include": "#number" },
+    { "include": "#variable" }
+  ],
+  "repository": {
+    "line_comment": {
+      "name": "comment.line.hash.xdc",
+      "match": "#.*$"
+    },
+    "block_comment": {
+      "name": "comment.block.xdc",
+      "begin": "/\\*",
+      "end": "\\*/"
+    },
+    "string": {
+      "name": "string.quoted.double.xdc",
+      "begin": "\"",
+      "end": "\""
+    },
+    "tcl_command": {
+      "name": "keyword.control.xdc",
+      "match": "\\b(set_property|create_clock|create_generated_clock|set_input_delay|set_output_delay|set_false_path|set_multicycle_path|set_max_delay|set_min_delay|get_ports|get_pins|get_nets|get_cells|get_clocks|get_property|set_clock_groups|set_bus_skew|current_instance|startgroup|endgroup|add_files|import_files|set_param|set_units|read_xdc|source)\\b"
+    },
+    "xdc_option": {
+      "name": "support.constant.property.xdc",
+      "match": "(-period|-name|-waveform|-rise|-fall|-source|-master_clock|-combinational|-from|-to|-through|-datapath_only|-quiet|-verbose|-of_objects|-filter|-regexp|-nocase|-add|-hold|-setup|-min|-max|-clock|-rise_from|-rise_to|-fall_from|-fall_to|PACKAGE_PIN|IOSTANDARD|DRIVE|SLEW|PULLDOWN|PULLUP|LVCMOS33|LVCMOS25|LVCMOS18|LVCMOS15|LVCMOS12|LVTTL|LVDS|DIFF_TERM|IN_TERM|OUT_TERM)"
+    },
+    "number": {
+      "name": "constant.numeric.xdc",
+      "match": "-?\\b\\d+(\\.\\d+)?\\b"
+    },
+    "variable": {
+      "name": "variable.other.tcl",
+      "match": "\\$\\{?[\\w:]+\\}?"
+    }
+  }
+}

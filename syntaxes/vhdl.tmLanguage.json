@@ -1,0 +1,68 @@
+{
+  "name": "VHDL",
+  "scopeName": "source.vhdl",
+  "fileTypes": ["vhd", "vhdl"],
+  "patterns": [
+    { "include": "#block_comment" },
+    { "include": "#line_comment" },
+    { "include": "#string" },
+    { "include": "#character_literal" },
+    { "include": "#number" },
+    { "include": "#keyword_type" },
+    { "include": "#keyword_control" },
+    { "include": "#keyword_misc" },
+    { "include": "#operator" }
+  ],
+  "repository": {
+    "block_comment": {
+      "name": "comment.block.vhdl",
+      "begin": "/\\*",
+      "end": "\\*/"
+    },
+    "line_comment": {
+      "name": "comment.line.double-dash.vhdl",
+      "match": "--.*$"
+    },
+    "string": {
+      "name": "string.quoted.double.vhdl",
+      "begin": "\"",
+      "end": "\""
+    },
+    "character_literal": {
+      "name": "string.quoted.single.vhdl",
+      "match": "'[^'\\\\]'"
+    },
+    "number": {
+      "patterns": [
+        {
+          "name": "constant.numeric.bit_vector.vhdl",
+          "match": "\"[01_xXzZuUwWlLhH-]+\""
+        },
+        {
+          "name": "constant.numeric.based.vhdl",
+          "match": "\\b\\d+#[0-9a-fA-F_]+#\\b"
+        },
+        {
+          "name": "constant.numeric.decimal.vhdl",
+          "match": "\\b\\d[0-9_]*(\\.[0-9_]+)?([eE][+-]?\\d+)?\\b"
+        }
+      ]
+    },
+    "keyword_type": {
+      "name": "storage.type.vhdl",
+      "match": "(?i)\\b(bit|bit_vector|boolean|character|integer|natural|positive|real|string|std_logic|std_logic_vector|std_ulogic|std_ulogic_vector|signed|unsigned|time|severity_level|file_open_kind|file_open_status)\\b"
+    },
+    "keyword_control": {
+      "name": "keyword.control.vhdl",
+      "match": "(?i)\\b(entity|architecture|configuration|package|library|use|is|of|begin|end|port|generic|map|signal|variable|constant|type|subtype|alias|attribute|component|function|procedure|process|if|then|else|elsif|case|when|others|for|while|loop|exit|next|return|wait|after|until|on|assert|report|severity|generate|with|select|and|or|nand|nor|xor|xnor|not|mod|rem|abs|in|out|inout|buffer|linkage|to|downto|range|reverse_range|null|open|new|all|transport|reject|inertial|unaffected|guarded|block|disconnected|access|file|protected|shared|postponed|pure|impure|label|group|units|literal)\\b"
+    },
+    "keyword_misc": {
+      "name": "keyword.other.vhdl",
+      "match": "(?i)\\b(work|std|ieee|vital_primitives|vital_timing|std_logic_1164|std_logic_arith|std_logic_unsigned|std_logic_signed|numeric_std|numeric_bit|math_real|math_complex|textio|std_logic_textio)\\b"
+    },
+    "operator": {
+      "name": "keyword.operator.vhdl",
+      "match": "(:=|=>|<=|>=|/=|<|>|=|\\+|-|\\*|/|&|\\|)"
+    }
+  }
+}

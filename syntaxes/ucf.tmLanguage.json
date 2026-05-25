@@ -1,0 +1,32 @@
+{
+  "name": "UCF Constraint",
+  "scopeName": "source.ucf",
+  "fileTypes": ["ucf"],
+  "patterns": [
+    {
+      "name": "comment.line.hash.ucf",
+      "match": "#.*$"
+    },
+    {
+      "name": "keyword.control.ucf",
+      "match": "\\b(NET|INST|PIN|TIMESPEC|PERIOD|TNM_NET|TNM|TIG|OFFSET|PACE|TIMEGRP|MAXSKEW|MAXDELAY|MINPERIOD|FROM|TO|THRU|RISING|FALLING)\\b"
+    },
+    {
+      "name": "support.constant.property.ucf",
+      "match": "\\b(LOC|IOSTANDARD|DRIVE|SLEW|PULLDOWN|PULLUP|KEEPER|NODELAY|FAST|SLOW|LVCMOS33|LVCMOS25|LVCMOS18|LVCMOS15|LVCMOS12|LVTTL|LVDS|DIFF_TERM|IN_TERM|OUT_TERM|BUFGCE|BUFIO|BUFR)\\b"
+    },
+    {
+      "name": "string.quoted.double.ucf",
+      "begin": "\"",
+      "end": "\""
+    },
+    {
+      "name": "constant.numeric.ucf",
+      "match": "\\b\\d+(\\.\\d+)?\\s*(ns|ps|MHz|KHz|Hz)?\\b"
+    },
+    {
+      "name": "punctuation.terminator.ucf",
+      "match": ";"
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "name": "GoWin CST Constraint",
+  "scopeName": "source.cst",
+  "fileTypes": ["cst"],
+  "patterns": [
+    { "include": "#line_comment" },
+    { "include": "#block_comment" },
+    { "include": "#string" },
+    { "include": "#keyword" },
+    { "include": "#property" },
+    { "include": "#number" }
+  ],
+  "repository": {
+    "line_comment": {
+      "name": "comment.line.double-slash.cst",
+      "match": "//.*$"
+    },
+    "block_comment": {
+      "name": "comment.block.cst",
+      "begin": "/\\*",
+      "end": "\\*/"
+    },
+    "string": {
+      "name": "string.quoted.double.cst",
+      "begin": "\"",
+      "end": "\""
+    },
+    "keyword": {
+      "name": "keyword.control.cst",
+      "match": "\\b(IO_LOC|IO_PORT|IO_PAD|CLOCK_LOC|NET|FREQ|IOLOGIC_CLK_LOC|BANK|POSITION|PORT|DUT|PIN_NAME|SITE|PULL_MODE|DRIVE|HYSTERESIS|VREF|SLEW_RATE|OPEN_DRAIN|SINGLE_RESISTOR|IO_TYPE|POWER|GROUND|CLOCK)\\b"
+    },
+    "property": {
+      "name": "support.constant.property.cst",
+      "match": "\\b(LVCMOS33|LVCMOS25|LVCMOS18|LVCMOS15|LVCMOS12|LVCMOS10|LVDS|LVPECL|MLVDS|BLVDS|HSTL|SSTL|PCI|NONE|UP|DOWN|PULL|FLOAT|SCHMITT|STRONG|FAST|SLOW|MEDIUM|WEAK|TRUE|FALSE)\\b"
+    },
+    "number": {
+      "name": "constant.numeric.cst",
+      "match": "\\b-?\\d+(\\.\\d+)?\\b"
+    }
+  }
+}

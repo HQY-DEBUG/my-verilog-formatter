@@ -1,0 +1,35 @@
+{
+  "name": "ModelSim DO",
+  "scopeName": "source.do",
+  "fileTypes": ["do"],
+  "patterns": [
+    { "include": "#line_comment" },
+    { "include": "#string" },
+    { "include": "#variable" },
+    { "include": "#keyword" },
+    { "include": "#number" }
+  ],
+  "repository": {
+    "line_comment": {
+      "name": "comment.line.hash.do",
+      "match": "#.*$"
+    },
+    "string": {
+      "name": "string.quoted.double.do",
+      "begin": "\"",
+      "end": "\""
+    },
+    "variable": {
+      "name": "variable.other.do",
+      "match": "\\$\\w+"
+    },
+    "keyword": {
+      "name": "keyword.control.do",
+      "match": "\\b(vsim|vlog|vcom|vlib|vmap|vcover|vopt|vrun|quit|run|restart|add|wave|log|force|noforce|nforce|examine|view|config|radix|delete|do|if|else|elseif|while|for|foreach|break|continue|return|proc|set|puts|echo|transcript|dataset|env|onfinish|onerror|onElabError|coverage|report|write|read|find|describe|show|when|checkpoint|restore|simstats|verror|vdir|vdel|resolve|mkdir|file|cd|pwd|glob|catch|error|format|incr|append|lappend|lindex|llength|lsort|split|join|string|regexp)\\b"
+    },
+    "number": {
+      "name": "constant.numeric.do",
+      "match": "\\b-?\\d+(\\.\\d+)?(ns|ps|us|ms|s|fs)?\\b"
+    }
+  }
+}

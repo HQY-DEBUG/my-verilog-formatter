@@ -1,50 +1,54 @@
 // =========================================================================
 // 文件    : extension.ts
-// 描述    : VS Code 扩展入口，注册 Verilog 格式化 Provider
-// 版本    : v0.1.0
+// 描述    : VS Code 扩展入口，注册所有 Provider 和命令
+// 版本    : v0.2.0
 // 日期    : 2026/05/25
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v0.2.0  2026/05/25  新增文件树、例化、跳转、悬停、语法检查、UCF转XDC、数字编辑
 //  v0.1.0  2026/05/25  创建文件
 // =========================================================================
 
 import * as vscode from 'vscode';
-import { VerilogFormatter } from './formatter';
+import { VerilogFormatter }          from './formatter';
+import { registerInstantiatorCommands } from './instantiator';
+import { registerFileTree }          from './fileTree';
+import { registerSymbolProviders }   from './symbolProvider';
+import { registerLinter }            from './linter';
+import { registerUcfToXdcCommand }   from './ucfToXdc';
+import { registerNumberEditCommands } from './numberEdit';
 
 export function activate(context: vscode.ExtensionContext): void {
     const formatter = new VerilogFormatter();
 
-    // 注册整文档格式化 Provider（支持 .v / .vh）
-    context.subscriptions.push(
-        vscode.languages.registerDocumentFormattingEditProvider(
-            { language: 'verilog' },
-            formatter
-        )
-    );
+    // ---- 格式化 ----//
+    const VERILOG_LANGS = ['verilog', 'systemverilog'];
+    for (const lang of VERILOG_LANGS) {
+        context.subscriptions.push(
+            vscode.languages.registerDocumentFormattingEditProvider({ language: lang }, formatter),
+            vscode.languages.registerDocumentRangeFormattingEditProvider({ language: lang }, formatter),
+        );
+    }
 
-    // 注册整文档格式化 Provider（支持 .sv / .svh）
-    context.subscriptions.push(
-        vscode.languages.registerDocumentFormattingEditProvider(
-            { language: 'systemverilog' },
-            formatter
-        )
-    );
+    // ---- 一键例化 / TB ----//
+    registerInstantiatorCommands(context);
 
-    // 注册区域格式化 Provider
-    context.subscriptions.push(
-        vscode.languages.registerDocumentRangeFormattingEditProvider(
-            { language: 'verilog' },
-            formatter
-        )
-    );
-    context.subscriptions.push(
-        vscode.languages.registerDocumentRangeFormattingEditProvider(
-            { language: 'systemverilog' },
-            formatter
-        )
-    );
+    // ---- 文件树 ----//
+    registerFileTree(context);
+
+    // ---- 语法跳转 + 悬停 ----//
+    registerSymbolProviders(context);
+
+    // ---- 语法检查 ----//
+    registerLinter(context);
+
+    // ---- UCF → XDC ----//
+    registerUcfToXdcCommand(context);
+
+    // ---- 数字递增/递减 ----//
+    registerNumberEditCommands(context);
 }
 
 export function deactivate(): void {
