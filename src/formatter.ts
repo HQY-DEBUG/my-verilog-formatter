@@ -230,8 +230,8 @@ export class VerilogFormatter
     // ---- 对齐信号声明（reg / wire / logic / integer）----//
     // 格式：类型    [位宽]   名称    ;   // 注释
     private alignSignalDeclarations(code: string): string {
-        // 新增 signed/unsigned 捕获组（m[3]），位宽移到 m[4]，名称移到 m[5]
-        const RE = /^(\s*)(reg|wire|logic|integer)\b\s*(signed|unsigned)?\s*(\[[^\]]*\])?\s*(\w+)\s*;?\s*(\/\/.*)?$/;
+        // 支持 signed/unsigned、多名称声明（name1, name2, ...）
+        const RE = /^(\s*)(reg|wire|logic|integer)\b\s*(signed|unsigned)?\s*(\[[^\]]*\])?\s*(\w+(?:\s*,\s*\w+)*)\s*;?\s*(\/\/.*)?$/;
         return this.processBlocks(code, RE, (block) => this.formatSignalBlock(block, RE));
     }
 
@@ -244,11 +244,12 @@ export class VerilogFormatter
         const parsed: P[] = lines.map(line => {
             const m = line.match(RE);
             if (!m) { return { indent: '', type: '', signWidth: '', name: line, comment: '' }; }
-            // 将 signed/unsigned 与位宽合并为一列，与端口声明保持一致
             const sign      = m[3] ?? '';
             const width     = m[4] ?? '';
             const signWidth = [sign, width].filter(s => s).join(' ');
-            return { indent: m[1], type: m[2], signWidth, name: m[5], comment: m[6] ?? '' };
+            // 多名称时去除内部多余空格，统一为 "name1, name2" 格式
+            const name = m[5].replace(/\s*,\s*/g, ', ');
+            return { indent: m[1], type: m[2], signWidth, name, comment: m[6] ?? '' };
         });
 
         const maxType      = Math.max(...parsed.map(p => p.type.length));
