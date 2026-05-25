@@ -283,9 +283,9 @@ export class VerilogFormatter
     // ---- 对齐信号声明（reg / wire / logic / integer）----//
     // 格式：类型    [位宽]   名称    ;   // 注释
     private alignSignalDeclarations(code: string): string {
-        // 支持 signed/unsigned、多名称声明（name1, name2, ...）
+        // 支持 signed/unsigned、多名称声明（name1, name2, ...）；空行/注释行不断开 block
         const RE = /^(\s*)(reg|wire|logic|integer)\b\s*(signed|unsigned)?\s*(\[[^\]]*\])?\s*(\w+(?:\s*,\s*\w+)*)\s*;?\s*(\/\/.*)?$/;
-        return this.processBlocks(code, RE, (block) => this.formatSignalBlock(block, RE));
+        return this.processBlocksWithGaps(code, RE, (block) => this.formatSignalBlock(block, RE));
     }
 
     private formatSignalBlock(
