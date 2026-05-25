@@ -281,10 +281,10 @@ export class VerilogFormatter
     }
 
     // ---- 对齐信号声明（reg / wire / logic / integer）----//
-    // 格式：类型    [位宽]   名称    ;   // 注释
+    // 格式：类型    [位宽]   名称[= 初值]    ;   // 注释
     private alignSignalDeclarations(code: string): string {
-        // 支持 signed/unsigned、多名称声明（name1, name2, ...）；空行/注释行不断开 block
-        const RE = /^(\s*)(reg|wire|logic|integer)\b\s*(signed|unsigned)?\s*(\[[^\]]*\])?\s*(\w+(?:\s*,\s*\w+)*)\s*;?\s*(\/\/.*)?$/;
+        // 支持 signed/unsigned、多名称声明、带初值（= 1'b0）；空行/注释行不断开 block
+        const RE = /^(\s*)(reg|wire|logic|integer)\b\s*(signed|unsigned)?\s*(\[[^\]]*\])?\s*(\w+(?:\s*,\s*\w+)*)\s*(=\s*[^;\/]+?)?\s*;?\s*(\/\/.*)?$/;
         return this.processBlocksWithGaps(code, RE, (block) => this.formatSignalBlock(block, RE));
     }
 
@@ -300,9 +300,11 @@ export class VerilogFormatter
             const sign      = m[3] ?? '';
             const width     = m[4] ?? '';
             const signWidth = [sign, width].filter(s => s).join(' ');
-            // 多名称时去除内部多余空格，统一为 "name1, name2" 格式
-            const name = m[5].replace(/\s*,\s*/g, ', ');
-            return { indent: m[1], type: m[2], signWidth, name, comment: m[6] ?? '' };
+            // 多名称统一 "name1, name2" 格式；有初值则拼入 name 列一起对齐
+            const baseName  = m[5].replace(/\s*,\s*/g, ', ');
+            const initVal   = m[6] ? m[6].trim() : '';
+            const name      = initVal ? `${baseName} ${initVal}` : baseName;
+            return { indent: m[1], type: m[2], signWidth, name, comment: m[7] ?? '' };
         });
 
         const maxType      = Math.max(...parsed.map(p => p.type.length));
