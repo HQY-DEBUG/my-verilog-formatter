@@ -3,6 +3,7 @@
     "displayName": "Verilog Formatter",
     "description": "Verilog / SystemVerilog 代码格式化、文件树、例化、语法高亮、跳转等",
     "version": "0.2.0",
+    "icon": "icon.png",
     "engines": {
         "vscode": "^1.80.0"
     },
