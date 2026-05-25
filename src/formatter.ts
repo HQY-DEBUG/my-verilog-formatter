@@ -248,47 +248,56 @@ export class VerilogFormatter
     }
 
     // ---- 对齐端口声明（input / output / inout）----//
-    // 格式：方向  类型  [位宽]  名称  ,  // 注释
+    // 格式：[属性]  方向  类型  [signed/unsigned] [位宽]  名称  ,  // 注释
+    // 支持 (* mark_debug = "true" *) 等综合属性前缀，以及 signed/unsigned 修饰符
     private alignPortDeclarations(code: string): string {
-        const RE = /^(\s*)(input|output|inout)\b\s*(wire|reg|logic)?\s*(\[[^\]]*\])?\s*(\w+)\s*(,?)\s*(\/\/.*)?$/;
+        const RE = /^(\s*)(\(\*[^*]*\*\)\s*)?(input|output|inout)\b\s*(wire|reg|logic)?\s*(signed|unsigned)?\s*(\[[^\]]*\])?\s*([\w_]+)\s*(,?)\s*(\/\/.*)?$/;
         return this.processBlocks(code, RE, (block) => this.formatPortBlock(block, RE));
     }
 
     private formatPortBlock(lines: string[], RE: RegExp): string[] {
         interface P {
-            indent: string; dir: string; ptype: string;
-            width: string;  name: string; comma: string; comment: string;
+            indent: string; attr: string; dir: string; ptype: string;
+            signWidth: string; name: string; comma: string; comment: string;
         }
 
         const parsed: P[] = lines.map(line => {
             const m = line.match(RE);
-            if (!m) { return { indent: '', dir: '', ptype: '', width: '', name: line, comma: '', comment: '' }; }
+            if (!m) { return { indent: '', attr: '', dir: '', ptype: '', signWidth: '', name: line, comma: '', comment: '' }; }
+            // 将 signed/unsigned 与位宽合并为一列，保持视觉连贯
+            const sign  = m[5] ?? '';
+            const width = m[6] ?? '';
+            const signWidth = [sign, width].filter(s => s).join(' ');
             return {
-                indent:  m[1],
-                dir:     m[2],
-                ptype:   m[3] ?? 'wire',
-                width:   m[4] ?? '',
-                name:    m[5],
-                comma:   m[6],
-                comment: m[7] ?? '',
+                indent:    m[1],
+                attr:      m[2] ? m[2].trimEnd() : '',
+                dir:       m[3],
+                ptype:     m[4] ?? 'wire',
+                signWidth,
+                name:      m[7],
+                comma:     m[8] ?? '',
+                comment:   m[9] ?? '',
             };
         });
 
-        const maxDir   = Math.max(...parsed.map(p => p.dir.length));
-        const maxType  = Math.max(...parsed.map(p => p.ptype.length));
-        const maxWidth = Math.max(...parsed.map(p => p.width.length));
-        const maxName  = Math.max(...parsed.map(p => p.name.length));
+        const maxDir       = Math.max(...parsed.map(p => p.dir.length));
+        const maxType      = Math.max(...parsed.map(p => p.ptype.length));
+        const maxSignWidth = Math.max(...parsed.map(p => p.signWidth.length));
+        const maxName      = Math.max(...parsed.map(p => p.name.length));
 
         return parsed.map(p => {
             if (!p.dir) { return p.name; }
             const dirPad   = p.dir.padEnd(maxDir + 2);
             const typePad  = p.ptype.padEnd(maxType + 2);
-            const widthPad = p.width.padEnd(maxWidth + (maxWidth > 0 ? 1 : 0));
+            // 有位宽/signed 时留 1 个间距，无时不补空列（让 alignTrailingComments 统一对齐注释）
+            const swPad    = maxSignWidth > 0 ? p.signWidth.padEnd(maxSignWidth + 1) : '';
             const namePad  = p.name.padEnd(maxName);
             const cmt      = p.comment
                 ? `  ${p.comment.startsWith('//') ? p.comment : '// ' + p.comment}`
                 : '';
-            return `${p.indent}${dirPad}${typePad}${widthPad} ${namePad}${p.comma}${cmt}`;
+            // 属性前缀保留原文，与方向之间用 2 个空格分隔
+            const attrPad = p.attr ? p.attr + '  ' : '';
+            return `${p.indent}${attrPad}${dirPad}${typePad}${swPad}${namePad}${p.comma}${cmt}`;
         });
     }
 
