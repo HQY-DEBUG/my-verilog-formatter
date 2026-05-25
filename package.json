@@ -27,6 +27,13 @@
                 "extensions": [".sv", ".svh"]
             }
         ],
+        "keybindings": [
+            {
+                "command": "editor.action.formatDocument",
+                "key": "ctrl+alt+f",
+                "when": "editorTextFocus && editorLangId =~ /verilog|systemverilog/"
+            }
+        ],
         "configuration": {
             "title": "Verilog Formatter",
             "properties": {
