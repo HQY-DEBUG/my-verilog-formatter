@@ -347,7 +347,7 @@ export class VerilogFormatter
         code: string,
         re: RegExp,
         handler: (block: string[]) => string[]
-    ): string[] {
+    ): string {
         const lines  = code.split('\n');
         const result: string[] = [];
         let   i      = 0;
@@ -366,7 +366,7 @@ export class VerilogFormatter
             result.push(...handler(block));
         }
 
-        return result.join('\n').split('\n');
+        return result.join('\n');
     }
 
     // ---- 清除行尾空格 ----//
