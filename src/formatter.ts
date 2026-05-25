@@ -300,7 +300,8 @@ export class VerilogFormatter
             const block: string[] = [];
 
             while (i < lines.length) {
-                if (RE.test(lines[i])) {
+                // 连续行也须 attr 结构一致，attr 与非 attr 不合并到同一 block
+                if (RE.test(lines[i]) && ATTR_RE.test(lines[i]) === hasAttr) {
                     block.push(lines[i++]);
                 } else if (isGap(lines[i])) {
                     // 预看：找到下一个非 gap 行，attr 结构须与当前 block 一致才合并
