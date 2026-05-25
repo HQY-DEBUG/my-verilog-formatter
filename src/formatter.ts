@@ -230,7 +230,8 @@ export class VerilogFormatter
     // ---- 对齐信号声明（reg / wire / logic / integer）----//
     // 格式：类型    [位宽]   名称    ;   // 注释
     private alignSignalDeclarations(code: string): string {
-        const RE = /^(\s*)(reg|wire|logic|integer)\b\s*(\[[^\]]*\])?\s*(\w+)\s*;?\s*(\/\/.*)?$/;
+        // 新增 signed/unsigned 捕获组（m[3]），位宽移到 m[4]，名称移到 m[5]
+        const RE = /^(\s*)(reg|wire|logic|integer)\b\s*(signed|unsigned)?\s*(\[[^\]]*\])?\s*(\w+)\s*;?\s*(\/\/.*)?$/;
         return this.processBlocks(code, RE, (block) => this.formatSignalBlock(block, RE));
     }
 
@@ -238,27 +239,31 @@ export class VerilogFormatter
         lines: string[],
         RE: RegExp
     ): string[] {
-        interface P { indent: string; type: string; width: string; name: string; comment: string; }
+        interface P { indent: string; type: string; signWidth: string; name: string; comment: string; }
 
         const parsed: P[] = lines.map(line => {
             const m = line.match(RE);
-            if (!m) { return { indent: '', type: '', width: '', name: line, comment: '' }; }
-            return { indent: m[1], type: m[2], width: m[3] ?? '', name: m[4], comment: m[5] ?? '' };
+            if (!m) { return { indent: '', type: '', signWidth: '', name: line, comment: '' }; }
+            // 将 signed/unsigned 与位宽合并为一列，与端口声明保持一致
+            const sign      = m[3] ?? '';
+            const width     = m[4] ?? '';
+            const signWidth = [sign, width].filter(s => s).join(' ');
+            return { indent: m[1], type: m[2], signWidth, name: m[5], comment: m[6] ?? '' };
         });
 
-        const maxType  = Math.max(...parsed.map(p => p.type.length));
-        const maxWidth = Math.max(...parsed.map(p => p.width.length));
-        const maxName  = Math.max(...parsed.map(p => p.name.length));
+        const maxType      = Math.max(...parsed.map(p => p.type.length));
+        const maxSignWidth = Math.max(...parsed.map(p => p.signWidth.length));
+        const maxName      = Math.max(...parsed.map(p => p.name.length));
 
         return parsed.map(p => {
             if (!p.type) { return p.name; }
-            const typePad  = p.type.padEnd(maxType + 4);
-            const widthPad = p.width.padEnd(maxWidth + 3);
-            const namePad  = p.name.padEnd(maxName + 4);
-            const cmt      = p.comment
-                ? `   ${p.comment.startsWith('//') ? p.comment : '// ' + p.comment}`
+            const typePad      = p.type.padEnd(maxType + 4);
+            const signWidthPad = p.signWidth.padEnd(maxSignWidth + 3);
+            const namePad      = p.name.padEnd(maxName + 4);
+            const cmt          = p.comment
+                ? ` ${p.comment.startsWith('//') ? p.comment : '// ' + p.comment}`
                 : '';
-            return `${p.indent}${typePad}${widthPad}${namePad};${cmt}`;
+            return `${p.indent}${typePad}${signWidthPad}${namePad};${cmt}`;
         });
     }
 
