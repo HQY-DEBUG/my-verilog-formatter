@@ -281,45 +281,89 @@ export class VerilogFormatter
     }
 
     // ---- 对齐信号声明（reg / wire / logic / integer）----//
-    // 格式：类型    [位宽]   名称[= 初值]    ;   // 注释
+    // 格式：[属性]  类型    [signed] [位宽]   名称[= 初值]    ;   // 注释
     private alignSignalDeclarations(code: string): string {
-        // 支持 signed/unsigned、多名称声明、带初值（= 1'b0）；空行/注释行不断开 block
-        const RE = /^(\s*)(reg|wire|logic|integer)\b\s*(signed|unsigned)?\s*(\[[^\]]*\])?\s*(\w+(?:\s*,\s*\w+)*)\s*(=\s*[^;\/]+?)?\s*;?\s*(\/\/.*)?$/;
-        return this.processBlocksWithGaps(code, RE, (block) => this.formatSignalBlock(block, RE));
+        // 支持综合属性前缀、signed/unsigned、多名称声明、带初值；空行/注释行不断开 block
+        // 但只合并 attr 结构相同的信号行（都有属性 or 都没有属性），避免跨组错乱
+        const RE = /^(\s*)(\(\*[^*]*\*\)\s*)?(reg|wire|logic|integer)\b\s*(signed|unsigned)?\s*(\[[^\]]*\])?\s*(\w+(?:\s*,\s*\w+)*)\s*(=\s*[^;\/]+)?\s*;?\s*(\/\/.*)?$/;
+        const ATTR_RE = /^\s*\(\*/;
+        const isGap   = (l: string) => l.trim() === '' || /^\s*\/\//.test(l);
+
+        const lines  = code.split('\n');
+        const result: string[] = [];
+        let   i      = 0;
+
+        while (i < lines.length) {
+            if (!RE.test(lines[i])) { result.push(lines[i++]); continue; }
+
+            const hasAttr = ATTR_RE.test(lines[i]);
+            const block: string[] = [];
+
+            while (i < lines.length) {
+                if (RE.test(lines[i])) {
+                    block.push(lines[i++]);
+                } else if (isGap(lines[i])) {
+                    // 预看：找到下一个非 gap 行，attr 结构须与当前 block 一致才合并
+                    let j = i + 1;
+                    while (j < lines.length && isGap(lines[j])) { j++; }
+                    if (j < lines.length && RE.test(lines[j]) && ATTR_RE.test(lines[j]) === hasAttr) {
+                        while (i < j) { block.push(lines[i++]); }
+                    } else {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            }
+            result.push(...this.formatSignalBlock(block, RE));
+        }
+
+        return result.join('\n');
     }
 
     private formatSignalBlock(
         lines: string[],
         RE: RegExp
     ): string[] {
-        interface P { indent: string; type: string; signWidth: string; name: string; comment: string; }
+        interface P { indent: string; attr: string; type: string; signWidth: string; name: string; comment: string; }
 
         const parsed: P[] = lines.map(line => {
             const m = line.match(RE);
-            if (!m) { return { indent: '', type: '', signWidth: '', name: line, comment: '' }; }
-            const sign      = m[3] ?? '';
-            const width     = m[4] ?? '';
+            if (!m) { return { indent: '', attr: '', type: '', signWidth: '', name: line, comment: '' }; }
+            const sign      = m[4] ?? '';
+            const width     = m[5] ?? '';
             const signWidth = [sign, width].filter(s => s).join(' ');
-            // 多名称统一 "name1, name2" 格式；有初值则拼入 name 列一起对齐
-            const baseName  = m[5].replace(/\s*,\s*/g, ', ');
-            const initVal   = m[6] ? m[6].trim() : '';
+            const baseName  = m[6].replace(/\s*,\s*/g, ', ');
+            const initVal   = m[7] ? m[7].trim() : '';
             const name      = initVal ? `${baseName} ${initVal}` : baseName;
-            return { indent: m[1], type: m[2], signWidth, name, comment: m[7] ?? '' };
+            return {
+                indent:    m[1],
+                attr:      m[2] ? m[2].trimEnd() : '',
+                type:      m[3],
+                signWidth,
+                name,
+                comment:   m[8] ?? '',
+            };
         });
 
+        const maxAttr      = Math.max(...parsed.map(p => p.attr.length));
         const maxType      = Math.max(...parsed.map(p => p.type.length));
         const maxSignWidth = Math.max(...parsed.map(p => p.signWidth.length));
         const maxName      = Math.max(...parsed.map(p => p.name.length));
 
         return parsed.map(p => {
             if (!p.type) { return p.name; }
+            // 有属性前缀的行与无属性行对齐：属性列统一补齐
+            const attrPad      = maxAttr > 0
+                ? (p.attr ? p.attr : '').padEnd(maxAttr) + '  '
+                : '';
             const typePad      = p.type.padEnd(maxType + 4);
             const signWidthPad = p.signWidth.padEnd(maxSignWidth + 3);
             const namePad      = p.name.padEnd(maxName + 4);
             const cmt          = p.comment
                 ? ` ${p.comment.startsWith('//') ? p.comment : '// ' + p.comment}`
                 : '';
-            return `${p.indent}${typePad}${signWidthPad}${namePad};${cmt}`;
+            return `${p.indent}${attrPad}${typePad}${signWidthPad}${namePad};${cmt}`;
         });
     }
 
