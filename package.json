@@ -1,0 +1,62 @@
+{
+    "name": "my-verilog-formatter",
+    "displayName": "Verilog Formatter",
+    "description": "Verilog / SystemVerilog 代码格式化插件",
+    "version": "0.1.0",
+    "engines": {
+        "vscode": "^1.80.0"
+    },
+    "categories": [
+        "Formatters"
+    ],
+    "activationEvents": [
+        "onLanguage:verilog",
+        "onLanguage:systemverilog"
+    ],
+    "main": "./out/extension.js",
+    "contributes": {
+        "languages": [
+            {
+                "id": "verilog",
+                "aliases": ["Verilog", "verilog"],
+                "extensions": [".v", ".vh"]
+            },
+            {
+                "id": "systemverilog",
+                "aliases": ["SystemVerilog", "systemverilog"],
+                "extensions": [".sv", ".svh"]
+            }
+        ],
+        "configuration": {
+            "title": "Verilog Formatter",
+            "properties": {
+                "verilogFormatter.indentSize": {
+                    "type": "number",
+                    "default": 4,
+                    "description": "缩进空格数"
+                },
+                "verilogFormatter.alignPortComment": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "是否对齐端口行尾注释"
+                },
+                "verilogFormatter.newlineBeforeBegin": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "begin 是否另起一行"
+                }
+            }
+        }
+    },
+    "scripts": {
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "package": "vsce package",
+        "vscode:prepublish": "npm run compile"
+    },
+    "devDependencies": {
+        "@types/node": "^18.0.0",
+        "@types/vscode": "^1.80.0",
+        "typescript": "^5.0.0"
+    }
+}
