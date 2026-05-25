@@ -32,8 +32,8 @@
             "properties": {
                 "verilogFormatter.indentSize": {
                     "type": "number",
-                    "default": 4,
-                    "description": "缩进空格数"
+                    "default": 2,
+                    "description": "缩进空格数（Verilog 风格规范：2 空格）"
                 },
                 "verilogFormatter.alignPortComment": {
                     "type": "boolean",
