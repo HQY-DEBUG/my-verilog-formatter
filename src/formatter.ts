@@ -159,6 +159,21 @@ export class VerilogFormatter
 
             const isComment = /^(\/\/|\/\*|\*)/.test(line);
 
+            // 模块端口列表的 ); 或单独 ) 始终在第 0 列，重置 contentIndent
+            if (!isComment && stack.length === 0 && /^\)\s*;?\s*$/.test(line)) {
+                const norm = line.includes(';') ? ');' : ')';
+                result.push(norm);
+                if (norm === ');') { contentIndent = 0; }
+                pendingExtra = false;
+                continue;
+            }
+
+            // ") (" 形式（关闭参数列表后紧接端口列表），在第 0 列
+            if (!isComment && stack.length === 0 && /^\)\s*\(/.test(line)) {
+                result.push(') (');
+                continue;
+            }
+
             // endmodule 始终在第 0 列，不影响栈
             if (!isComment && /^endmodule\b/.test(line)) {
                 result.push(line);
@@ -199,8 +214,8 @@ export class VerilogFormatter
                 stack.push({ beginIndent: lineIndent, parentContentIndent: contentIndent });
                 contentIndent = lineIndent + indentSize;
             } else if (/^module\b/.test(line)) {
-                // module 体不缩进，端口/参数行由 alignPortDeclarations 负责对齐
-                contentIndent = 0;
+                // 有端口/参数列表时缩进 indentSize；直接以 ; 结尾时不缩进
+                contentIndent = line.endsWith(';') ? 0 : indentSize;
             } else if (/^(always|initial|if|for|while|forever)\b/.test(line)) {
                 // 控制关键字后接单条语句（无 begin）：下一行临时 +indentSize
                 pendingExtra = true;
@@ -333,9 +348,9 @@ export class VerilogFormatter
         return /\S.*\/\//.test(line);
     }
 
-    // 将块内所有行的 // 对齐到最大代码列 + 3 空格
+    // 将块内所有行的 // 对齐到最大代码列 + 1 空格
     private alignCommentBlock(lines: string[]): string[] {
-        const GAP = 3;
+        const GAP = 1;
         const codeParts = lines.map(line => {
             const idx = line.indexOf('//');
             return idx >= 0 ? line.substring(0, idx).trimEnd() : line;
