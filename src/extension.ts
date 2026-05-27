@@ -19,6 +19,7 @@ import { registerSymbolProviders }   from './symbolProvider';
 import { registerLinter }            from './linter';
 import { registerUcfToXdcCommand }   from './ucfToXdc';
 import { registerNumberEditCommands } from './numberEdit';
+import { registerCompletionProvider } from './completionProvider';
 
 export function activate(context: vscode.ExtensionContext): void {
     const formatter = new VerilogFormatter();
@@ -32,14 +33,27 @@ export function activate(context: vscode.ExtensionContext): void {
         );
     }
 
+    // ---- 保存时自动格式化 ----//
+    context.subscriptions.push(
+        vscode.workspace.onDidSaveTextDocument(async doc => {
+            const cfg = vscode.workspace.getConfiguration('verilogFormatter');
+            if (!cfg.get<boolean>('formatOnSave', false)) { return; }
+            if (!VERILOG_LANGS.includes(doc.languageId)) { return; }
+            await vscode.commands.executeCommand('editor.action.formatDocument', doc.uri);
+        }),
+    );
+
     // ---- 一键例化 / TB ----//
     registerInstantiatorCommands(context);
 
     // ---- 文件树 ----//
     registerFileTree(context);
 
-    // ---- 语法跳转 + 悬停 ----//
-    registerSymbolProviders(context);
+    // ---- 语法跳转 + 悬停（返回共享索引）----//
+    const symbolIndex = registerSymbolProviders(context);
+
+    // ---- 代码补全 ----//
+    registerCompletionProvider(context, symbolIndex);
 
     // ---- 语法检查 ----//
     registerLinter(context);

@@ -1,0 +1,208 @@
+{
+    "module 模板": {
+        "prefix": "module",
+        "body": [
+            "/**************************************************************************/",
+            "// Function   : ${1:模块功能简述}",
+            "// Version    : v1.0",
+            "// Date       : ${CURRENT_YEAR}/${CURRENT_MONTH}/${CURRENT_DATE}",
+            "/**************************************************************************/",
+            "module ${2:module_name} (",
+            "  input   wire          clk     ,   // 时钟",
+            "  input   wire          rst_n   ,   // 复位，低有效",
+            "  $0",
+            ");",
+            "",
+            "endmodule // ${2:module_name}"
+        ],
+        "description": "Verilog module 模板"
+    },
+    "always_ff 时序逻辑": {
+        "prefix": "always_ff",
+        "body": [
+            "always @(posedge ${1:clk} or negedge ${2:rst_n})",
+            "begin",
+            "  if (!${2:rst_n})",
+            "  begin",
+            "    ${3:signal} <= ${4:1'b0};",
+            "  end",
+            "  else",
+            "  begin",
+            "    ${3:signal} <= ${5:next_value};",
+            "  end",
+            "end"
+        ],
+        "description": "带复位的时序逻辑 always 块"
+    },
+    "always_comb 组合逻辑": {
+        "prefix": "always_comb",
+        "body": [
+            "always @(*)",
+            "begin",
+            "  ${0:// 组合逻辑}",
+            "end"
+        ],
+        "description": "组合逻辑 always 块"
+    },
+    "always posedge clk": {
+        "prefix": "alwaysclk",
+        "body": [
+            "always @(posedge ${1:clk})",
+            "begin",
+            "  ${0}",
+            "end"
+        ],
+        "description": "时钟上升沿 always 块（无复位）"
+    },
+    "initial 块": {
+        "prefix": "initial",
+        "body": [
+            "initial",
+            "begin",
+            "  ${0:// 初始化}",
+            "end"
+        ],
+        "description": "initial 仿真初始化块"
+    },
+    "case 语句": {
+        "prefix": "case",
+        "body": [
+            "case (${1:signal})",
+            "  ${2:2'b00} :",
+            "  begin",
+            "    ${3}",
+            "  end",
+            "  ${4:2'b01} :",
+            "  begin",
+            "    ${5}",
+            "  end",
+            "  default :",
+            "  begin",
+            "    ${6}",
+            "  end",
+            "endcase"
+        ],
+        "description": "case 语句（含 default）"
+    },
+    "if-else 语句": {
+        "prefix": "ifelse",
+        "body": [
+            "if (${1:condition})",
+            "begin",
+            "  ${2}",
+            "end",
+            "else",
+            "begin",
+            "  ${3}",
+            "end"
+        ],
+        "description": "if-else 语句"
+    },
+    "for 循环": {
+        "prefix": "for",
+        "body": [
+            "for (${1:i} = 0; ${1:i} < ${2:N}; ${1:i} = ${1:i} + 1)",
+            "begin",
+            "  ${0}",
+            "end"
+        ],
+        "description": "for 循环"
+    },
+    "assign 语句": {
+        "prefix": "assign",
+        "body": [
+            "assign ${1:out} = ${2:in};"
+        ],
+        "description": "assign 连续赋值"
+    },
+    "parameter 声明": {
+        "prefix": "parameter",
+        "body": [
+            "parameter ${1:NAME} = ${2:8};"
+        ],
+        "description": "parameter 参数声明"
+    },
+    "localparam 声明": {
+        "prefix": "localparam",
+        "body": [
+            "localparam ${1:NAME} = ${2:8};"
+        ],
+        "description": "localparam 本地参数"
+    },
+    "reg 声明": {
+        "prefix": "reg",
+        "body": [
+            "reg     [${1:7}:0]   ${2:signal}  ;   // ${3:说明}"
+        ],
+        "description": "reg 信号声明（对齐格式）"
+    },
+    "wire 声明": {
+        "prefix": "wire",
+        "body": [
+            "wire    [${1:7}:0]   ${2:signal}  ;   // ${3:说明}"
+        ],
+        "description": "wire 信号声明（对齐格式）"
+    },
+    "timescale": {
+        "prefix": "timescale",
+        "body": [
+            "`timescale 1ns / 1ps"
+        ],
+        "description": "`timescale 指令"
+    },
+    "文件头注释": {
+        "prefix": "fileheader",
+        "body": [
+            "/**************************************************************************/",
+            "// Function   : ${1:模块功能简述}",
+            "// Version    : v1.0",
+            "// Date       : ${CURRENT_YEAR}/${CURRENT_MONTH}/${CURRENT_DATE}",
+            "// Description: ${2:详细说明}",
+            "//",
+            "// Modify:",
+            "// version       date       modify",
+            "// --------    -----------  ------------------------------------------------",
+            "//  v1.0        ${CURRENT_YEAR}/${CURRENT_MONTH}/${CURRENT_DATE}  创建文件",
+            "/**************************************************************************/"
+        ],
+        "description": "Verilog 文件头注释模板"
+    },
+    "状态机 FSM": {
+        "prefix": "fsm",
+        "body": [
+            "// ---- 状态定义 ----//",
+            "localparam  S_IDLE   = 2'd0;",
+            "localparam  S_RUN    = 2'd1;",
+            "localparam  S_DONE   = 2'd2;",
+            "",
+            "reg [1:0]   state       ;   // 当前状态",
+            "reg [1:0]   state_next  ;   // 次态",
+            "",
+            "// ---- 状态寄存器 ----//",
+            "always @(posedge ${1:clk} or negedge ${2:rst_n})",
+            "begin",
+            "  if (!${2:rst_n})",
+            "    state <= S_IDLE;",
+            "  else",
+            "    state <= state_next;",
+            "end",
+            "",
+            "// ---- 次态逻辑 ----//",
+            "always @(*)",
+            "begin",
+            "  case (state)",
+            "    S_IDLE :",
+            "    begin",
+            "      state_next = S_IDLE;",
+            "    end",
+            "    S_RUN :",
+            "    begin",
+            "      state_next = S_DONE;",
+            "    end",
+            "    default : state_next = S_IDLE;",
+            "  endcase",
+            "end"
+        ],
+        "description": "两段式状态机模板"
+    }
+}

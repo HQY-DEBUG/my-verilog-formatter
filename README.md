@@ -1,6 +1,6 @@
 # my-verilog-formatter
 
-面向 FPGA 开发者的 VS Code Verilog / SystemVerilog 全功能辅助插件，提供代码格式化、文件树、一键例化、语法高亮、跳转悬停、语法检查等功能。
+面向 FPGA 开发者的 VS Code Verilog / SystemVerilog 全功能辅助插件，提供代码格式化、文件树、一键例化、语法高亮、跳转悬停、语法检查、代码补全、Snippet 等功能。
 
 > 版本：v0.2.0　日期：2026/05/25
 
@@ -22,6 +22,53 @@
 | 行尾注释对齐 | 连续代码块的 `//` 注释对齐到同一列 |
 | 属性前缀支持 | `(* mark_debug = "true" *)` 声明单独分组对齐 |
 | 行尾空格清除 | 格式化后自动去除每行末尾多余空格 |
+
+启用保存时自动格式化（`settings.json`）：
+
+```jsonc
+{
+  "verilogFormatter.formatOnSave": true
+}
+```
+
+---
+
+### 💡 代码补全（IntelliSense）
+
+输入时自动弹出补全列表，或按 `Ctrl+Space` 手动触发，支持三层补全：
+
+| 层级 | 内容 | 说明 |
+|------|------|------|
+| 关键字 | `always`、`assign`、`module` 等 | 内置 50+ Verilog/SV 关键字 |
+| 当前文件符号 | 信号、端口、参数 | 来自当前文件，排序靠前 |
+| 工作区模块名 | 跨文件模块 | 显示来源文件名 |
+
+每个补全项携带类型图标和声明原文，鼠标悬停可预览完整声明。
+
+---
+
+### ✂️ Snippet 代码片段
+
+输入前缀后按 `Tab` 展开，支持 `Tab` 键在各占位符间跳转：
+
+| 前缀 | 展开内容 |
+|------|---------|
+| `module` | 完整 module 模板（含文件头注释） |
+| `always_ff` | 带复位的时序逻辑 always 块 |
+| `always_comb` | 组合逻辑 always 块 |
+| `alwaysclk` | 时钟上升沿 always 块 |
+| `initial` | initial 仿真块 |
+| `case` | case 语句（含 default） |
+| `ifelse` | if-else 语句 |
+| `for` | for 循环 |
+| `assign` | assign 连续赋值 |
+| `parameter` | parameter 声明 |
+| `localparam` | localparam 声明 |
+| `reg` | reg 信号声明（对齐格式） |
+| `wire` | wire 信号声明（对齐格式） |
+| `timescale` | \`timescale 指令 |
+| `fileheader` | Verilog 文件头注释模板 |
+| `fsm` | 两段式状态机完整模板 |
 
 ---
 
@@ -85,8 +132,7 @@ module_name u_module_name (
 
 ```jsonc
 {
-  "verilogFormatter.lintEnabled": true,
-  "verilogFormatter.xvlogPath": "xvlog"  // xvlog 不在 PATH 时填完整路径
+  "verilogFormatter.lintEnabled": true
 }
 ```
 
@@ -118,11 +164,14 @@ module_name u_module_name (
   // begin 是否另起一行，默认 true
   "verilogFormatter.newlineBeforeBegin": true,
 
+  // 保存时自动格式化，默认 false
+  "verilogFormatter.formatOnSave": false,
+
   // 是否启用 xvlog 语法检查，默认 false
   "verilogFormatter.lintEnabled": false,
 
-  // xvlog 可执行文件路径（默认 "xvlog"，需在 PATH 中）
-  "verilogFormatter.xvlogPath": "xvlog"
+  // 是否启用悬停查看定义，默认 true
+  "verilogFormatter.hoverEnabled": true
 }
 ```
 
@@ -134,8 +183,10 @@ module_name u_module_name (
 |--------|------|
 | `Ctrl+Alt+F` | 格式化当前文件 |
 | `Ctrl+Alt+I` | 一键例化当前模块 |
+| `Ctrl+Space` | 触发代码补全 |
 | `F4` | 跳转到定义 |
 | `Alt+F4` | Peek 查看定义 |
+| `Ctrl+/` | 行注释切换 |
 | `Ctrl+Alt+↑` | 递增选中数字 |
 | `Ctrl+Alt+↓` | 递减选中数字 |
 
@@ -162,8 +213,8 @@ npm run compile
 ### 打包安装
 
 ```bash
-npx vsce package --allow-missing-repository
-code --install-extension my-verilog-formatter-0.2.0.vsix
+npx vsce package --no-dependencies
+code --install-extension my-verilog-formatter-0.2.0.vsix --force
 ```
 
 ---
@@ -173,18 +224,24 @@ code --install-extension my-verilog-formatter-0.2.0.vsix
 ```
 my-verilog-formatter/
 ├── src/
-│   ├── extension.ts       # 入口，注册所有 Provider 和命令
-│   ├── formatter.ts       # 格式化核心逻辑
-│   ├── instantiator.ts    # 一键例化 / Testbench 生成
-│   ├── fileTree.ts        # 文件树 TreeDataProvider
-│   ├── symbolProvider.ts  # 符号索引、跳转、悬停
-│   ├── linter.ts          # xvlog 语法检查
-│   ├── ucfToXdc.ts        # UCF → XDC 转换
-│   └── numberEdit.ts      # 数字递增/递减
-├── syntaxes/              # 语法高亮 tmLanguage 文件
-├── icon.png               # 插件图标
-├── package.json           # 扩展元数据与配置项声明
-└── tsconfig.json          # TypeScript 编译配置
+│   ├── extension.ts          # 入口，注册所有 Provider 和命令
+│   ├── formatter.ts          # 格式化核心逻辑
+│   ├── completionProvider.ts # 代码补全（关键字/符号/模块）
+│   ├── instantiator.ts       # 一键例化 / Testbench 生成
+│   ├── fileTree.ts           # 文件树 TreeDataProvider
+│   ├── symbolProvider.ts     # 符号索引、跳转、悬停
+│   ├── linter.ts             # xvlog 语法检查
+│   ├── ucfToXdc.ts           # UCF → XDC 转换
+│   └── numberEdit.ts         # 数字递增/递减
+├── snippets/
+│   └── verilog.code-snippets # Verilog/SV 代码片段
+├── syntaxes/                 # 语法高亮 tmLanguage 文件
+├── language-configuration-verilog.json  # Verilog/SV 注释配置
+├── language-configuration-vhdl.json     # VHDL 注释配置
+├── language-configuration.json          # XDC/TCL/UCF 注释配置
+├── icon.png                  # 插件图标
+├── package.json              # 扩展元数据与配置项声明
+└── tsconfig.json             # TypeScript 编译配置
 ```
 
 ---
@@ -193,5 +250,6 @@ my-verilog-formatter/
 
 | 版本 | 日期 | 修改内容 |
 |------|------|---------|
+| v0.2.0 | 2026/05/27 | 新增代码补全、Snippet、保存时自动格式化；修复全部语言注释快捷键 |
 | v0.2.0 | 2026/05/25 | 新增文件树、例化、语法高亮、跳转、悬停、语法检查、UCF转XDC、数字递增等功能；添加插件图标 |
 | v0.1.0 | 2026/05/25 | 创建项目，实现代码格式化核心功能 |

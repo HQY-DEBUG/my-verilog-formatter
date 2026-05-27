@@ -147,6 +147,16 @@ export class VerilogSymbolIndex {
         this.symbols = this.symbols.filter(s => s.filePath !== filePath);
         this.symbols.push(...extractSymbols(filePath));
     }
+
+    // 返回指定文件的所有符号（供补全使用）
+    getFileSymbols(filePath: string): SymbolInfo[] {
+        return this.symbols.filter(s => s.filePath === filePath);
+    }
+
+    // 返回全部符号（供补全使用）
+    getAllSymbols(): SymbolInfo[] {
+        return this.symbols;
+    }
 }
 
 // ---- Definition Provider ----//
@@ -289,8 +299,9 @@ const VERILOG_SELECTOR = [
 /**
  * @brief 注册语法跳转、悬停与大纲 Provider
  * @param context 扩展上下文
+ * @return 符号索引实例（供其他 Provider 共享）
  */
-export function registerSymbolProviders(context: vscode.ExtensionContext): void {
+export function registerSymbolProviders(context: vscode.ExtensionContext): VerilogSymbolIndex {
     const index = new VerilogSymbolIndex();
 
     // 文件保存时增量更新索引
@@ -320,4 +331,6 @@ export function registerSymbolProviders(context: vscode.ExtensionContext): void 
         vscode.languages.registerHoverProvider(VERILOG_SELECTOR, new VerilogHoverProvider(index)),
         vscode.languages.registerDocumentSymbolProvider(VERILOG_SELECTOR, new VerilogDocumentSymbolProvider()),
     );
+
+    return index;
 }

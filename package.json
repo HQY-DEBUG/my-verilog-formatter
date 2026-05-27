@@ -120,6 +120,16 @@
                 "configuration": "./language-configuration.json"
             }
         ],
+        "snippets": [
+            {
+                "language": "verilog",
+                "path": "./snippets/verilog.code-snippets"
+            },
+            {
+                "language": "systemverilog",
+                "path": "./snippets/verilog.code-snippets"
+            }
+        ],
         "grammars": [
             {
                 "language": "verilog",
@@ -318,6 +328,11 @@
                     "type": "number",
                     "default": 1,
                     "description": "数字递增/递减的步长"
+                },
+                "verilogFormatter.formatOnSave": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "保存时自动格式化 Verilog/SystemVerilog 文件"
                 }
             }
         }
