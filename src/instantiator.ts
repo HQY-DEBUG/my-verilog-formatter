@@ -118,10 +118,20 @@ function generateInstance(info: ModuleInfo): string {
     });
     const maxBodyLen = portBodies.reduce((m, b) => Math.max(m, b.length), 0);
 
-    // 第二步：拼接注释，所有注释列对齐
+    // 第二步：计算注释内部三列的对齐宽度
+    //   col1: 方向（input/output/inout）
+    //   col2: 位宽（[W:0] 或空）
+    //   col3: 端口名
+    const maxDirLen   = flatPorts.reduce((m, p) => Math.max(m, p.dir.length), 0);
+    const maxWidthLen = flatPorts.reduce((m, p) => Math.max(m, p.width ? p.width.length : 0), 0);
+
+    // 第三步：拼接，所有注释列对齐
     flatPorts.forEach((port, i) => {
-        const widthStr = port.width ? ` ${port.width}` : '';
-        const comment  = `// ${port.dir}${widthStr} ${port.name}`;
+        const dirPad   = port.dir.padEnd(maxDirLen);
+        const widthPad = (port.width ?? '').padEnd(maxWidthLen);
+        const comment  = maxWidthLen > 0
+            ? `// ${dirPad}  ${widthPad}  ${port.name}`
+            : `// ${dirPad}  ${port.name}`;
         const body     = portBodies[i].padEnd(maxBodyLen);
         lines.push(`${body}  ${comment}`);
     });
