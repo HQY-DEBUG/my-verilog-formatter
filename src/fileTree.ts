@@ -13,7 +13,6 @@
 import * as vscode from 'vscode';
 import * as fs     from 'fs';
 import * as path   from 'path';
-import * as glob   from 'glob';
 
 // ---- 数据结构 ----//
 interface ModuleDecl {
@@ -62,7 +61,7 @@ export class VerilogTreeItem extends vscode.TreeItem {
 // ---- 解析逻辑 ----//
 const RE_MODULE    = /^\s*module\s+(\w+)/;
 const RE_INST      = /^\s*(\w+)\s+(?:#\s*\([^)]*\)\s*)?(\w+)\s*\s*[(\s]/;
-const VERILOG_EXTS = ['.v', '.vh', '.sv', '.svh'];
+const VERILOG_EXTS = new Set(['.v', '.vh', '.sv', '.svh']);
 // 不视为模块例化的关键字
 const KEYWORDS = new Set([
     'module','endmodule','input','output','inout','wire','reg','logic',
@@ -112,6 +111,24 @@ function parseFile(filePath: string): ParsedFile {
 }
 
 /**
+ * @brief 递归遍历目录，收集 Verilog 文件路径（替代 glob，无外部依赖）
+ */
+function walkFiles(dir: string, excludeDirs: Set<string>, result: string[] = []): string[] {
+    let entries: fs.Dirent[];
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return result; }
+    for (const entry of entries) {
+        if (entry.isDirectory()) {
+            if (!excludeDirs.has(entry.name)) {
+                walkFiles(path.join(dir, entry.name), excludeDirs, result);
+            }
+        } else if (VERILOG_EXTS.has(path.extname(entry.name).toLowerCase())) {
+            result.push(path.join(dir, entry.name));
+        }
+    }
+    return result;
+}
+
+/**
  * @brief 扫描工作区所有 Verilog 文件
  * @param excludeFolders 排除的文件夹名称列表
  * @return 文件解析结果数组
@@ -120,14 +137,10 @@ function scanWorkspace(excludeFolders: string[]): ParsedFile[] {
     const folders = vscode.workspace.workspaceFolders;
     if (!folders || folders.length === 0) { return []; }
 
+    const excludeSet = new Set(excludeFolders);
     const results: ParsedFile[] = [];
     for (const folder of folders) {
-        const root  = folder.uri.fsPath;
-        const files = glob.sync('**/*.{v,vh,sv,svh}', {
-            cwd    : root,
-            ignore : excludeFolders.map(f => `**/${f}/**`),
-            absolute: true,
-        });
+        const files = walkFiles(folder.uri.fsPath, excludeSet);
         for (const f of files) {
             results.push(parseFile(f));
         }

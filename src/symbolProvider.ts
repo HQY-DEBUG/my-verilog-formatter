@@ -12,7 +12,25 @@
 
 import * as vscode from 'vscode';
 import * as fs     from 'fs';
-import * as glob   from 'glob';
+import * as path   from 'path';
+
+// ---- 文件扫描辅助（替代 glob，避免外部依赖）----//
+const VERILOG_EXTS_SET = new Set(['.v', '.vh', '.sv', '.svh']);
+
+function walkFiles(dir: string, excludeDirs: Set<string>, result: string[] = []): string[] {
+    let entries: fs.Dirent[];
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return result; }
+    for (const entry of entries) {
+        if (entry.isDirectory()) {
+            if (!excludeDirs.has(entry.name)) {
+                walkFiles(path.join(dir, entry.name), excludeDirs, result);
+            }
+        } else if (VERILOG_EXTS_SET.has(path.extname(entry.name).toLowerCase())) {
+            result.push(path.join(dir, entry.name));
+        }
+    }
+    return result;
+}
 
 // ---- 符号信息 ----//
 interface SymbolInfo {
@@ -123,11 +141,8 @@ export class VerilogSymbolIndex {
 
         this.symbols = [];
         for (const folder of folders) {
-            const files = glob.sync('**/*.{v,vh,sv,svh}', {
-                cwd     : folder.uri.fsPath,
-                ignore  : excludeFolders.map(f => `**/${f}/**`),
-                absolute: true,
-            });
+            const excludeSet = new Set(excludeFolders);
+            const files = walkFiles(folder.uri.fsPath, excludeSet);
             for (const f of files) {
                 this.symbols.push(...extractSymbols(f));
             }
