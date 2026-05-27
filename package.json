@@ -37,7 +37,8 @@
                 "extensions": [
                     ".v",
                     ".vh"
-                ]
+                ],
+                "configuration": "./language-configuration-verilog.json"
             },
             {
                 "id": "systemverilog",
@@ -48,7 +49,8 @@
                 "extensions": [
                     ".sv",
                     ".svh"
-                ]
+                ],
+                "configuration": "./language-configuration-verilog.json"
             },
             {
                 "id": "ucf",
@@ -69,7 +71,8 @@
                 ],
                 "extensions": [
                     ".xdc"
-                ]
+                ],
+                "configuration": "./language-configuration.json"
             },
             {
                 "id": "vhdl",
@@ -80,7 +83,8 @@
                 "extensions": [
                     ".vhd",
                     ".vhdl"
-                ]
+                ],
+                "configuration": "./language-configuration-vhdl.json"
             },
             {
                 "id": "tcl",
@@ -90,7 +94,8 @@
                 ],
                 "extensions": [
                     ".tcl"
-                ]
+                ],
+                "configuration": "./language-configuration.json"
             },
             {
                 "id": "modelsim-do",
@@ -100,7 +105,8 @@
                 ],
                 "extensions": [
                     ".do"
-                ]
+                ],
+                "configuration": "./language-configuration.json"
             },
             {
                 "id": "gowin-cst",
@@ -110,7 +116,8 @@
                 ],
                 "extensions": [
                     ".cst"
-                ]
+                ],
+                "configuration": "./language-configuration.json"
             }
         ],
         "grammars": [
