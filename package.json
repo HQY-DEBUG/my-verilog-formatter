@@ -23,7 +23,9 @@
         "onLanguage:gowin-cst",
         "onView:verilogFileTree",
         "workspaceContains:**/*.v",
-        "workspaceContains:**/*.sv"
+        "workspaceContains:**/*.sv",
+        "onView:verilogTodoTree",
+        "onStartupFinished"
     ],
     "main": "./out/extension.js",
     "contributes": {
@@ -181,6 +183,11 @@
                     "id": "verilogFileTree",
                     "name": "Verilog 文件树",
                     "when": "workbenchState != empty"
+                },
+                {
+                    "id": "verilogTodoTree",
+                    "name": "TODO",
+                    "when": "workbenchState != empty"
                 }
             ]
         },
@@ -195,6 +202,53 @@
                     "command": "verilogFormatter.setTopModule",
                     "when": "view == verilogFileTree",
                     "group": "navigation"
+                },
+                {
+                    "command": "verilogFormatter.todo.refresh",
+                    "when": "view == verilogTodoTree",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "verilogFormatter.todo.collapseAll",
+                    "when": "view == verilogTodoTree",
+                    "group": "navigation@2"
+                },
+                {
+                    "command": "verilogFormatter.todo.setViewTree",
+                    "when": "view == verilogTodoTree",
+                    "group": "navigation@3"
+                },
+                {
+                    "command": "verilogFormatter.todo.setViewFlat",
+                    "when": "view == verilogTodoTree",
+                    "group": "navigation@4"
+                },
+                {
+                    "command": "verilogFormatter.todo.setViewTags",
+                    "when": "view == verilogTodoTree",
+                    "group": "navigation@5"
+                },
+                {
+                    "command": "verilogFormatter.todo.filterClear",
+                    "when": "view == verilogTodoTree",
+                    "group": "navigation@6"
+                }
+            ],
+            "view/item/context": [
+                {
+                    "command": "verilogFormatter.todo.hidePath",
+                    "when": "view == verilogTodoTree && viewItem == todoFile",
+                    "group": "todo@1"
+                },
+                {
+                    "command": "verilogFormatter.todo.hidePath",
+                    "when": "view == verilogTodoTree && viewItem == todoFolder",
+                    "group": "todo@1"
+                },
+                {
+                    "command": "verilogFormatter.todo.resetPathFilter",
+                    "when": "view == verilogTodoTree",
+                    "group": "todo@2"
                 }
             ],
             "editor/context": [
@@ -249,6 +303,60 @@
             {
                 "command": "verilogFormatter.decrementNumbers",
                 "title": "Verilog: 数字递减 (-step)"
+            },
+            {
+                "command": "verilogFormatter.todo.refresh",
+                "title": "TODO: 刷新",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "verilogFormatter.todo.addTag",
+                "title": "TODO: 添加标签"
+            },
+            {
+                "command": "verilogFormatter.todo.removeTag",
+                "title": "TODO: 删除标签"
+            },
+            {
+                "command": "verilogFormatter.todo.goToNext",
+                "title": "TODO: 跳到下一个"
+            },
+            {
+                "command": "verilogFormatter.todo.goToPrevious",
+                "title": "TODO: 跳到上一个"
+            },
+            {
+                "command": "verilogFormatter.todo.setViewTree",
+                "title": "TODO: 树视图",
+                "icon": "$(list-tree)"
+            },
+            {
+                "command": "verilogFormatter.todo.setViewFlat",
+                "title": "TODO: 平铺列表",
+                "icon": "$(list-flat)"
+            },
+            {
+                "command": "verilogFormatter.todo.setViewTags",
+                "title": "TODO: 按标签分组",
+                "icon": "$(tag)"
+            },
+            {
+                "command": "verilogFormatter.todo.filterClear",
+                "title": "TODO: 清除过滤",
+                "icon": "$(clear-all)"
+            },
+            {
+                "command": "verilogFormatter.todo.collapseAll",
+                "title": "TODO: 折叠全部",
+                "icon": "$(collapse-all)"
+            },
+            {
+                "command": "verilogFormatter.todo.hidePath",
+                "title": "TODO: 隐藏此路径"
+            },
+            {
+                "command": "verilogFormatter.todo.resetPathFilter",
+                "title": "TODO: 重置路径过滤"
             }
         ],
         "keybindings": [
@@ -333,6 +441,51 @@
                     "type": "boolean",
                     "default": false,
                     "description": "保存时自动格式化 Verilog/SystemVerilog 文件"
+                },
+                "verilogFormatter.todo.tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": [
+                        "TODO",
+                        "FIXME",
+                        "NOTE",
+                        "HACK"
+                    ],
+                    "description": "TODO 扫描的标签关键字列表"
+                },
+                "verilogFormatter.todo.excludePatterns": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": [
+                        "**/node_modules/**",
+                        "**/.git/**",
+                        "**/out/**"
+                    ],
+                    "description": "TODO 扫描排除的 glob 模式"
+                },
+                "verilogFormatter.todo.showInStatusBar": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "状态栏显示 TODO 总计数"
+                },
+                "verilogFormatter.todo.highlightEnabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "是否在编辑器中启用 TODO 行内高亮"
+                },
+                "verilogFormatter.todo.defaultHighlight": {
+                    "type": "object",
+                    "default": {},
+                    "description": "所有标签的默认高亮配置（foreground/background/gutterIcon/highlightType）"
+                },
+                "verilogFormatter.todo.customHighlight": {
+                    "type": "object",
+                    "default": {},
+                    "description": "各标签的个性化高亮配置，键为标签名"
                 }
             }
         }
