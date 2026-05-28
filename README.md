@@ -224,24 +224,29 @@ code --install-extension my-verilog-formatter-0.2.0.vsix --force
 ```
 my-verilog-formatter/
 ├── src/
-│   ├── extension.ts          # 入口，注册所有 Provider 和命令
-│   ├── formatter.ts          # 格式化核心逻辑
-│   ├── completionProvider.ts # 代码补全（关键字/符号/模块）
-│   ├── instantiator.ts       # 一键例化 / Testbench 生成
-│   ├── fileTree.ts           # 文件树 TreeDataProvider
-│   ├── symbolProvider.ts     # 符号索引、跳转、悬停
-│   ├── linter.ts             # xvlog 语法检查
-│   ├── ucfToXdc.ts           # UCF → XDC 转换
-│   └── numberEdit.ts         # 数字递增/递减
-├── snippets/
-│   └── verilog.code-snippets # Verilog/SV 代码片段
-├── syntaxes/                 # 语法高亮 tmLanguage 文件
-├── language-configuration-verilog.json  # Verilog/SV 注释配置
-├── language-configuration-vhdl.json     # VHDL 注释配置
-├── language-configuration.json          # XDC/TCL/UCF 注释配置
-├── icon.png                  # 插件图标
-├── package.json              # 扩展元数据与配置项声明
-└── tsconfig.json             # TypeScript 编译配置
+│   ├── extension.ts               # 入口，注册所有 Provider 和命令
+│   └── features/
+│       └── verilog/
+│           ├── formatter.ts       # 格式化核心逻辑
+│           ├── completionProvider.ts # 代码补全（关键字/符号/模块）
+│           ├── instantiator.ts    # 一键例化 / Testbench 生成
+│           ├── fileTree.ts        # 文件树 TreeDataProvider
+│           ├── symbolProvider.ts  # 符号索引、跳转、悬停
+│           ├── linter.ts          # xvlog 语法检查
+│           ├── ucfToXdc.ts        # UCF → XDC 转换
+│           └── numberEdit.ts      # 数字递增/递减
+├── resources/
+│   └── verilog/
+│       ├── snippets/
+│       │   └── verilog.code-snippets  # Verilog/SV 代码片段
+│       ├── syntaxes/                  # 语法高亮 tmLanguage 文件
+│       └── language-configurations/
+│           ├── language-configuration-verilog.json  # Verilog/SV 注释配置
+│           ├── language-configuration-vhdl.json     # VHDL 注释配置
+│           └── language-configuration.json          # XDC/TCL/UCF 注释配置
+├── icon.png                       # 插件图标
+├── package.json                   # 扩展元数据与配置项声明
+└── tsconfig.json                  # TypeScript 编译配置
 ```
 
 ---

@@ -12,14 +12,14 @@
 // =========================================================================
 
 import * as vscode from 'vscode';
-import { VerilogFormatter }          from './formatter';
-import { registerInstantiatorCommands } from './instantiator';
-import { registerFileTree }          from './fileTree';
-import { registerSymbolProviders }   from './symbolProvider';
-import { registerLinter }            from './linter';
-import { registerUcfToXdcCommand }   from './ucfToXdc';
-import { registerNumberEditCommands } from './numberEdit';
-import { registerCompletionProvider } from './completionProvider';
+import { VerilogFormatter }          from './features/verilog/formatter';
+import { registerInstantiatorCommands } from './features/verilog/instantiator';
+import { registerFileTree }          from './features/verilog/fileTree';
+import { registerSymbolProviders }   from './features/verilog/symbolProvider';
+import { registerLinter }            from './features/verilog/linter';
+import { registerUcfToXdcCommand }   from './features/verilog/ucfToXdc';
+import { registerNumberEditCommands } from './features/verilog/numberEdit';
+import { registerCompletionProvider } from './features/verilog/completionProvider';
 
 export function activate(context: vscode.ExtensionContext): void {
     const formatter = new VerilogFormatter();

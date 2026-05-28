@@ -38,7 +38,7 @@
                     ".v",
                     ".vh"
                 ],
-                "configuration": "./language-configuration-verilog.json"
+                "configuration": "./resources/verilog/language-configurations/language-configuration-verilog.json"
             },
             {
                 "id": "systemverilog",
@@ -50,7 +50,7 @@
                     ".sv",
                     ".svh"
                 ],
-                "configuration": "./language-configuration-verilog.json"
+                "configuration": "./resources/verilog/language-configurations/language-configuration-verilog.json"
             },
             {
                 "id": "ucf",
@@ -61,7 +61,7 @@
                 "extensions": [
                     ".ucf"
                 ],
-                "configuration": "./language-configuration.json"
+                "configuration": "./resources/verilog/language-configurations/language-configuration.json"
             },
             {
                 "id": "xdc",
@@ -72,7 +72,7 @@
                 "extensions": [
                     ".xdc"
                 ],
-                "configuration": "./language-configuration.json"
+                "configuration": "./resources/verilog/language-configurations/language-configuration.json"
             },
             {
                 "id": "vhdl",
@@ -84,7 +84,7 @@
                     ".vhd",
                     ".vhdl"
                 ],
-                "configuration": "./language-configuration-vhdl.json"
+                "configuration": "./resources/verilog/language-configurations/language-configuration-vhdl.json"
             },
             {
                 "id": "tcl",
@@ -95,7 +95,7 @@
                 "extensions": [
                     ".tcl"
                 ],
-                "configuration": "./language-configuration.json"
+                "configuration": "./resources/verilog/language-configurations/language-configuration.json"
             },
             {
                 "id": "modelsim-do",
@@ -106,7 +106,7 @@
                 "extensions": [
                     ".do"
                 ],
-                "configuration": "./language-configuration.json"
+                "configuration": "./resources/verilog/language-configurations/language-configuration.json"
             },
             {
                 "id": "gowin-cst",
@@ -117,29 +117,29 @@
                 "extensions": [
                     ".cst"
                 ],
-                "configuration": "./language-configuration.json"
+                "configuration": "./resources/verilog/language-configurations/language-configuration.json"
             }
         ],
         "snippets": [
             {
                 "language": "verilog",
-                "path": "./snippets/verilog.code-snippets"
+                "path": "./resources/verilog/snippets/verilog.code-snippets"
             },
             {
                 "language": "systemverilog",
-                "path": "./snippets/verilog.code-snippets"
+                "path": "./resources/verilog/snippets/verilog.code-snippets"
             }
         ],
         "grammars": [
             {
                 "language": "verilog",
                 "scopeName": "source.verilog",
-                "path": "./syntaxes/verilog.tmLanguage.json"
+                "path": "./resources/verilog/syntaxes/verilog.tmLanguage.json"
             },
             {
                 "language": "systemverilog",
                 "scopeName": "source.systemverilog",
-                "path": "./syntaxes/systemverilog.tmLanguage.json",
+                "path": "./resources/verilog/syntaxes/systemverilog.tmLanguage.json",
                 "embeddedLanguages": {
                     "source.verilog": "verilog"
                 }
@@ -147,32 +147,32 @@
             {
                 "language": "ucf",
                 "scopeName": "source.ucf",
-                "path": "./syntaxes/ucf.tmLanguage.json"
+                "path": "./resources/verilog/syntaxes/ucf.tmLanguage.json"
             },
             {
                 "language": "xdc",
                 "scopeName": "source.xdc",
-                "path": "./syntaxes/xdc.tmLanguage.json"
+                "path": "./resources/verilog/syntaxes/xdc.tmLanguage.json"
             },
             {
                 "language": "vhdl",
                 "scopeName": "source.vhdl",
-                "path": "./syntaxes/vhdl.tmLanguage.json"
+                "path": "./resources/verilog/syntaxes/vhdl.tmLanguage.json"
             },
             {
                 "language": "tcl",
                 "scopeName": "source.tcl",
-                "path": "./syntaxes/tcl.tmLanguage.json"
+                "path": "./resources/verilog/syntaxes/tcl.tmLanguage.json"
             },
             {
                 "language": "modelsim-do",
                 "scopeName": "source.do",
-                "path": "./syntaxes/do.tmLanguage.json"
+                "path": "./resources/verilog/syntaxes/do.tmLanguage.json"
             },
             {
                 "language": "gowin-cst",
                 "scopeName": "source.cst",
-                "path": "./syntaxes/cst.tmLanguage.json"
+                "path": "./resources/verilog/syntaxes/cst.tmLanguage.json"
             }
         ],
         "views": {
