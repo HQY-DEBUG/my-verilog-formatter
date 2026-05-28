@@ -83,12 +83,16 @@ function runRg(args: string[], cwd: string, tags: string[], paths: string[] = ['
             }
         });
 
-        proc.stderr.resume();
+        let stderrBuf = '';
+        proc.stderr.on('data', (chunk: Buffer) => { stderrBuf += chunk.toString('utf8'); });
         proc.on('error', reject);
         proc.on('close', () => {
             if (buf) {
                 const item = parseRgLine(buf, tags);
                 if (item) { items.push(item); }
+            }
+            if (stderrBuf.trim()) {
+                console.warn('[TodoScanner] rg stderr:', stderrBuf.trim());
             }
             resolve(items);
         });

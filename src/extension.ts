@@ -77,16 +77,19 @@ export function activate(context: vscode.ExtensionContext): void {
         treeDataProvider: todoProvider,
         showCollapseAll : true,
     });
-    context.subscriptions.push(todoTreeView, todoStatusBar);
+    context.subscriptions.push(todoTreeView, todoStatusBar, todoDecorator);
 
     // 初始全量扫描
-    todoProvider.refresh().then(() => {
-        todoStatusBar.update(todoProvider.getTotalCount());
-        // 对当前编辑器应用高亮
-        if (vscode.window.activeTextEditor) {
-            todoDecorator.apply(vscode.window.activeTextEditor, todoProvider.getItems());
-        }
-    });
+    todoProvider.refresh()
+        .then(() => {
+            todoStatusBar.update(todoProvider.getTotalCount());
+            if (vscode.window.activeTextEditor) {
+                todoDecorator.apply(vscode.window.activeTextEditor, todoProvider.getItems());
+            }
+        })
+        .catch((err: Error) => {
+            vscode.window.showErrorMessage(`TODO Tree: 扫描失败 — ${err.message}`);
+        });
 
     // 保存时增量更新
     context.subscriptions.push(

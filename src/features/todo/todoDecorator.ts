@@ -33,9 +33,8 @@ function buildDecorOptions(cfg: TagConfig): vscode.DecorationRenderOptions {
         opts.overviewRulerColor = cfg.rulerColour;
     }
     if (cfg.gutterIcon) {
-        opts.gutterIconPath = new vscode.ThemeIcon(
-            cfg.icon.replace(/^\$\(|\)$/g, '')
-        ) as unknown as vscode.Uri;
+        // gutterIconPath 需要实际 SVG/PNG 文件的 Uri，暂不支持 ThemeIcon
+        // 用户如需 gutter 图标，可将图标文件放入 resources/gutter/ 目录
     }
 
     return opts;
@@ -74,7 +73,6 @@ export class TodoDecorator {
             if (existing) { existing.dispose(); }
             const dtype = vscode.window.createTextEditorDecorationType(buildDecorOptions(tagCfg));
             this.decorTypes.set(tag, dtype);
-            this.context.subscriptions.push(dtype);
             editor.setDecorations(dtype, decorOpts);
         }
 

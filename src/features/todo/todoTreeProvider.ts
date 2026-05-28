@@ -27,6 +27,7 @@ export class TodoTreeNode extends vscode.TreeItem {
         public readonly nodeType      : 'folder' | 'file' | 'item',
         public readonly todoItem?     : TodoItem,
         public readonly filePath?     : string,
+        public readonly tagName?      : string,   // tags 视图下的标签名
     ) {
         super(label, collapsibleState);
 
@@ -143,7 +144,8 @@ export class TodoTreeProvider implements vscode.TreeDataProvider<TodoTreeNode> {
                     vscode.TreeItemCollapsibleState.Expanded,
                     'folder',
                     undefined,
-                    tag,
+                    undefined,  // filePath
+                    tag,        // tagName
                 );
             });
         }
@@ -156,7 +158,7 @@ export class TodoTreeProvider implements vscode.TreeDataProvider<TodoTreeNode> {
         const filtered = this._applyFilter(this.allItems);
 
         if (this.viewMode === 'tags') {
-            const tag = parent.filePath!; // 复用 filePath 存储 tag 名
+            const tag = parent.tagName!;
             return filtered
                 .filter(i => i.tag === tag)
                 .map(i => this._makeItemNode(i));
