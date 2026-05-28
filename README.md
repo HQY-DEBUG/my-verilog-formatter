@@ -153,6 +153,44 @@ module_name u_module_name (
 
 ---
 
+### TODO
+
+#### 📋 TODO 树视图
+
+侧边栏 **TODO** 面板扫描整个工作区（使用 ripgrep），在树视图中展示所有 TODO/FIXME 等注释标签，点击条目直接跳转到对应文件行。
+
+支持三种视图模式（工具栏切换）：
+
+| 模式 | 说明 |
+|------|------|
+| 树视图（默认） | 按文件夹层级展示，可折叠 |
+| 平铺列表 | 所有条目扁平展示 |
+| 按标签分组 | 一级为 TODO/FIXME/...，二级为具体条目 |
+
+工具栏按钮：折叠全部、树/平铺/标签分组切换、过滤清除、手动刷新。
+
+右键菜单：隐藏此文件/文件夹、重置路径过滤。
+
+---
+
+#### 🎨 行内高亮
+
+打开文件时自动高亮 TODO 标签，各标签颜色可在配置中自定义。
+
+---
+
+#### 🔍 前后导航
+
+命令面板搜索 `TODO: 跳到下一个` / `TODO: 跳到上一个`，在当前文件内的 TODO 条目间快速跳转。
+
+---
+
+#### 🏷️ 标签管理
+
+命令面板搜索 `TODO: 添加标签` / `TODO: 删除标签`，动态管理扫描的标签关键字，无需手动编辑 `settings.json`。
+
+---
+
 ## 配置项
 
 ```jsonc
@@ -174,6 +212,31 @@ module_name u_module_name (
 
   // 是否启用悬停查看定义，默认 true
   "verilogFormatter.hoverEnabled": true
+}
+```
+
+### TODO 配置
+
+```jsonc
+// TODO 相关配置
+{
+  // 扫描的标签关键字，默认 ["TODO","FIXME","NOTE","HACK"]
+  "verilogFormatter.todo.tags": ["TODO", "FIXME", "NOTE", "HACK"],
+
+  // 排除的 glob 模式
+  "verilogFormatter.todo.excludePatterns": ["**/node_modules/**", "**/.git/**", "**/out/**"],
+
+  // 状态栏显示 TODO 计数
+  "verilogFormatter.todo.showInStatusBar": true,
+
+  // 是否启用行内高亮
+  "verilogFormatter.todo.highlightEnabled": true,
+
+  // 所有标签的默认高亮
+  "verilogFormatter.todo.defaultHighlight": {},
+
+  // 各标签的个性化高亮
+  "verilogFormatter.todo.customHighlight": {}
 }
 ```
 
