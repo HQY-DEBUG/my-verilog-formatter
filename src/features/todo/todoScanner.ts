@@ -44,7 +44,7 @@ export function parseRgLine(raw: string, tags: string[]): TodoItem | null {
 
     const col  = submatches[0]?.start as number ?? 0;
     // 提取标签后的注释内容
-    const rest = lineText.slice(col + matchedTag.length).replace(/^[\s:：]+/, '').trimEnd().replace(/\n$/, '');
+    const rest = lineText.slice(col + matchedTag.length).replace(/^[\s:：]+/, '').trimEnd();
 
     return {
         file : filePath,
@@ -67,17 +67,9 @@ export function groupByFile(items: TodoItem[]): Map<string, TodoItem[]> {
 }
 
 // ---- 异步运行 rg，返回所有 TodoItem ----//
-function runRg(args: string[], cwd: string): Promise<TodoItem[]> {
+function runRg(args: string[], cwd: string, tags: string[], paths: string[] = ['.']): Promise<TodoItem[]> {
     return new Promise((resolve, reject) => {
-        // 从 -e pattern 中提取 tags 列表用于 parseRgLine 过滤
-        const eIdx  = args.indexOf('-e');
-        const pat   = eIdx >= 0 ? args[eIdx + 1] : '';
-        const tagRe = /\\b\((.*?)\)/.exec(pat);
-        const tagList: string[] = tagRe
-            ? tagRe[1].split('|').map(t => t.replace(/\\/g, ''))
-            : [];
-
-        const proc  = cp.spawn(rgPath, [...args, '.'], { cwd, shell: false });
+        const proc  = cp.spawn(rgPath, [...args, ...paths], { cwd, shell: false });
         const items: TodoItem[] = [];
         let   buf   = '';
 
@@ -86,15 +78,16 @@ function runRg(args: string[], cwd: string): Promise<TodoItem[]> {
             const lines = buf.split('\n');
             buf = lines.pop() ?? '';
             for (const line of lines) {
-                const item = parseRgLine(line, tagList);
+                const item = parseRgLine(line, tags);
                 if (item) { items.push(item); }
             }
         });
 
+        proc.stderr.resume();
         proc.on('error', reject);
         proc.on('close', () => {
             if (buf) {
-                const item = parseRgLine(buf, tagList);
+                const item = parseRgLine(buf, tags);
                 if (item) { items.push(item); }
             }
             resolve(items);
@@ -106,7 +99,7 @@ function runRg(args: string[], cwd: string): Promise<TodoItem[]> {
 export async function scan(workspaceFolders: string[], config: TodoConfig): Promise<TodoItem[]> {
     const args    = buildRgArgs(config.tags, config.excludePatterns);
     const results = await Promise.all(
-        workspaceFolders.map(folder => runRg(args, folder))
+        workspaceFolders.map(folder => runRg(args, folder, config.tags))
     );
     return results.flat();
 }
@@ -116,5 +109,5 @@ export async function scanFile(filePath: string, config: TodoConfig): Promise<To
     const args = buildRgArgs(config.tags, config.excludePatterns);
     const dir  = path.dirname(filePath);
     const file = path.basename(filePath);
-    return runRg([...args, file], dir);
+    return runRg(args, dir, config.tags, [file]);
 }
