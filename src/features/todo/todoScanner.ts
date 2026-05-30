@@ -39,12 +39,14 @@ export function parseRgLine(raw: string, tags: string[]): TodoItem | null {
 
     if (!filePath || !lineNumber || !submatches.length) { return null; }
 
-    const matchedTag = submatches[0]?.match?.text as string;
+    // rg submatches[0] 是完整匹配文本（含末尾分隔符），去除后缀得到纯标签名
+    const rawMatch   = submatches[0]?.match?.text as string ?? '';
+    const matchedTag = rawMatch.replace(/[\s:：]+$/, '');
     if (!tags.includes(matchedTag)) { return null; }
 
     const col  = submatches[0]?.start as number ?? 0;
-    // 提取标签后的注释内容
-    const rest = lineText.slice(col + matchedTag.length).replace(/^[\s:：]+/, '').trimEnd();
+    // 提取标签后的注释内容（跳过整个原始匹配长度，再去除剩余分隔符）
+    const rest = lineText.slice(col + rawMatch.length).replace(/^[\s:：]+/, '').trimEnd();
 
     return {
         file : filePath,

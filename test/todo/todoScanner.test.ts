@@ -23,7 +23,8 @@ describe('parseRgLine', () => {
                 path: { text: '/workspace/main.c' },
                 line_number: 10,
                 lines: { text: '  // TODO: fix this\n' },
-                submatches: [{ match: { text: 'TODO' }, start: 5, end: 9 }],
+                // rg submatches[0] 是完整匹配文本（含分隔符 :）
+                submatches: [{ match: { text: 'TODO:' }, start: 5, end: 10 }],
             },
         });
         const item = parseRgLine(line, ['TODO', 'FIXME']);
@@ -46,7 +47,7 @@ describe('parseRgLine', () => {
                 path: { text: '/workspace/main.c' },
                 line_number: 5,
                 lines: { text: '// HACK something\n' },
-                submatches: [{ match: { text: 'HACK' }, start: 3, end: 7 }],
+                submatches: [{ match: { text: 'HACK ' }, start: 3, end: 8 }],
             },
         });
         expect(parseRgLine(line, ['TODO', 'FIXME'])).toBeNull();
