@@ -16,6 +16,16 @@ import { scan, scanFile, groupByFile } from './todoScanner';
 import { getTodoConfig, mergeTagConfig } from './todoConfig';
 import type { TodoItem } from './todoScanner';
 
+// ---- 路径比较（Windows 大小写不敏感、统一分隔符） ----//
+export function pathStartsWith(child: string, parent: string): boolean {
+    const normalize = (p: string) => path.normalize(p).toLowerCase();
+    const c  = normalize(child);
+    const p_ = normalize(parent);
+    // 确保 parent 以分隔符结尾，避免 /foo 误匹配 /foobar
+    const pSep = p_.endsWith(path.sep) ? p_ : p_ + path.sep;
+    return c === p_ || c.startsWith(pSep);
+}
+
 // ---- 视图模式 ----//
 export type ViewMode = 'tree' | 'flat' | 'tags';
 
@@ -189,10 +199,10 @@ export class TodoTreeProvider implements vscode.TreeDataProvider<TodoTreeNode> {
             return this._buildFileNodes(items, folders[0]);
         }
         return folders
-            .filter(f => items.some(i => i.file.startsWith(f)))
+            .filter(f => items.some(i => pathStartsWith(i.file, f)))
             .map(f => {
                 const name  = path.basename(f);
-                const count = items.filter(i => i.file.startsWith(f)).length;
+                const count = items.filter(i => pathStartsWith(i.file, f)).length;
                 return new TodoTreeNode(
                     `${name} (${count})`,
                     vscode.TreeItemCollapsibleState.Expanded,
@@ -206,7 +216,7 @@ export class TodoTreeProvider implements vscode.TreeDataProvider<TodoTreeNode> {
     private _buildFileNodes(items: TodoItem[], baseFolder?: string): TodoTreeNode[] {
         const fileSet = [...new Set(items.map(i => i.file))].sort();
         return fileSet
-            .filter(f => !this.hiddenPaths.has(f) && (!baseFolder || f.startsWith(baseFolder)))
+            .filter(f => !this.hiddenPaths.has(f) && (!baseFolder || pathStartsWith(f, baseFolder)))
             .map(f => {
                 const count   = (this.byFile.get(f) ?? []).filter(i => this._matchFilter(i)).length;
                 const rel     = baseFolder ? path.relative(baseFolder, f) : f;
@@ -221,7 +231,7 @@ export class TodoTreeProvider implements vscode.TreeDataProvider<TodoTreeNode> {
     }
 
     private _getFileNodesUnderFolder(folderPath: string, items: TodoItem[]): TodoTreeNode[] {
-        return this._buildFileNodes(items.filter(i => i.file.startsWith(folderPath)), folderPath);
+        return this._buildFileNodes(items.filter(i => pathStartsWith(i.file, folderPath)), folderPath);
     }
 
     private _makeItemNode(item: TodoItem): TodoTreeNode {
