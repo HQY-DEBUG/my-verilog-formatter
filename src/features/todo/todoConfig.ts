@@ -55,7 +55,7 @@ export function getTodoConfig(): TodoConfig {
     const cfg = vscode.workspace.getConfiguration('verilogFormatter.todo');
     return {
         tags            : cfg.get<string[]>('tags',             ['TODO', 'FIXME', 'NOTE', 'HACK']),
-        excludePatterns : cfg.get<string[]>('excludePatterns',  ['**/node_modules/**', '**/.git/**', '**/out/**', '**/test/**']),
+        excludePatterns : cfg.get<string[]>('excludePatterns',  ['**/node_modules/**', '**/.git/**', '**/out/**']),
         showInStatusBar : cfg.get<boolean>('showInStatusBar',   true),
         highlightEnabled: cfg.get<boolean>('highlightEnabled',  true),
         defaultHighlight: cfg.get<Partial<TagConfig>>('defaultHighlight', {}),

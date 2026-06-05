@@ -81,7 +81,11 @@ function runRg(args: string[], cwd: string, tags: string[], paths: string[] = ['
             buf = lines.pop() ?? '';
             for (const line of lines) {
                 const item = parseRgLine(line, tags);
-                if (item) { items.push(item); }
+                // rg 以 cwd 运行时返回相对路径，转换为绝对路径
+                if (item) {
+                    if (!path.isAbsolute(item.file)) { item.file = path.resolve(cwd, item.file); }
+                    items.push(item);
+                }
             }
         });
 
@@ -91,7 +95,10 @@ function runRg(args: string[], cwd: string, tags: string[], paths: string[] = ['
         proc.on('close', () => {
             if (buf) {
                 const item = parseRgLine(buf, tags);
-                if (item) { items.push(item); }
+                if (item) {
+                    if (!path.isAbsolute(item.file)) { item.file = path.resolve(cwd, item.file); }
+                    items.push(item);
+                }
             }
             if (stderrBuf.trim()) {
                 console.warn('[TodoScanner] rg stderr:', stderrBuf.trim());
