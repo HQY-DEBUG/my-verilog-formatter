@@ -18,11 +18,24 @@ import type { TodoConfig } from './todoConfig';
 
 // ---- 数据结构 ----//
 export interface TodoItem {
-    file : string;   // 绝对路径
-    line : number;   // 0-based
-    col  : number;   // 0-based
-    tag  : string;
-    text : string;   // 标签后的注释内容（已 trim）
+    file   : string;   // 绝对路径
+    line   : number;   // 0-based
+    col    : number;   // 0-based，UTF-8 字节偏移（rg 原始值）
+    charCol: number;   // 0-based，UTF-16 字符偏移（VS Code Range 使用）
+    tag    : string;
+    text   : string;   // 标签后的注释内容（已 trim）
+}
+
+// ---- 将 UTF-8 字节偏移转换为 UTF-16 字符偏移 ----//
+function byteOffsetToCharOffset(line: string, byteOffset: number): number {
+    // lineText 在 JSON 里已解码为 JS 字符串；重新编码为 UTF-8，截取前 byteOffset 字节，
+    // 再解码得到前缀字符串，其 .length 即 UTF-16 字符数（即 VS Code 期望的列偏移）。
+    try {
+        const prefix = Buffer.from(line, 'utf8').slice(0, byteOffset).toString('utf8');
+        return prefix.length;
+    } catch {
+        return byteOffset; // 回退：ASCII-only 时字节偏移 == 字符偏移
+    }
 }
 
 // ---- 解析单行 rg NDJSON ----//
@@ -45,15 +58,18 @@ export function parseRgLine(raw: string, tags: string[]): TodoItem | null {
     if (!tags.includes(matchedTag)) { return null; }
 
     const col  = submatches[0]?.start as number ?? 0;
+    // 将 UTF-8 字节偏移转换为 VS Code 期望的 UTF-16 字符偏移
+    const charCol = byteOffsetToCharOffset(lineText, col);
     // 提取标签后的注释内容（跳过整个原始匹配长度，再去除剩余分隔符）
-    const rest = lineText.slice(col + rawMatch.length).replace(/^[\s:：]+/, '').trimEnd();
+    const rest = lineText.slice(charCol + rawMatch.length).replace(/^[\s:：]+/, '').trimEnd();
 
     return {
-        file : filePath,
-        line : lineNumber - 1,   // 转 0-based
+        file   : filePath,
+        line   : lineNumber - 1,   // 转 0-based
         col,
-        tag  : matchedTag,
-        text : rest,
+        charCol,
+        tag    : matchedTag,
+        text   : rest,
     };
 }
 

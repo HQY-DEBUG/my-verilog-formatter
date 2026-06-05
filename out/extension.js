@@ -95,22 +95,42 @@ function activate(context) {
     const todoProvider = new todoTreeProvider_1.TodoTreeProvider(context);
     const todoDecorator = new todoDecorator_1.TodoDecorator(context);
     const todoStatusBar = new todoStatusBar_1.TodoStatusBar();
+    const todoLog = vscode.window.createOutputChannel('TODO Tree');
     // 注册树视图
     const todoTreeView = vscode.window.createTreeView('verilogTodoTree', {
         treeDataProvider: todoProvider,
         showCollapseAll: true,
     });
-    context.subscriptions.push(todoTreeView, todoStatusBar, todoDecorator);
+    context.subscriptions.push(todoTreeView, todoStatusBar, todoDecorator, todoLog);
+    // 注册专用跳转命令（比 vscode.open 更可靠，且能正确处理 Unicode 列偏移）
+    context.subscriptions.push(vscode.commands.registerCommand('verilogFormatter.todo.revealItem', async (file, line, charCol) => {
+        try {
+            const uri = vscode.Uri.file(file);
+            const pos = new vscode.Position(line, charCol);
+            const doc = await vscode.workspace.openTextDocument(uri);
+            await vscode.window.showTextDocument(doc, {
+                selection: new vscode.Range(pos, pos),
+                preserveFocus: false,
+            });
+        }
+        catch (e) {
+            vscode.window.showErrorMessage(`TODO: 跳转失败 — ${e.message}`);
+        }
+    }));
     // 初始全量扫描
     todoProvider.refresh()
         .then(() => {
-        todoStatusBar.update(todoProvider.getTotalCount());
+        const count = todoProvider.getTotalCount();
+        todoStatusBar.update(count);
+        todoLog.appendLine(`[扫描完成] 共找到 ${count} 条 TODO`);
+        todoProvider.getItems().forEach(i => todoLog.appendLine(`  [${i.tag}] ${i.file}:${i.line + 1}:${i.charCol}`));
         if (vscode.window.activeTextEditor) {
             todoDecorator.apply(vscode.window.activeTextEditor, todoProvider.getItems());
         }
     })
         .catch((err) => {
         vscode.window.showErrorMessage(`TODO Tree: 扫描失败 — ${err.message}`);
+        todoLog.appendLine(`[ERROR] ${err.message}\n${err.stack}`);
     });
     // 保存时增量更新
     context.subscriptions.push(vscode.workspace.onDidSaveTextDocument(async (doc) => {
@@ -175,16 +195,17 @@ function activate(context) {
         if (!editor) {
             return;
         }
+        const fsPath = editor.document.uri.fsPath.toLowerCase();
         const items = todoProvider.getItems();
         const fileItems = items
-            .filter((i) => i.file === editor.document.uri.fsPath)
+            .filter((i) => i.file.toLowerCase() === fsPath)
             .sort((a, b) => a.line - b.line);
         if (!fileItems.length) {
             return;
         }
         const curLine = editor.selection.active.line;
         const next = fileItems.find((i) => i.line > curLine) ?? fileItems[0];
-        const pos = new vscode.Position(next.line, next.col);
+        const pos = new vscode.Position(next.line, next.charCol ?? next.col);
         editor.selection = new vscode.Selection(pos, pos);
         editor.revealRange(new vscode.Range(pos, pos), vscode.TextEditorRevealType.InCenter);
     }), 
@@ -206,16 +227,17 @@ function activate(context) {
         if (!editor) {
             return;
         }
+        const fsPath = editor.document.uri.fsPath.toLowerCase();
         const items = todoProvider.getItems();
         const fileItems = items
-            .filter((i) => i.file === editor.document.uri.fsPath)
+            .filter((i) => i.file.toLowerCase() === fsPath)
             .sort((a, b) => a.line - b.line);
         if (!fileItems.length) {
             return;
         }
         const curLine = editor.selection.active.line;
         const prev = [...fileItems].reverse().find((i) => i.line < curLine) ?? fileItems[fileItems.length - 1];
-        const pos = new vscode.Position(prev.line, prev.col);
+        const pos = new vscode.Position(prev.line, prev.charCol ?? prev.col);
         editor.selection = new vscode.Selection(pos, pos);
         editor.revealRange(new vscode.Range(pos, pos), vscode.TextEditorRevealType.InCenter);
     }));

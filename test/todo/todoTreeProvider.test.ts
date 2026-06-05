@@ -60,9 +60,9 @@ describe('TodoTreeProvider - tree mode', () => {
     const FILE_B    = path.join(WORKSPACE, 'lib', 'util.ts');
 
     const ITEMS: TodoItem[] = [
-        { file: FILE_A, line: 9,  col: 3, tag: 'TODO',  text: 'fix this' },
-        { file: FILE_A, line: 20, col: 3, tag: 'FIXME', text: 'broken'   },
-        { file: FILE_B, line: 4,  col: 0, tag: 'NOTE',  text: 'info'     },
+        { file: FILE_A, line: 9,  col: 3, charCol: 3, tag: 'TODO',  text: 'fix this' },
+        { file: FILE_A, line: 20, col: 3, charCol: 3, tag: 'FIXME', text: 'broken'   },
+        { file: FILE_B, line: 4,  col: 0, charCol: 0, tag: 'NOTE',  text: 'info'     },
     ];
 
     function makeProvider(): TodoTreeProvider {

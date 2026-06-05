@@ -76,14 +76,9 @@ class TodoTreeNode extends vscode.TreeItem {
             this.tooltip = `${todoItem.tag}: ${todoItem.text}`;
             this.contextValue = 'todoItem';
             this.command = {
-                command: 'vscode.open',
+                command: 'verilogFormatter.todo.revealItem',
                 title: '跳转到 TODO',
-                arguments: [
-                    vscode.Uri.file(todoItem.file),
-                    {
-                        selection: new vscode.Range(todoItem.line, todoItem.col, todoItem.line, todoItem.col),
-                    },
-                ],
+                arguments: [todoItem.file, todoItem.line, todoItem.charCol],
             };
         }
         else if (nodeType === 'file') {

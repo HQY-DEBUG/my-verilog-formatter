@@ -11,7 +11,7 @@
 // =========================================================================
 
 import { buildRgArgs, mergeTagConfig, DEFAULT_TAG_CONFIGS, getTodoConfig } from '../../src/features/todo/todoConfig';
-
+// TODO : 需要 mock vscode.workspace.getConfiguration 来测试 getTodoConfig 的行为
 describe('buildRgArgs', () => {
     it('应包含 --json 和 -n 参数', () => {
         const args = buildRgArgs(['TODO', 'FIXME'], ['**/node_modules/**']);

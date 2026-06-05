@@ -52,6 +52,18 @@ const cp = __importStar(require("child_process"));
 const path = __importStar(require("path"));
 const ripgrep_1 = require("@vscode/ripgrep");
 const todoConfig_1 = require("./todoConfig");
+// ---- 将 UTF-8 字节偏移转换为 UTF-16 字符偏移 ----//
+function byteOffsetToCharOffset(line, byteOffset) {
+    // lineText 在 JSON 里已解码为 JS 字符串；重新编码为 UTF-8，截取前 byteOffset 字节，
+    // 再解码得到前缀字符串，其 .length 即 UTF-16 字符数（即 VS Code 期望的列偏移）。
+    try {
+        const prefix = Buffer.from(line, 'utf8').slice(0, byteOffset).toString('utf8');
+        return prefix.length;
+    }
+    catch {
+        return byteOffset; // 回退：ASCII-only 时字节偏移 == 字符偏移
+    }
+}
 // ---- 解析单行 rg NDJSON ----//
 function parseRgLine(raw, tags) {
     let obj;
@@ -79,12 +91,15 @@ function parseRgLine(raw, tags) {
         return null;
     }
     const col = submatches[0]?.start ?? 0;
+    // 将 UTF-8 字节偏移转换为 VS Code 期望的 UTF-16 字符偏移
+    const charCol = byteOffsetToCharOffset(lineText, col);
     // 提取标签后的注释内容（跳过整个原始匹配长度，再去除剩余分隔符）
-    const rest = lineText.slice(col + rawMatch.length).replace(/^[\s:：]+/, '').trimEnd();
+    const rest = lineText.slice(charCol + rawMatch.length).replace(/^[\s:：]+/, '').trimEnd();
     return {
         file: filePath,
         line: lineNumber - 1, // 转 0-based
         col,
+        charCol,
         tag: matchedTag,
         text: rest,
     };
