@@ -187,6 +187,21 @@ export function activate(context: vscode.ExtensionContext): void {
             editor.revealRange(new vscode.Range(pos, pos), vscode.TextEditorRevealType.InCenter);
         }),
 
+        // 诊断命令：显示当前扫描状态
+        vscode.commands.registerCommand('verilogFormatter.todo.diagnose', async () => {
+            const cfg     = vscode.workspace.getConfiguration('verilogFormatter.todo');
+            const folders = (vscode.workspace.workspaceFolders ?? []).map(f => f.uri.fsPath);
+            const tags    = cfg.get<string[]>('tags', ['TODO', 'FIXME', 'NOTE', 'HACK']);
+            const items   = todoProvider.getItems();
+            const msg = [
+                `工作区目录: ${folders.join(', ') || '（无）'}`,
+                `监听标签: ${tags.join(', ')}`,
+                `已扫描 TODO: ${items.length} 条`,
+                items.length > 0 ? `示例: ${items[0].tag} @ ${items[0].file}:${items[0].line + 1}` : '',
+            ].filter(Boolean).join('\n');
+            vscode.window.showInformationMessage(msg, { modal: true });
+        }),
+
         vscode.commands.registerCommand('verilogFormatter.todo.goToPrevious', async () => {
             const editor = vscode.window.activeTextEditor;
             if (!editor) { return; }

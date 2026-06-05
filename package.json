@@ -318,6 +318,10 @@
                 "title": "TODO: 删除标签"
             },
             {
+                "command": "verilogFormatter.todo.diagnose",
+                "title": "TODO: 诊断（显示当前扫描状态）"
+            },
+            {
                 "command": "verilogFormatter.todo.goToNext",
                 "title": "TODO: 跳到下一个"
             },
