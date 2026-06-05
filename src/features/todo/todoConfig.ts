@@ -55,7 +55,7 @@ export function getTodoConfig(): TodoConfig {
     const cfg = vscode.workspace.getConfiguration('verilogFormatter.todo');
     return {
         tags            : cfg.get<string[]>('tags',             ['TODO', 'FIXME', 'NOTE', 'HACK']),
-        excludePatterns : cfg.get<string[]>('excludePatterns',  ['**/node_modules/**', '**/.git/**', '**/out/**']),
+        excludePatterns : cfg.get<string[]>('excludePatterns',  ['**/node_modules/**', '**/.git/**', '**/out/**', '**/test/**']),
         showInStatusBar : cfg.get<boolean>('showInStatusBar',   true),
         highlightEnabled: cfg.get<boolean>('highlightEnabled',  true),
         defaultHighlight: cfg.get<Partial<TagConfig>>('defaultHighlight', {}),
@@ -66,8 +66,9 @@ export function getTodoConfig(): TodoConfig {
 // ---- 构造 ripgrep 参数 ----//
 export function buildRgArgs(tags: string[], excludePatterns: string[]): string[] {
     // 转义正则特殊字符，构造 (TAG1|TAG2|...) 模式
+    // 要求冒号必须存在，避免 'TODO'/'FIXME' 字符串字面量被误匹配
     const escaped = tags.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-    const pattern = `\\b(${escaped.join('|')})\\b[\\s:：]?`;
+    const pattern = `\\b(${escaped.join('|')})\\b\\s*[：:]`;
 
     const args: string[] = [
         '--json',

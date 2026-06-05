@@ -467,7 +467,8 @@
                     "default": [
                         "**/node_modules/**",
                         "**/.git/**",
-                        "**/out/**"
+                        "**/out/**",
+                        "**/test/**"
                     ],
                     "description": "TODO 扫描排除的 glob 模式"
                 },
