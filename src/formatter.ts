@@ -79,6 +79,7 @@ export class VerilogFormatter
             r = this.splitBeginToNewline(r);
         }
         r = this.reindent(r, config.indentSize);
+        r = this.alignAssignContinuations(r);
         r = this.alignLocalparams(r);
         r = this.alignSignalDeclarations(r);
         r = this.alignPortDeclarations(r);
@@ -223,6 +224,53 @@ export class VerilogFormatter
                 pendingExtra = true;
             } else if (/^else\b/.test(line)) {
                 pendingExtra = true;
+            }
+        }
+
+        return result.join('\n');
+    }
+
+    // ---- 对齐 assign 多行表达式续行 ----//
+    private alignAssignContinuations(code: string): string {
+        const lines: string[] = code.split('\n');
+        const result: string[] = [];
+        let i = 0;
+
+        while (i < lines.length) {
+            const line = lines[i];
+            if (!/^\s*assign\b.*=\s*/.test(line) || /;\s*(\/\/.*)?$/.test(line.trim())) {
+                result.push(line);
+                i++;
+                continue;
+            }
+
+            const equalIdx = line.indexOf('=');
+            if (equalIdx < 0) {
+                result.push(line);
+                i++;
+                continue;
+            }
+
+            let exprIndent = equalIdx + 1;
+            while (exprIndent < line.length && line[exprIndent] === ' ') { exprIndent++; }
+            const block: string[] = [line];
+            i++;
+            while (i < lines.length) {
+                block.push(lines[i]);
+                const trimmed = lines[i].trim();
+                i++;
+                if (/;\s*(\/\/.*)?$/.test(trimmed)) { break; }
+            }
+
+            const firstCont = block[1]?.trim() ?? '';
+            const alignInnerParen = firstCont.startsWith('((');
+            result.push(block[0]);
+            for (let j = 1; j < block.length; j++) {
+                const trimmed = block[j].trim();
+                const innerOffset = alignInnerParen && j > 1 && /^\(/.test(trimmed) && !/^\)+\s*;/.test(trimmed)
+                    ? 1
+                    : 0;
+                result.push(' '.repeat(exprIndent + innerOffset) + trimmed);
             }
         }
 
