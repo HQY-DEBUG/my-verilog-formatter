@@ -50,8 +50,20 @@ exports.scan = scan;
 exports.scanFile = scanFile;
 const cp = __importStar(require("child_process"));
 const path = __importStar(require("path"));
-const ripgrep_1 = require("@vscode/ripgrep");
 const todoConfig_1 = require("./todoConfig");
+// @vscode/ripgrep 自 1.16+ 改为 ESM 模块，TS commonjs 编译后 require() 会抛
+// ERR_REQUIRE_ESM；TS 也会把原生 import() 降级为 require()。用 new Function
+// 包一层保留真正的动态 import，使其能在 Node 中加载 ESM 模块。
+const nativeDynamicImport = new Function('m', 'return import(m)');
+let rgPathCache;
+async function getRgPath() {
+    if (rgPathCache) {
+        return rgPathCache;
+    }
+    const mod = await nativeDynamicImport('@vscode/ripgrep');
+    rgPathCache = mod.rgPath;
+    return rgPathCache;
+}
 // ---- 将 UTF-8 字节偏移转换为 UTF-16 字符偏移 ----//
 function byteOffsetToCharOffset(line, byteOffset) {
     // lineText 在 JSON 里已解码为 JS 字符串；重新编码为 UTF-8，截取前 byteOffset 字节，
@@ -115,9 +127,10 @@ function groupByFile(items) {
     return map;
 }
 // ---- 异步运行 rg，返回所有 TodoItem ----//
-function runRg(args, cwd, tags, paths = ['.']) {
+async function runRg(args, cwd, tags, paths = ['.']) {
+    const rgPath = await getRgPath();
     return new Promise((resolve, reject) => {
-        const proc = cp.spawn(ripgrep_1.rgPath, [...args, ...paths], { cwd, shell: false });
+        const proc = cp.spawn(rgPath, [...args, ...paths], { cwd, shell: false });
         const items = [];
         let buf = '';
         proc.stdout.on('data', (chunk) => {
