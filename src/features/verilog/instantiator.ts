@@ -16,7 +16,7 @@ import * as vscode from 'vscode';
 // 匹配 module 声明行（含参数列表）
 const RE_MODULE       = /^\s*module\s+(\w+)\s*(?:#\s*\(|(?:\()|$)/;
 // 匹配端口声明行
-const RE_PORT         = /^\s*(input|output|inout)\b\s*(wire|reg|logic)?\s*(signed|unsigned)?\s*(\[[^\]]*\])?\s*([\w,\s]+)\s*[,;)]/;
+const RE_PORT         = /^\s*(input|output|inout)\b\s*(wire|reg|logic)?\s*(signed|unsigned)?\s*(\[[^\]]*\])?\s*([\w,\s]+)\s*(?:[,;)]|$)/;
 // 匹配 parameter 声明（在 #() 内）
 const RE_PARAM        = /^\s*parameter\s+(?:\[[^\]]*\]\s*)?(\w+)\s*=\s*([^,)]+)/;
 

@@ -79,9 +79,11 @@ export class VerilogFormatter
             r = this.splitBeginToNewline(r);
         }
         r = this.reindent(r, config.indentSize);
+        r = this.alignAssignContinuations(r);
         r = this.alignLocalparams(r);
         r = this.alignSignalDeclarations(r);
         r = this.alignPortDeclarations(r);
+        r = this.alignInstantiationPorts(r);
         if (config.alignPortComment) {
             r = this.alignTrailingComments(r);
         }
@@ -228,9 +230,56 @@ export class VerilogFormatter
         return result.join('\n');
     }
 
-    // ---- 对齐 localparam 多参数块 ----//
-    // 第一行：localparam  NAME = value,  // comment
-    // 续行：  <对齐到首个参数名>NAME = value,  // comment
+    // ---- 对齐 assign 多行表达式续行 ----//
+    private alignAssignContinuations(code: string): string {
+        const lines: string[] = code.split('\n');
+        const result: string[] = [];
+        let i = 0;
+
+        while (i < lines.length) {
+            const line = lines[i];
+            if (!/^\s*assign\b.*=\s*/.test(line) || /;\s*(\/\/.*)?$/.test(line.trim())) {
+                result.push(line);
+                i++;
+                continue;
+            }
+
+            const equalIdx = line.indexOf('=');
+            if (equalIdx < 0) {
+                result.push(line);
+                i++;
+                continue;
+            }
+
+            let exprIndent = equalIdx + 1;
+            while (exprIndent < line.length && line[exprIndent] === ' ') { exprIndent++; }
+            const block: string[] = [line];
+            i++;
+            while (i < lines.length) {
+                block.push(lines[i]);
+                const trimmed = lines[i].trim();
+                i++;
+                if (/;\s*(\/\/.*)?$/.test(trimmed)) { break; }
+            }
+
+            const firstCont = block[1]?.trim() ?? '';
+            const alignInnerParen = firstCont.startsWith('((');
+            result.push(block[0]);
+            for (let j = 1; j < block.length; j++) {
+                const trimmed = block[j].trim();
+                const innerOffset = alignInnerParen && j > 1 && /^\(/.test(trimmed) && !/^\)+\s*;/.test(trimmed)
+                    ? 1
+                    : 0;
+                result.push(' '.repeat(exprIndent + innerOffset) + trimmed);
+            }
+        }
+
+        return result.join('\n');
+    }
+
+    // ---- 对齐 localparam 块 ----//
+    // 情况1（多参数）：localparam NAME = v, NAME2 = v2;  续行逗号分隔，末行分号
+    // 情况2（连续单行）：多行 localparam NAME = value; 作为一组四列对齐
     private alignLocalparams(code: string): string {
         const FIRST_RE = /^(\s*)(localparam)\s+(\w+)\s*=\s*([^,;]+?)\s*([,;])\s*(\/\/.*)?$/;
         const CONT_RE  = /^(\s*)(\w+)\s*=\s*([^,;]+?)\s*([,;])\s*(\/\/.*)?$/;
@@ -246,11 +295,32 @@ export class VerilogFormatter
 
             const baseIndent = fm[1];
             const keyword    = fm[2];
-            const entries: Entry[] = [{ name: fm[3], value: fm[4].trim(), term: fm[5], comment: fm[6] ?? '' }];
-            i++;
 
-            // 若首行已用 ; 结束，单参数 localparam，直接格式化
-            if (fm[5] !== ';') {
+            if (fm[5] === ';') {
+                // 情况2：收集连续的同缩进 localparam ... ; 行作为一组对齐
+                const group: Entry[] = [{ name: fm[3], value: fm[4].trim(), term: fm[5], comment: fm[6] ?? '' }];
+                i++;
+                while (i < lines.length) {
+                    const nm = lines[i].match(FIRST_RE);
+                    if (nm && nm[1] === baseIndent && nm[5] === ';') {
+                        group.push({ name: nm[3], value: nm[4].trim(), term: nm[5], comment: nm[6] ?? '' });
+                        i++;
+                    } else {
+                        break;
+                    }
+                }
+                const maxName  = Math.max(...group.map(e => e.name.length));
+                const maxValue = Math.max(...group.map(e => e.value.length));
+                group.forEach(e => {
+                    const n = e.name.padEnd(maxName);
+                    const v = e.value.padEnd(maxValue);
+                    const c = e.comment ? ` ${e.comment}` : '';
+                    result.push(`${baseIndent}${keyword}  ${n} = ${v}${e.term}${c}`);
+                });
+            } else {
+                // 情况1：多参数逗号分隔块
+                const entries: Entry[] = [{ name: fm[3], value: fm[4].trim(), term: fm[5], comment: fm[6] ?? '' }];
+                i++;
                 while (i < lines.length) {
                     const cm = lines[i].match(CONT_RE);
                     if (!cm) { break; }
@@ -258,23 +328,21 @@ export class VerilogFormatter
                     i++;
                     if (cm[4] === ';') { break; }
                 }
+                // 续行缩进 = baseIndent + keyword + 2 空格
+                const contIndent = baseIndent + ' '.repeat(keyword.length + 2);
+                const maxName    = Math.max(...entries.map(e => e.name.length));
+                const maxValue   = Math.max(...entries.map(e => e.value.length));
+                entries.forEach((e, idx) => {
+                    const n = e.name.padEnd(maxName);
+                    const v = e.value.padEnd(maxValue);
+                    const c = e.comment ? ` ${e.comment}` : '';
+                    if (idx === 0) {
+                        result.push(`${baseIndent}${keyword}  ${n} = ${v}${e.term}${c}`);
+                    } else {
+                        result.push(`${contIndent}${n} = ${v}${e.term}${c}`);
+                    }
+                });
             }
-
-            // 对齐输出：续行缩进 = baseIndent + keyword + 2 空格
-            const contIndent = baseIndent + ' '.repeat(keyword.length + 2);
-            const maxName    = Math.max(...entries.map(e => e.name.length));
-            const maxValue   = Math.max(...entries.map(e => e.value.length));
-
-            entries.forEach((e, idx) => {
-                const n = e.name.padEnd(maxName);
-                const v = e.value.padEnd(maxValue);
-                const c = e.comment ? ` ${e.comment}` : '';
-                if (idx === 0) {
-                    result.push(`${baseIndent}${keyword}  ${n} = ${v}${e.term}${c}`);
-                } else {
-                    result.push(`${contIndent}${n} = ${v}${e.term}${c}`);
-                }
-            });
         }
 
         return result.join('\n');
@@ -366,6 +434,83 @@ export class VerilogFormatter
                 : '';
             return `${p.indent}${attrPad}${typePad}${signWidthPad}${namePad};${cmt}`;
         });
+    }
+
+    // ---- 对齐例化端口连接 ----//
+    // 格式：  .portName ( signalExpr  ),  // comment
+    // 支持：  紧凑写法 .port(sig), → 展开为 .port ( sig  ),
+    //         块内注释行（// ...）和空行透传，不打断分组
+    private alignInstantiationPorts(code: string): string {
+        const IS_PORT_RE = /^\s*\.\w+\s*\(/;
+        const isGap = (l: string) => l.trim() === '' || /^\s*\/\//.test(l);
+
+        interface Conn { indent: string; port: string; expr: string; comma: string; comment: string; }
+
+        // 解析一行 .portName ( expr ), // comment，支持 expr 内嵌套括号
+        const parseConn = (line: string): Conn | null => {
+            const pm = line.match(/^(\s*)\.(\w+)\s*\(/);
+            if (!pm) { return null; }
+            const indent = pm[1];
+            const port   = pm[2];
+            const pos    = pm[0].length - 1; // 首个 '(' 的下标
+            let   depth  = 0;
+            let   exprStart = -1;
+            let   closeParen = -1;
+            for (let k = pos; k < line.length; k++) {
+                if (line[k] === '(') {
+                    depth++;
+                    if (depth === 1) { exprStart = k + 1; }
+                } else if (line[k] === ')') {
+                    depth--;
+                    if (depth === 0) { closeParen = k; break; }
+                }
+            }
+            if (closeParen < 0) { return null; }
+            const expr = line.substring(exprStart, closeParen).trim();
+            const rest = line.substring(closeParen + 1).trim();
+            const rm   = rest.match(/^(,?)\s*(\/\/.*)?$/);
+            if (!rm) { return null; }
+            return { indent, port, expr, comma: rm[1] ?? '', comment: rm[2] ?? '' };
+        };
+
+        const lines  = code.split('\n');
+        const result: string[] = [];
+        let   i      = 0;
+
+        while (i < lines.length) {
+            if (!IS_PORT_RE.test(lines[i])) { result.push(lines[i++]); continue; }
+
+            // 收集连续的端口连接行（空行/注释行允许穿插）
+            const block: string[] = [];
+            while (i < lines.length) {
+                if (IS_PORT_RE.test(lines[i])) {
+                    block.push(lines[i++]);
+                } else if (isGap(lines[i])) {
+                    let j = i + 1;
+                    while (j < lines.length && isGap(lines[j])) { j++; }
+                    if (j < lines.length && IS_PORT_RE.test(lines[j])) {
+                        while (i < j) { block.push(lines[i++]); }
+                    } else { break; }
+                } else { break; }
+            }
+
+            const conns = block.map(line => ({ raw: line, conn: parseConn(line) }));
+            const valid = conns.filter(x => x.conn !== null).map(x => x.conn!);
+            if (valid.length === 0) { result.push(...block); continue; }
+
+            const maxPort = Math.max(...valid.map(c => c.port.length));
+            const maxExpr = Math.max(...valid.map(c => c.expr.length));
+
+            result.push(...conns.map(({ raw, conn }) => {
+                if (!conn) { return raw; } // 注释行/空行原样输出
+                const portPad = conn.port.padEnd(maxPort);
+                const exprPad = conn.expr.padEnd(maxExpr);
+                const cmt     = conn.comment ? `  ${conn.comment}` : '';
+                return `${conn.indent}.${portPad} ( ${exprPad}  )${conn.comma}${cmt}`;
+            }));
+        }
+
+        return result.join('\n');
     }
 
     // ---- 对齐端口声明（input / output / inout）----//
