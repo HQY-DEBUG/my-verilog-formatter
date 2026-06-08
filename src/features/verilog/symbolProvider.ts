@@ -17,12 +17,19 @@ import * as path   from 'path';
 // ---- 文件扫描辅助（替代 glob，避免外部依赖）----//
 const VERILOG_EXTS_SET = new Set(['.v', '.vh', '.sv', '.svh']);
 
+// 始终排除的目录（版本控制、历史备份、构建产物等）
+const ALWAYS_EXCLUDE_DIRS = new Set([
+    '.history', '.git', '.svn', '.hg',
+    'node_modules', '.vscode', '.vscode-test',
+    'out', 'dist', '.qoder', '.idea',
+]);
+
 function walkFiles(dir: string, excludeDirs: Set<string>, result: string[] = []): string[] {
     let entries: fs.Dirent[];
     try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return result; }
     for (const entry of entries) {
         if (entry.isDirectory()) {
-            if (!excludeDirs.has(entry.name)) {
+            if (!excludeDirs.has(entry.name) && !ALWAYS_EXCLUDE_DIRS.has(entry.name)) {
                 walkFiles(path.join(dir, entry.name), excludeDirs, result);
             }
         } else if (VERILOG_EXTS_SET.has(path.extname(entry.name).toLowerCase())) {
@@ -74,12 +81,9 @@ function extractPortNamesFromLine(line: string): string[] {
 }
 
 /**
- * @brief 从单个文件提取所有符号（正确处理多名称声明和带初值信号）
+ * @brief 从文本内容提取所有符号（支持从内存缓冲区或磁盘文件）
  */
-function extractSymbols(filePath: string): SymbolInfo[] {
-    let text: string;
-    try { text = fs.readFileSync(filePath, 'utf8'); } catch { return []; }
-
+function extractSymbolsFromText(filePath: string, text: string): SymbolInfo[] {
     const lines   = text.split(/\r?\n/);
     const symbols : SymbolInfo[] = [];
 
@@ -126,6 +130,15 @@ function extractSymbols(filePath: string): SymbolInfo[] {
     return symbols;
 }
 
+/**
+ * @brief 从磁盘文件读取并提取符号
+ */
+function extractSymbols(filePath: string): SymbolInfo[] {
+    let text: string;
+    try { text = fs.readFileSync(filePath, 'utf8'); } catch { return []; }
+    return extractSymbolsFromText(filePath, text);
+}
+
 // ---- 符号索引 ----//
 export class VerilogSymbolIndex {
     private symbols : SymbolInfo[] = [];
@@ -163,6 +176,12 @@ export class VerilogSymbolIndex {
         this.symbols.push(...extractSymbols(filePath));
     }
 
+    /** 从内存文本更新指定文件的符号（避免磁盘读取时序问题）*/
+    updateFileFromText(filePath: string, text: string): void {
+        this.symbols = this.symbols.filter(s => s.filePath !== filePath);
+        this.symbols.push(...extractSymbolsFromText(filePath, text));
+    }
+
     // 返回指定文件的所有符号（供补全使用）
     getFileSymbols(filePath: string): SymbolInfo[] {
         return this.symbols.filter(s => s.filePath === filePath);
@@ -171,6 +190,10 @@ export class VerilogSymbolIndex {
     // 返回全部符号（供补全使用）
     getAllSymbols(): SymbolInfo[] {
         return this.symbols;
+    }
+
+    getIndexedAt(): number {
+        return this.indexedAt;
     }
 }
 
@@ -212,14 +235,36 @@ export class VerilogHoverProvider implements vscode.HoverProvider {
         if (!wordRange) { return null; }
         const word = document.getText(wordRange);
 
-        const hits = this.index.find(word);
-        if (hits.length === 0) { return null; }
+        // 优先查找当前文件的定义
+        const localHits = this.index.findInFile(word, document.uri.fsPath);
+        const allHits   = this.index.find(word);
+        if (localHits.length === 0 && allHits.length === 0) { return null; }
+
+        // 当前文件优先，再补充其他文件
+        const hits = localHits.length > 0 ? localHits : allHits;
 
         const md = new vscode.MarkdownString();
         md.appendMarkdown(`**${word}** — ${hits[0].kind}\n\n`);
         md.appendCodeblock(hits[0].text.trim(), 'verilog');
+
         if (hits.length > 1) {
-            md.appendMarkdown(`\n_共 ${hits.length} 处定义_`);
+            // 显示最多 5 个不同文件的定义
+            const shown = new Set<string>();
+            shown.add(hits[0].text.trim());
+            let extra = 0;
+            for (let i = 1; i < hits.length && extra < 4; i++) {
+                const t = hits[i].text.trim();
+                if (shown.has(t)) { continue; }
+                shown.add(t);
+                const fname = hits[i].filePath.replace(/.*[\\/]/, '');
+                md.appendMarkdown(`\n\n---\n`);
+                md.appendMarkdown(`_📄 ${fname}:${hits[i].line + 1}_\n`);
+                md.appendCodeblock(t, 'verilog');
+                extra++;
+            }
+            if (allHits.length > 1) {
+                md.appendMarkdown(`\n_共 ${allHits.length} 处定义（${localHits.length} 处在当前文件）_`);
+            }
         }
 
         return new vscode.Hover(md, wordRange);
@@ -319,11 +364,40 @@ const VERILOG_SELECTOR = [
 export function registerSymbolProviders(context: vscode.ExtensionContext): VerilogSymbolIndex {
     const index = new VerilogSymbolIndex();
 
-    // 文件保存时增量更新索引
+    // 文件保存时增量更新索引（使用内存文本，避免磁盘读取时序问题）
     context.subscriptions.push(
         vscode.workspace.onDidSaveTextDocument(doc => {
+            if (doc.uri.scheme !== 'file') { return; }
             if (doc.languageId === 'verilog' || doc.languageId === 'systemverilog') {
-                index.updateFile(doc.uri.fsPath);
+                index.updateFileFromText(doc.uri.fsPath, doc.getText());
+            }
+        }),
+    );
+
+    // 编辑时防抖更新索引（实时跟踪变化）
+    const debounceTimers = new Map<string, NodeJS.Timeout>();
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeTextDocument(event => {
+            const doc = event.document;
+            if (doc.uri.scheme !== 'file') { return; }
+            if (doc.languageId !== 'verilog' && doc.languageId !== 'systemverilog') { return; }
+            const fsPath = doc.uri.fsPath;
+            if (!fsPath) { return; }
+            const existing = debounceTimers.get(fsPath);
+            if (existing) { clearTimeout(existing); }
+            debounceTimers.set(fsPath, setTimeout(() => {
+                index.updateFileFromText(fsPath, doc.getText());
+                debounceTimers.delete(fsPath);
+            }, 500)); // 500ms 防抖
+        }),
+    );
+
+    // 文件打开时立即索引（确保新打开的文件符号可用）
+    context.subscriptions.push(
+        vscode.workspace.onDidOpenTextDocument(doc => {
+            if (doc.uri.scheme !== 'file') { return; }
+            if (doc.languageId === 'verilog' || doc.languageId === 'systemverilog') {
+                index.updateFileFromText(doc.uri.fsPath, doc.getText());
             }
         }),
     );
@@ -338,6 +412,32 @@ export function registerSymbolProviders(context: vscode.ExtensionContext): Veril
         vscode.commands.registerCommand('verilogFormatter.rebuildIndex', () => {
             index.rebuild();
             vscode.window.showInformationMessage('符号索引已重建');
+        }),
+    );
+
+    // 诊断索引状态命令
+    context.subscriptions.push(
+        vscode.commands.registerCommand('verilogFormatter.diagnoseIndex', () => {
+            const all = index.getAllSymbols();
+            const fileCounts = new Map<string, number>();
+            for (const s of all) {
+                fileCounts.set(s.filePath, (fileCounts.get(s.filePath) ?? 0) + 1);
+            }
+            const totalFiles = fileCounts.size;
+            const topFiles = [...fileCounts.entries()]
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10)
+                .map(([f, c]) => `  ${c} symbols: ${f.replace(/.*[\\/]/, '')}`)
+                .join('\n');
+            const paramCount = all.filter(s => s.kind === 'param').length;
+            const msg = [
+                `索引符号总数: ${all.length}`,
+                `索引文件数: ${totalFiles}`,
+                `参数符号数: ${paramCount}`,
+                `索引时间: ${new Date(index.getIndexedAt()).toLocaleString()}`,
+                `\n符号最多的文件:\n${topFiles}`,
+            ].join('\n');
+            vscode.window.showInformationMessage(msg, { modal: true });
         }),
     );
 

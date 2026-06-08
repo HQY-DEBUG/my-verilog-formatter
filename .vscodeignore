@@ -1,0 +1,10 @@
+.history/**
+.vscode/**
+.qoder/**
+docs/**
+src/**
+test/**
+.histoire/**
+node_modules/@vscode/ripgrep/**
+tsconfig.json
+.gitignore
