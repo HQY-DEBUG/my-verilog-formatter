@@ -134,6 +134,72 @@ describe('VerilogFormatter', () => {
         expect(fmt['format'](input, defaultCfg)).toBe(expected);
     });
 
+    // ---- assign 块注释不应污染后续缩进 ----//
+    test('assign 行尾块注释不触发多行续行缩进', () => {
+        const input = [
+            'generate',
+            'if (XY2_100_MODE == "Master")',
+            'begin : gen_master_io',
+            'assign sync_o    = tx_sync_o;',
+            'assign cmd_o     = tx_cmd;',
+            'assign status_o  = 1\'b0;       /* Master不输出status */',
+            'assign rx_sync   = tx_sync_o;  /* RX用自己产生的sync判断帧 */',
+            'assign rx_data_in = status_i;  /* RX接收slave返回的status */',
+            'end',
+            'else',
+            'begin : gen_slave_io',
+            'assign sync_o    = 1\'b0;       /* Slave不输出sync */',
+            'assign cmd_o     = 1\'b0;       /* Slave不输出cmd */',
+            'assign status_o  = tx_cmd;     /* Slave通过status线返回数据 */',
+            'assign rx_sync   = sync_i;     /* RX用master发来的sync判断帧 */',
+            'assign rx_data_in = cmd_i;     /* RX接收master发来的cmd数据 */',
+            'end',
+            'endgenerate',
+            '',
+            'tx_data #(',
+            '.DATA_WIDTH   ( DATA_WIDTH       ),',
+            '.XY2_100_MODE ( XY2_100_MODE     ),',
+            '.FRAME_HEADER ( TX_FRAME_HEADER  )',
+            ') u_tx_data (',
+            '.clk           ( clk_tx         ),',
+            '.rstn          ( rstn           ),',
+            '.cmd           ( tx_cmd         )',
+            ');',
+        ].join('\n');
+        const expected = [
+            'generate',
+            '  if (XY2_100_MODE == "Master")',
+            '    begin : gen_master_io',
+            '      assign sync_o    = tx_sync_o;',
+            '      assign cmd_o     = tx_cmd;',
+            '      assign status_o  = 1\'b0;       /* Master不输出status */',
+            '      assign rx_sync   = tx_sync_o;  /* RX用自己产生的sync判断帧 */',
+            '      assign rx_data_in = status_i;  /* RX接收slave返回的status */',
+            '    end',
+            '  else',
+            '    begin : gen_slave_io',
+            '      assign sync_o    = 1\'b0;       /* Slave不输出sync */',
+            '      assign cmd_o     = 1\'b0;       /* Slave不输出cmd */',
+            '      assign status_o  = tx_cmd;     /* Slave通过status线返回数据 */',
+            '      assign rx_sync   = sync_i;     /* RX用master发来的sync判断帧 */',
+            '      assign rx_data_in = cmd_i;     /* RX接收master发来的cmd数据 */',
+            '    end',
+            'endgenerate',
+            '',
+            'tx_data #(',
+            '.DATA_WIDTH   ( DATA_WIDTH       ),',
+            '.XY2_100_MODE ( XY2_100_MODE     ),',
+            '.FRAME_HEADER ( TX_FRAME_HEADER  )',
+            ') u_tx_data (',
+            '.clk  ( clk_tx  ),',
+            '.rstn ( rstn    ),',
+            '.cmd  ( tx_cmd  )',
+            ');',
+        ].join('\n');
+
+        expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
     // ---- 样例文件对比（集成测试）----//
     test('样例文件格式化输出符合预期', () => {
         const input    = fs.readFileSync(path.join(SAMPLES, 'input_messy.v'), 'utf8');

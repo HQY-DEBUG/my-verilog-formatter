@@ -234,6 +234,9 @@ class VerilogFormatter {
         const noComment = line.replace(/\/\/.*$/, '').trim();
         return /^default\s*:\s*$/.test(noComment) || /^[^:]+:\s*$/.test(noComment);
     }
+    isStatementTerminated(line) {
+        return /;\s*(?:(?:\/\/.*)|(?:\/\*.*\*\/\s*))?$/.test(line.trim());
+    }
     // ---- 对齐 assign 多行表达式续行 ----//
     alignAssignContinuations(code) {
         const lines = code.split('\n');
@@ -241,7 +244,7 @@ class VerilogFormatter {
         let i = 0;
         while (i < lines.length) {
             const line = lines[i];
-            if (!/^\s*assign\b.*=\s*/.test(line) || /;\s*(\/\/.*)?$/.test(line.trim())) {
+            if (!/^\s*assign\b.*=\s*/.test(line) || this.isStatementTerminated(line)) {
                 result.push(line);
                 i++;
                 continue;
@@ -262,7 +265,7 @@ class VerilogFormatter {
                 block.push(lines[i]);
                 const trimmed = lines[i].trim();
                 i++;
-                if (/;\s*(\/\/.*)?$/.test(trimmed)) {
+                if (this.isStatementTerminated(trimmed)) {
                     break;
                 }
             }
