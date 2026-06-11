@@ -27,7 +27,7 @@
     },
     "attribute": {
       "name": "meta.attribute.verilog",
-      "begin": "\\(\\*",
+      "begin": "\\(\\*(?=\\s*[A-Za-z_])",
       "end": "\\*\\)",
       "patterns": [
         { "include": "#string" },

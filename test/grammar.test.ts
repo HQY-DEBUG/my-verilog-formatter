@@ -14,15 +14,27 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 describe('Verilog TextMate grammar', () => {
-    it('普通标识符不应被全局标记为 variable/constant scope', () => {
+    function loadVerilogGrammar(): {
+        patterns: Array<{ include?: string }>;
+        repository: Record<string, any>;
+    } {
         const grammarPath = path.join(__dirname, '..', 'resources', 'verilog', 'syntaxes', 'verilog.tmLanguage.json');
-        const grammar = JSON.parse(fs.readFileSync(grammarPath, 'utf8')) as {
-            patterns: Array<{ include?: string }>;
-            repository: Record<string, unknown>;
-        };
+        return JSON.parse(fs.readFileSync(grammarPath, 'utf8'));
+    }
+
+    it('普通标识符不应被全局标记为 variable/constant scope', () => {
+        const grammar = loadVerilogGrammar();
 
         expect(grammar.patterns.map(p => p.include)).not.toContain('#identifier');
         expect(grammar.repository).not.toHaveProperty('identifier');
+    });
+
+    it('attribute 规则不应匹配 always @(*) 灵敏度列表', () => {
+        const grammar = loadVerilogGrammar();
+        const begin = new RegExp(grammar.repository.attribute.begin);
+
+        expect(begin.test('(*)')).toBe(false);
+        expect(begin.test('(* mark_debug = "true" *)')).toBe(true);
     });
 
     it('formatter 支持的 Verilog 语言都应绑定 grammar', () => {
