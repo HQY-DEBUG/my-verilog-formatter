@@ -24,11 +24,12 @@ import { TodoTreeProvider }  from './features/todo/todoTreeProvider';
 import { TodoDecorator }     from './features/todo/todoDecorator';
 import { TodoStatusBar }     from './features/todo/todoStatusBar';
 
+export const VERILOG_LANGS = ['verilog', 'systemverilog', 'verilog-hdl', 'systemverilog-hdl'];
+
 export function activate(context: vscode.ExtensionContext): void {
     const formatter = new VerilogFormatter();
 
     // ---- 格式化 ----//
-    const VERILOG_LANGS = ['verilog', 'systemverilog'];
     for (const lang of VERILOG_LANGS) {
         context.subscriptions.push(
             vscode.languages.registerDocumentFormattingEditProvider({ language: lang }, formatter),

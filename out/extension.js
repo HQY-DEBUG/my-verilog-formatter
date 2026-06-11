@@ -45,6 +45,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.VERILOG_LANGS = void 0;
 exports.activate = activate;
 exports.deactivate = deactivate;
 const vscode = __importStar(require("vscode"));
@@ -59,11 +60,11 @@ const completionProvider_1 = require("./features/verilog/completionProvider");
 const todoTreeProvider_1 = require("./features/todo/todoTreeProvider");
 const todoDecorator_1 = require("./features/todo/todoDecorator");
 const todoStatusBar_1 = require("./features/todo/todoStatusBar");
+exports.VERILOG_LANGS = ['verilog', 'systemverilog', 'verilog-hdl', 'systemverilog-hdl'];
 function activate(context) {
     const formatter = new formatter_1.VerilogFormatter();
     // ---- 格式化 ----//
-    const VERILOG_LANGS = ['verilog', 'systemverilog'];
-    for (const lang of VERILOG_LANGS) {
+    for (const lang of exports.VERILOG_LANGS) {
         context.subscriptions.push(vscode.languages.registerDocumentFormattingEditProvider({ language: lang }, formatter), vscode.languages.registerDocumentRangeFormattingEditProvider({ language: lang }, formatter));
     }
     // ---- 保存时自动格式化 ----//
@@ -72,7 +73,7 @@ function activate(context) {
         if (!cfg.get('formatOnSave', false)) {
             return;
         }
-        if (!VERILOG_LANGS.includes(doc.languageId)) {
+        if (!exports.VERILOG_LANGS.includes(doc.languageId)) {
             return;
         }
         await vscode.commands.executeCommand('editor.action.formatDocument', doc.uri);
