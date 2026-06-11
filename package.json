@@ -141,11 +141,24 @@
                 "path": "./resources/verilog/syntaxes/verilog.tmLanguage.json"
             },
             {
+                "language": "verilog-hdl",
+                "scopeName": "source.verilog.hdl",
+                "path": "./resources/verilog/syntaxes/verilog.tmLanguage.json"
+            },
+            {
                 "language": "systemverilog",
                 "scopeName": "source.systemverilog",
                 "path": "./resources/verilog/syntaxes/systemverilog.tmLanguage.json",
                 "embeddedLanguages": {
                     "source.verilog": "verilog"
+                }
+            },
+            {
+                "language": "systemverilog-hdl",
+                "scopeName": "source.systemverilog.hdl",
+                "path": "./resources/verilog/syntaxes/systemverilog.tmLanguage.json",
+                "embeddedLanguages": {
+                    "source.verilog": "verilog-hdl"
                 }
             },
             {

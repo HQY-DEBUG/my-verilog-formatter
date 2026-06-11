@@ -24,4 +24,21 @@ describe('Verilog TextMate grammar', () => {
         expect(grammar.patterns.map(p => p.include)).not.toContain('#identifier');
         expect(grammar.repository).not.toHaveProperty('identifier');
     });
+
+    it('formatter 支持的 Verilog 语言都应绑定 grammar', () => {
+        const pkgPath = path.join(__dirname, '..', 'package.json');
+        const extensionPath = path.join(__dirname, '..', 'src', 'extension.ts');
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8')) as {
+            contributes: { grammars: Array<{ language: string }> };
+        };
+        const extensionText = fs.readFileSync(extensionPath, 'utf8');
+        const match = extensionText.match(/VERILOG_LANGS\s*=\s*\[([^\]]+)\]/);
+        expect(match).not.toBeNull();
+        const formatterLangs = [...match![1].matchAll(/'([^']+)'/g)].map(m => m[1]);
+        const grammarLangs = pkg.contributes.grammars.map(g => g.language);
+
+        for (const lang of formatterLangs) {
+            expect(grammarLangs).toContain(lang);
+        }
+    });
 });
