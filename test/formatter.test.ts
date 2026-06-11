@@ -93,6 +93,47 @@ describe('VerilogFormatter', () => {
         expect(fmt['format'](input, defaultCfg)).toBe(expected);
     });
 
+    // ---- generate 命名 begin 缩进 ----//
+    test('generate 命名 begin 和 end else begin 缩进', () => {
+        const input = [
+            'generate',
+            'if (XY2_100_MODE == "Master") begin : gen_master',
+            'assign clk_o = clk_i;',
+            'assign clk_tx = clk;',
+            'end else begin : gen_slave',
+            'assign clk_o = 1\'b0;',
+            'assign clk_tx = ~clk_i;',
+            'end',
+            'endgenerate',
+            'tx_data #(',
+            '.DATA_WIDTH ( DATA_WIDTH )',
+            ') u_tx_data (',
+            '.clk ( clk_tx )',
+            ');',
+        ].join('\n');
+        const expected = [
+            'generate',
+            '  if (XY2_100_MODE == "Master")',
+            '    begin : gen_master',
+            '      assign clk_o = clk_i;',
+            '      assign clk_tx = clk;',
+            '    end',
+            '  else',
+            '    begin : gen_slave',
+            '      assign clk_o = 1\'b0;',
+            '      assign clk_tx = ~clk_i;',
+            '    end',
+            'endgenerate',
+            'tx_data #(',
+            '.DATA_WIDTH ( DATA_WIDTH  )',
+            ') u_tx_data (',
+            '.clk ( clk_tx  )',
+            ');',
+        ].join('\n');
+
+        expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
     // ---- 样例文件对比（集成测试）----//
     test('样例文件格式化输出符合预期', () => {
         const input    = fs.readFileSync(path.join(SAMPLES, 'input_messy.v'), 'utf8');

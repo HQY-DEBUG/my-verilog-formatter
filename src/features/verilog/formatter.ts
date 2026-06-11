@@ -115,17 +115,19 @@ export class VerilogFormatter
             // 去掉行尾注释后分析结构
             const noComment = stripped.replace(/\/\/.*$/, '').trimEnd();
 
-            // "end else begin" → end / else / begin（三行）
-            if (/^end\s+else\s+begin\s*$/.test(noComment)) {
-                result.push(indent + 'end', indent + 'else', indent + 'begin');
+            // "end else begin [: label]" → end / else / begin [: label]（三行）
+            const endElseBegin = noComment.match(/^end\s+else\s+begin(\s*:\s*\w+)?\s*$/);
+            if (endElseBegin) {
+                result.push(indent + 'end', indent + 'else', indent + 'begin' + (endElseBegin[1] ?? ''));
                 continue;
             }
 
-            // "keyword ... begin" → keyword ... / begin（两行）
-            if (/\bbegin\s*$/.test(noComment)) {
-                const beforeBegin = noComment.replace(/\s*begin\s*$/, '').trimEnd();
+            // "keyword ... begin [: label]" → keyword ... / begin [: label]（两行）
+            const beginMatch = noComment.match(/^(.*?)\s+begin(\s*:\s*\w+)?\s*$/);
+            if (beginMatch) {
+                const beforeBegin = beginMatch[1].trimEnd();
                 if (beforeBegin.length > 0) {
-                    result.push(indent + beforeBegin, indent + 'begin');
+                    result.push(indent + beforeBegin, indent + 'begin' + (beginMatch[2] ?? ''));
                     continue;
                 }
             }
