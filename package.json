@@ -522,6 +522,7 @@
     },
     "dependencies": {
         "@vscode/ripgrep": "^1.18.0",
+        "@vscode/ripgrep-win32-x64": "^1.18.0",
         "glob": "^10.5.0"
     }
 }

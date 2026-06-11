@@ -13,7 +13,7 @@
 
 jest.mock('@vscode/ripgrep', () => ({ rgPath: '/usr/bin/rg' }));
 
-import { parseRgLine, groupByFile } from '../../src/features/todo/todoScanner';
+import { parseRgLine, groupByFile, resolvePlatformRgPath } from '../../src/features/todo/todoScanner';
 import type { TodoItem } from '../../src/features/todo/todoScanner';
 
 describe('parseRgLine', () => {
@@ -104,5 +104,13 @@ describe('groupByFile', () => {
         const groups = groupByFile(items);
         expect(groups.get('/a.c')).toHaveLength(2);
         expect(groups.get('/b.c')).toHaveLength(1);
+    });
+});
+
+describe('resolvePlatformRgPath', () => {
+    it('应能直接解析 Windows 平台 ripgrep 可执行文件', () => {
+        const rgPath = resolvePlatformRgPath(process.cwd(), 'win32', 'x64');
+        expect(rgPath).toBeTruthy();
+        expect(rgPath).toMatch(/ripgrep-win32-x64[\\/]+bin[\\/]+rg\.exe$/);
     });
 });

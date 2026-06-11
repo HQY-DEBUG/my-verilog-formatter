@@ -44,11 +44,13 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.resolvePlatformRgPath = resolvePlatformRgPath;
 exports.parseRgLine = parseRgLine;
 exports.groupByFile = groupByFile;
 exports.scan = scan;
 exports.scanFile = scanFile;
 const cp = __importStar(require("child_process"));
+const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const todoConfig_1 = require("./todoConfig");
 // @vscode/ripgrep 自 1.16+ 改为 ESM 模块，TS commonjs 编译后 require() 会抛
@@ -56,12 +58,41 @@ const todoConfig_1 = require("./todoConfig");
 // 包一层保留真正的动态 import，使其能在 Node 中加载 ESM 模块。
 const nativeDynamicImport = new Function('m', 'return import(m)');
 let rgPathCache;
+function resolvePlatformRgPath(rootDir = path.resolve(__dirname, '..', '..', '..'), platform = process.platform, arch = process.arch) {
+    const binaryName = platform === 'win32' ? 'rg.exe' : 'rg';
+    const packageName = `@vscode/ripgrep-${platform}-${arch}`;
+    const directPath = path.join(rootDir, 'node_modules', '@vscode', `ripgrep-${platform}-${arch}`, 'bin', binaryName);
+    if (fs.existsSync(directPath)) {
+        return directPath;
+    }
+    try {
+        const resolved = require.resolve(`${packageName}/bin/${binaryName}`, { paths: [rootDir] });
+        return fs.existsSync(resolved) ? resolved : undefined;
+    }
+    catch {
+        return undefined;
+    }
+}
 async function getRgPath() {
     if (rgPathCache) {
         return rgPathCache;
     }
-    const mod = await nativeDynamicImport('@vscode/ripgrep');
-    rgPathCache = mod.rgPath;
+    try {
+        const mod = await nativeDynamicImport('@vscode/ripgrep');
+        if (typeof mod.rgPath === 'string' && fs.existsSync(mod.rgPath)) {
+            const importedRgPath = mod.rgPath;
+            rgPathCache = importedRgPath;
+            return importedRgPath;
+        }
+    }
+    catch {
+        // 安装后的 VSIX 可能只包含平台包，回退到显式路径解析。
+    }
+    const platformRgPath = resolvePlatformRgPath();
+    if (!platformRgPath) {
+        throw new Error('未找到 ripgrep 可执行文件，请确认 @vscode/ripgrep 平台依赖已随插件安装');
+    }
+    rgPathCache = platformRgPath;
     return rgPathCache;
 }
 // ---- 将 UTF-8 字节偏移转换为 UTF-16 字符偏移 ----//

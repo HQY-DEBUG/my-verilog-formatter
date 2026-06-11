@@ -203,12 +203,16 @@ class VerilogFormatter {
             // 后处理：更新栈和 contentIndent
             if (/\bbegin\b/.test(line)) {
                 // begin 压栈，后续内容缩进 = begin 列 + indentSize
-                stack.push({ beginIndent: lineIndent, parentContentIndent: contentIndent });
+                stack.push({ beginIndent: lineIndent, parentContentIndent: contentIndent, kind: 'block' });
                 contentIndent = lineIndent + indentSize;
             }
             else if (/^(case[xz]?|function|task|generate)\b/.test(line)) {
-                stack.push({ beginIndent: lineIndent, parentContentIndent: contentIndent });
+                const kind = /^case[xz]?\b/.test(line) ? 'case' : 'block';
+                stack.push({ beginIndent: lineIndent, parentContentIndent: contentIndent, kind });
                 contentIndent = lineIndent + indentSize;
+            }
+            else if (stack[stack.length - 1]?.kind === 'case' && this.isStandaloneCaseItem(line)) {
+                pendingExtra = true;
             }
             else if (/^module\b/.test(line)) {
                 // 有端口/参数列表时缩进 indentSize；直接以 ; 结尾时不缩进
@@ -223,6 +227,10 @@ class VerilogFormatter {
             }
         }
         return result.join('\n');
+    }
+    isStandaloneCaseItem(line) {
+        const noComment = line.replace(/\/\/.*$/, '').trim();
+        return /^default\s*:\s*$/.test(noComment) || /^[^:]+:\s*$/.test(noComment);
     }
     // ---- 对齐 assign 多行表达式续行 ----//
     alignAssignContinuations(code) {

@@ -24,6 +24,7 @@ interface FormatterConfig {
 interface StackEntry {
     beginIndent: number;            // begin 行的实际缩进量
     parentContentIndent: number;    // 进入此 begin 前的 contentIndent
+    kind: 'block' | 'case';         // 栈类型
 }
 
 export class VerilogFormatter
@@ -211,11 +212,14 @@ export class VerilogFormatter
             // 后处理：更新栈和 contentIndent
             if (/\bbegin\b/.test(line)) {
                 // begin 压栈，后续内容缩进 = begin 列 + indentSize
-                stack.push({ beginIndent: lineIndent, parentContentIndent: contentIndent });
+                stack.push({ beginIndent: lineIndent, parentContentIndent: contentIndent, kind: 'block' });
                 contentIndent = lineIndent + indentSize;
             } else if (/^(case[xz]?|function|task|generate)\b/.test(line)) {
-                stack.push({ beginIndent: lineIndent, parentContentIndent: contentIndent });
+                const kind = /^case[xz]?\b/.test(line) ? 'case' : 'block';
+                stack.push({ beginIndent: lineIndent, parentContentIndent: contentIndent, kind });
                 contentIndent = lineIndent + indentSize;
+            } else if (stack[stack.length - 1]?.kind === 'case' && this.isStandaloneCaseItem(line)) {
+                pendingExtra = true;
             } else if (/^module\b/.test(line)) {
                 // 有端口/参数列表时缩进 indentSize；直接以 ; 结尾时不缩进
                 contentIndent = line.endsWith(';') ? 0 : indentSize;
@@ -228,6 +232,11 @@ export class VerilogFormatter
         }
 
         return result.join('\n');
+    }
+
+    private isStandaloneCaseItem(line: string): boolean {
+        const noComment = line.replace(/\/\/.*$/, '').trim();
+        return /^default\s*:\s*$/.test(noComment) || /^[^:]+:\s*$/.test(noComment);
     }
 
     // ---- 对齐 assign 多行表达式续行 ----//

@@ -11,6 +11,7 @@
 // =========================================================================
 
 import * as cp   from 'child_process';
+import * as fs   from 'fs';
 import * as path from 'path';
 import { buildRgArgs } from './todoConfig';
 import type { TodoConfig } from './todoConfig';
@@ -20,10 +21,43 @@ import type { TodoConfig } from './todoConfig';
 // 包一层保留真正的动态 import，使其能在 Node 中加载 ESM 模块。
 const nativeDynamicImport = new Function('m', 'return import(m)') as (m: string) => Promise<any>;
 let rgPathCache: string | undefined;
+
+export function resolvePlatformRgPath(
+    rootDir: string = path.resolve(__dirname, '..', '..', '..'),
+    platform: NodeJS.Platform = process.platform,
+    arch: string = process.arch
+): string | undefined {
+    const binaryName = platform === 'win32' ? 'rg.exe' : 'rg';
+    const packageName = `@vscode/ripgrep-${platform}-${arch}`;
+    const directPath = path.join(rootDir, 'node_modules', '@vscode', `ripgrep-${platform}-${arch}`, 'bin', binaryName);
+    if (fs.existsSync(directPath)) { return directPath; }
+
+    try {
+        const resolved = require.resolve(`${packageName}/bin/${binaryName}`, { paths: [rootDir] });
+        return fs.existsSync(resolved) ? resolved : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
 async function getRgPath(): Promise<string> {
     if (rgPathCache) { return rgPathCache; }
-    const mod = await nativeDynamicImport('@vscode/ripgrep');
-    rgPathCache = mod.rgPath as string;
+    try {
+        const mod = await nativeDynamicImport('@vscode/ripgrep');
+        if (typeof mod.rgPath === 'string' && fs.existsSync(mod.rgPath)) {
+            const importedRgPath = mod.rgPath as string;
+            rgPathCache = importedRgPath;
+            return importedRgPath;
+        }
+    } catch {
+        // 安装后的 VSIX 可能只包含平台包，回退到显式路径解析。
+    }
+
+    const platformRgPath = resolvePlatformRgPath();
+    if (!platformRgPath) {
+        throw new Error('未找到 ripgrep 可执行文件，请确认 @vscode/ripgrep 平台依赖已随插件安装');
+    }
+    rgPathCache = platformRgPath;
     return rgPathCache;
 }
 

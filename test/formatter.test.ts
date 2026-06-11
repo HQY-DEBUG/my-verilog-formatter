@@ -61,6 +61,38 @@ describe('VerilogFormatter', () => {
         expect(new Set(semicolonCols).size).toBe(1);
     });
 
+    // ---- case 标签下 begin/end 缩进 ----//
+    test('case 标签下 begin/end 和 default 语句缩进', () => {
+        const input = [
+            'always @(*)',
+            'begin',
+            'case (state)',
+            'S_INIT :',
+            'begin',
+            'next_state = S_FRAME;',
+            'end',
+            'default :',
+            'next_state = S_INIT;',
+            'endcase',
+            'end',
+        ].join('\n');
+        const expected = [
+            'always @(*)',
+            '  begin',
+            '    case (state)',
+            '      S_INIT :',
+            '        begin',
+            '          next_state = S_FRAME;',
+            '        end',
+            '      default :',
+            '        next_state = S_INIT;',
+            '    endcase',
+            '  end',
+        ].join('\n');
+
+        expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
     // ---- 样例文件对比（集成测试）----//
     test('样例文件格式化输出符合预期', () => {
         const input    = fs.readFileSync(path.join(SAMPLES, 'input_messy.v'), 'utf8');
