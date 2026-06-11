@@ -13,7 +13,6 @@
     { "include": "#keyword_type" },
     { "include": "#keyword_control" },
     { "include": "#keyword_misc" },
-    { "include": "#identifier" },
     { "include": "#operator" }
   ],
   "repository": {
@@ -80,18 +79,6 @@
     "keyword_misc": {
       "name": "keyword.other.verilog",
       "match": "\\b(default|unique|priority|virtual|static|automatic|extern|protected|local|const|ref|var|type|typedef|enum|struct|union|class|endclass|extends|implements|super|this|new|null|import|export|bind|clocking|endclocking|property|endproperty|sequence|endsequence|checker|endchecker|covergroup|endgroup|coverpoint|cross|constraint|modport|pure|forkjoin|expect|assert|assume|cover|restrict|void|chandle|string|bit|byte|shortint|int|longint|shortreal|interconnect|nettype)\\b"
-    },
-    "identifier": {
-      "patterns": [
-        {
-          "name": "constant.other.uppercase.verilog",
-          "match": "\\b[A-Z][A-Z0-9_]*\\b"
-        },
-        {
-          "name": "variable.other.verilog",
-          "match": "\\b[a-zA-Z_][a-zA-Z0-9_$]*\\b"
-        }
-      ]
     },
     "operator": {
       "name": "keyword.operator.verilog",
