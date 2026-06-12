@@ -89,6 +89,7 @@ class VerilogFormatter {
         r = this.reindent(r, config.indentSize);
         r = this.alignAssignContinuations(r);
         r = this.alignAssignStatements(r);
+        r = this.alignProceduralAssignments(r);
         r = this.alignLocalparams(r);
         r = this.alignSignalDeclarations(r);
         r = this.alignPortDeclarations(r);
@@ -322,6 +323,51 @@ class VerilogFormatter {
             const lhsWidth = Math.max(MIN_LHS_WIDTH, ...group.map(item => item.lhs.length));
             for (const item of group) {
                 result.push(`${item.indent}assign ${item.lhs.padEnd(lhsWidth)} = ${item.rhs}`);
+            }
+        }
+        return result.join('\n');
+    }
+    // ---- 对齐连续过程赋值语句 ----//
+    alignProceduralAssignments(code) {
+        const lines = code.split('\n');
+        const result = [];
+        let i = 0;
+        const parseAssignment = (line) => {
+            if (!this.isStatementTerminated(line)) {
+                return null;
+            }
+            if (/^\s*(?:assign|localparam|parameter|wire|reg|input|output|inout)\b/.test(line)) {
+                return null;
+            }
+            const m = line.match(/^(\s*)([A-Za-z_][\w$]*(?:\s*\[[^\]]+\])?)\s*(<=|=)\s*(.+)$/);
+            if (!m) {
+                return null;
+            }
+            return { indent: m[1], lhs: m[2].trimEnd(), op: m[3], rhs: m[4].trim(), raw: line };
+        };
+        while (i < lines.length) {
+            const first = parseAssignment(lines[i]);
+            if (!first) {
+                result.push(lines[i++]);
+                continue;
+            }
+            const group = [first];
+            i++;
+            while (i < lines.length) {
+                const next = parseAssignment(lines[i]);
+                if (!next || next.indent !== first.indent || next.op !== first.op) {
+                    break;
+                }
+                group.push(next);
+                i++;
+            }
+            if (group.length === 1) {
+                result.push(group[0].raw);
+                continue;
+            }
+            const lhsWidth = Math.max(...group.map(item => item.lhs.length));
+            for (const item of group) {
+                result.push(`${item.indent}${item.lhs.padEnd(lhsWidth)} ${item.op} ${item.rhs}`);
             }
         }
         return result.join('\n');

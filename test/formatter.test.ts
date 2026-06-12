@@ -216,6 +216,40 @@ describe('VerilogFormatter', () => {
         expect(fmt['format'](input, defaultCfg)).toBe(expected);
     });
 
+    // ---- 过程赋值左值对齐 ----//
+    test('连续非阻塞赋值的操作符按左值列对齐', () => {
+        const input = [
+            'always @(posedge clk or negedge rstn)',
+            'begin',
+            'if (!rstn)',
+            'begin',
+            'x_data <= \'d0;',
+            'x_data_valid <= 1\'b0;',
+            'y_data <= \'d0;',
+            'y_data_valid <= 1\'b0;',
+            'z_data <= \'d0;',
+            'z_data_valid <= 1\'b0;',
+            'end',
+            'end',
+        ].join('\n');
+        const expected = [
+            'always @(posedge clk or negedge rstn)',
+            '  begin',
+            '    if (!rstn)',
+            '      begin',
+            '        x_data       <= \'d0;',
+            '        x_data_valid <= 1\'b0;',
+            '        y_data       <= \'d0;',
+            '        y_data_valid <= 1\'b0;',
+            '        z_data       <= \'d0;',
+            '        z_data_valid <= 1\'b0;',
+            '      end',
+            '  end',
+        ].join('\n');
+
+        expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
     // ---- 样例文件对比（集成测试）----//
     test('样例文件格式化输出符合预期', () => {
         const input    = fs.readFileSync(path.join(SAMPLES, 'input_messy.v'), 'utf8');

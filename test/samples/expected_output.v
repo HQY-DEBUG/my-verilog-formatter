@@ -31,7 +31,7 @@ always @(posedge clk or negedge rstn)
   begin
     if (rstn == 0)
       begin
-        cnt <= 0;
+        cnt  <= 0;
         flag <= 0;
       end
     else
