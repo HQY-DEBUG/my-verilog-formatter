@@ -618,14 +618,20 @@ class VerilogFormatter {
             }
             const maxPort = Math.max(...valid.map(c => c.port.length));
             const maxExpr = Math.max(...valid.map(c => c.expr.length));
+            const prevLine = [...result].reverse().find(line => line.trim() !== '');
+            const openedByPrevLine = prevLine !== undefined && /\(\s*$/.test(prevLine.trim());
+            const connIndent = openedByPrevLine
+                ? (prevLine.match(/^(\s*)/) ?? ['', ''])[1] + '  '
+                : null;
             result.push(...conns.map(({ raw, conn }) => {
                 if (!conn) {
                     return raw;
                 } // 注释行/空行原样输出
+                const indent = connIndent ?? conn.indent;
                 const portPad = conn.port.padEnd(maxPort);
                 const exprPad = conn.expr.padEnd(maxExpr);
                 const cmt = conn.comment ? `  ${conn.comment}` : '';
-                return `${conn.indent}.${portPad} ( ${exprPad}  )${conn.comma}${cmt}`;
+                return `${indent}.${portPad} ( ${exprPad}  )${conn.comma}${cmt}`;
             }));
         }
         return result.join('\n');

@@ -125,9 +125,9 @@ describe('VerilogFormatter', () => {
             '    end',
             'endgenerate',
             'tx_data #(',
-            '.DATA_WIDTH ( DATA_WIDTH  )',
+            '  .DATA_WIDTH ( DATA_WIDTH  )',
             ') u_tx_data (',
-            '.clk ( clk_tx  )',
+            '  .clk ( clk_tx  )',
             ');',
         ].join('\n');
 
@@ -157,9 +157,9 @@ describe('VerilogFormatter', () => {
             'endgenerate',
             '',
             'tx_data #(',
-            '.DATA_WIDTH   ( DATA_WIDTH       ),',
-            '.XY2_100_MODE ( XY2_100_MODE     ),',
-            '.FRAME_HEADER ( TX_FRAME_HEADER  )',
+            '  .DATA_WIDTH   ( DATA_WIDTH       ),',
+            '  .XY2_100_MODE ( XY2_100_MODE     ),',
+            '  .FRAME_HEADER ( TX_FRAME_HEADER  )',
             ') u_tx_data (',
             '.clk           ( clk_tx         ),',
             '.rstn          ( rstn           ),',
@@ -187,13 +187,13 @@ describe('VerilogFormatter', () => {
             'endgenerate',
             '',
             'tx_data #(',
-            '.DATA_WIDTH   ( DATA_WIDTH       ),',
-            '.XY2_100_MODE ( XY2_100_MODE     ),',
-            '.FRAME_HEADER ( TX_FRAME_HEADER  )',
+            '  .DATA_WIDTH   ( DATA_WIDTH       ),',
+            '  .XY2_100_MODE ( XY2_100_MODE     ),',
+            '  .FRAME_HEADER ( TX_FRAME_HEADER  )',
             ') u_tx_data (',
-            '.clk  ( clk_tx  ),',
-            '.rstn ( rstn    ),',
-            '.cmd  ( tx_cmd  )',
+            '  .clk  ( clk_tx  ),',
+            '  .rstn ( rstn    ),',
+            '  .cmd  ( tx_cmd  )',
             ');',
         ].join('\n');
 
@@ -226,6 +226,31 @@ describe('VerilogFormatter', () => {
             'assign m_xy2_tready_ox = 1\'b1;',
             'assign m_xy2_tready_oy = 1\'b1;',
             'assign m_xy2_tready_oz = 1\'b1;',
+        ].join('\n');
+
+        expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
+    test('例化参数和端口连接行应缩进两个空格', () => {
+        const input = [
+            'clk_gen #(',
+            '.CLK_FREQ     ( 100  ), // 输入时钟频率 (MHz)',
+            '.CLK_OUT_FREQ ( 2    )  // 输出时钟频率 (MHz)',
+            ') u_xy2_clk_gen (',
+            '.clk_in  ( ps_clk   ),',
+            '.rstn    ( pl_rstn  ),',
+            '.clk_out ( clk_xy2  )',
+            ');',
+        ].join('\n');
+        const expected = [
+            'clk_gen #(',
+            '  .CLK_FREQ     ( 100  ), // 输入时钟频率 (MHz)',
+            '  .CLK_OUT_FREQ ( 2    )  // 输出时钟频率 (MHz)',
+            ') u_xy2_clk_gen (',
+            '  .clk_in  ( ps_clk   ),',
+            '  .rstn    ( pl_rstn  ),',
+            '  .clk_out ( clk_xy2  )',
+            ');',
         ].join('\n');
 
         expect(fmt['format'](input, defaultCfg)).toBe(expected);
