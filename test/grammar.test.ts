@@ -37,6 +37,17 @@ describe('Verilog TextMate grammar', () => {
         expect(begin.test('(* mark_debug = "true" *)')).toBe(true);
     });
 
+    it('数字规则应匹配无位宽进制字面量', () => {
+        const grammar = loadVerilogGrammar();
+        const numberRules = grammar.repository.number.patterns as Array<{ match: string }>;
+        const matchesNumber = (text: string): boolean => numberRules.some(rule => new RegExp(rule.match).test(text));
+
+        expect(matchesNumber("'d0")).toBe(true);
+        expect(matchesNumber("'b0")).toBe(true);
+        expect(matchesNumber("'hFF")).toBe(true);
+        expect(matchesNumber("8'd0")).toBe(true);
+    });
+
     it('formatter 支持的 Verilog 语言都应绑定 grammar', () => {
         const pkgPath = path.join(__dirname, '..', 'package.json');
         const extensionPath = path.join(__dirname, '..', 'src', 'extension.ts');

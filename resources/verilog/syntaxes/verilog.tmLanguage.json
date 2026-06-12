@@ -60,7 +60,7 @@
       "patterns": [
         {
           "name": "constant.numeric.sized.verilog",
-          "match": "\\b(\\d+)'([bBoOdDhH])([0-9a-fA-FxXzZ_?]+)\\b"
+          "match": "(?<![A-Za-z0-9_$])(?:\\d+)?'([bBoOdDhH])([0-9a-fA-FxXzZ_?]+)\\b"
         },
         {
           "name": "constant.numeric.decimal.verilog",
