@@ -115,13 +115,13 @@ describe('VerilogFormatter', () => {
             'generate',
             '  if (XY2_100_MODE == "Master")',
             '    begin : gen_master',
-            '      assign clk_o                   = clk_i;',
-            '      assign clk_tx                  = clk;',
+            '      assign clk_o  = clk_i;',
+            '      assign clk_tx = clk;',
             '    end',
             '  else',
             '    begin : gen_slave',
-            '      assign clk_o                   = 1\'b0;',
-            '      assign clk_tx                  = ~clk_i;',
+            '      assign clk_o  = 1\'b0;',
+            '      assign clk_tx = ~clk_i;',
             '    end',
             'endgenerate',
             'tx_data #(',
@@ -170,19 +170,19 @@ describe('VerilogFormatter', () => {
             'generate',
             '  if (XY2_100_MODE == "Master")',
             '    begin : gen_master_io',
-            '      assign sync_o                  = tx_sync_o;',
-            '      assign cmd_o                   = tx_cmd;',
-            '      assign status_o                = 1\'b0;       /* Master不输出status */',
-            '      assign rx_sync                 = tx_sync_o;  /* RX用自己产生的sync判断帧 */',
-            '      assign rx_data_in              = status_i;  /* RX接收slave返回的status */',
+            '      assign sync_o     = tx_sync_o;',
+            '      assign cmd_o      = tx_cmd;',
+            '      assign status_o   = 1\'b0;       /* Master不输出status */',
+            '      assign rx_sync    = tx_sync_o;  /* RX用自己产生的sync判断帧 */',
+            '      assign rx_data_in = status_i;  /* RX接收slave返回的status */',
             '    end',
             '  else',
             '    begin : gen_slave_io',
-            '      assign sync_o                  = 1\'b0;       /* Slave不输出sync */',
-            '      assign cmd_o                   = 1\'b0;       /* Slave不输出cmd */',
-            '      assign status_o                = tx_cmd;     /* Slave通过status线返回数据 */',
-            '      assign rx_sync                 = sync_i;     /* RX用master发来的sync判断帧 */',
-            '      assign rx_data_in              = cmd_i;     /* RX接收master发来的cmd数据 */',
+            '      assign sync_o     = 1\'b0;       /* Slave不输出sync */',
+            '      assign cmd_o      = 1\'b0;       /* Slave不输出cmd */',
+            '      assign status_o   = tx_cmd;     /* Slave通过status线返回数据 */',
+            '      assign rx_sync    = sync_i;     /* RX用master发来的sync判断帧 */',
+            '      assign rx_data_in = cmd_i;     /* RX接收master发来的cmd数据 */',
             '    end',
             'endgenerate',
             '',
@@ -209,8 +209,23 @@ describe('VerilogFormatter', () => {
         ].join('\n');
         const expected = [
             '// ---- AXI-Stream输入接口握手信号 ----//',
-            'assign m_axis_mm2s_tready      = 1\'b1;',
-            'assign axis_handshake          = m_axis_mm2s_tvalid & m_axis_mm2s_tready;',
+            'assign m_axis_mm2s_tready = 1\'b1;',
+            'assign axis_handshake     = m_axis_mm2s_tvalid & m_axis_mm2s_tready;',
+        ].join('\n');
+
+        expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
+    test('等长连续 assign 不应补充额外对齐空格', () => {
+        const input = [
+            'assign m_xy2_tready_ox         = 1\'b1;',
+            'assign m_xy2_tready_oy         = 1\'b1;',
+            'assign m_xy2_tready_oz         = 1\'b1;',
+        ].join('\n');
+        const expected = [
+            'assign m_xy2_tready_ox = 1\'b1;',
+            'assign m_xy2_tready_oy = 1\'b1;',
+            'assign m_xy2_tready_oz = 1\'b1;',
         ].join('\n');
 
         expect(fmt['format'](input, defaultCfg)).toBe(expected);

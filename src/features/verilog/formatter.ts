@@ -296,7 +296,6 @@ export class VerilogFormatter
 
     // ---- 对齐连续单行 assign 语句 ----//
     private alignAssignStatements(code: string): string {
-        const MIN_LHS_WIDTH = 23;
         const lines = code.split('\n');
         const result: string[] = [];
         let i = 0;
@@ -330,7 +329,7 @@ export class VerilogFormatter
                 continue;
             }
 
-            const lhsWidth = Math.max(MIN_LHS_WIDTH, ...group.map(item => item.lhs.length));
+            const lhsWidth = Math.max(...group.map(item => item.lhs.length));
             for (const item of group) {
                 result.push(`${item.indent}assign ${item.lhs.padEnd(lhsWidth)} = ${item.rhs}`);
             }
