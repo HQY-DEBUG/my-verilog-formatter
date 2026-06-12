@@ -584,7 +584,16 @@ export class VerilogFormatter
         let   i      = 0;
 
         while (i < lines.length) {
-            if (!IS_PORT_RE.test(lines[i])) { result.push(lines[i++]); continue; }
+            const prevLine = [...result].reverse().find(line => line.trim() !== '');
+            const openedByPrevLine = prevLine !== undefined && /\(\s*$/.test(prevLine.trim());
+            if (!IS_PORT_RE.test(lines[i])) {
+                let j = i;
+                while (j < lines.length && isGap(lines[j])) { j++; }
+                if (!openedByPrevLine || j >= lines.length || !IS_PORT_RE.test(lines[j])) {
+                    result.push(lines[i++]);
+                    continue;
+                }
+            }
 
             // 收集连续的端口连接行（空行/注释行允许穿插）
             const block: string[] = [];
@@ -606,14 +615,16 @@ export class VerilogFormatter
 
             const maxPort = Math.max(...valid.map(c => c.port.length));
             const maxExpr = Math.max(...valid.map(c => c.expr.length));
-            const prevLine = [...result].reverse().find(line => line.trim() !== '');
-            const openedByPrevLine = prevLine !== undefined && /\(\s*$/.test(prevLine.trim());
             const connIndent = openedByPrevLine
                 ? (prevLine!.match(/^(\s*)/) ?? ['', ''])[1] + '  '
                 : null;
 
             result.push(...conns.map(({ raw, conn }) => {
-                if (!conn) { return raw; } // 注释行/空行原样输出
+                if (!conn) {
+                    const trimmed = raw.trim();
+                    if (trimmed === '') { return ''; }
+                    return connIndent !== null && trimmed.startsWith('//') ? connIndent + trimmed : raw;
+                }
                 const indent  = connIndent ?? conn.indent;
                 const portPad = conn.port.padEnd(maxPort);
                 const exprPad = conn.expr.padEnd(maxExpr);

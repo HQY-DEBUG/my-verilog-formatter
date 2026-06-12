@@ -256,6 +256,49 @@ describe('VerilogFormatter', () => {
         expect(fmt['format'](input, defaultCfg)).toBe(expected);
     });
 
+    test('例化端口连接块内注释行应跟随端口缩进', () => {
+        const input = [
+            'bram_ctrl #(',
+            '  .MAX_DATA_NUM ( MAX_DATA_NUM  ),',
+            '  .DATA_WIDTH   ( DATA_WIDTH    ),',
+            '  .CNT_WIDTH    ( CNT_WIDTH     )',
+            ') u_pang_bram (',
+            '// Clock and Reset',
+            '.clk           ( clk             ),',
+            '.rstn          ( rstn            ),',
+            '',
+            '// AXI-Stream Slave 输入端',
+            '.s_axis_tdata  ( pang_wr_tdata   ),',
+            '.s_axis_tvalid ( pang_wr_tvalid  ),',
+            '.s_axis_tready ( pang_wr_tready  ),',
+            '',
+            '// 数据计数',
+            '.data_cnt      ( pang_data_num   )',
+            ');',
+        ].join('\n');
+        const expected = [
+            'bram_ctrl #(',
+            '  .MAX_DATA_NUM ( MAX_DATA_NUM  ),',
+            '  .DATA_WIDTH   ( DATA_WIDTH    ),',
+            '  .CNT_WIDTH    ( CNT_WIDTH     )',
+            ') u_pang_bram (',
+            '  // Clock and Reset',
+            '  .clk           ( clk             ),',
+            '  .rstn          ( rstn            ),',
+            '',
+            '  // AXI-Stream Slave 输入端',
+            '  .s_axis_tdata  ( pang_wr_tdata   ),',
+            '  .s_axis_tvalid ( pang_wr_tvalid  ),',
+            '  .s_axis_tready ( pang_wr_tready  ),',
+            '',
+            '  // 数据计数',
+            '  .data_cnt      ( pang_data_num   )',
+            ');',
+        ].join('\n');
+
+        expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
     // ---- 过程赋值左值对齐 ----//
     test('连续非阻塞赋值的操作符按左值列对齐', () => {
         const input = [
