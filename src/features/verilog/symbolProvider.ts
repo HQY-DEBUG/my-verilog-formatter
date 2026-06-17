@@ -388,9 +388,13 @@ export class VerilogDocumentSymbolProvider implements vscode.DocumentSymbolProvi
 
 // ---- 注册函数 ----//
 const VERILOG_SELECTOR = [
-    { language: 'verilog'       },
-    { language: 'systemverilog' },
+    { language: 'verilog'          },
+    { language: 'systemverilog'    },
+    { language: 'verilog-hdl'      },
+    { language: 'systemverilog-hdl'},
 ];
+
+const VERILOG_LANGS = new Set(VERILOG_SELECTOR.map(selector => selector.language));
 
 /**
  * @brief 注册语法跳转、悬停与大纲 Provider
@@ -404,7 +408,7 @@ export function registerSymbolProviders(context: vscode.ExtensionContext): Veril
     context.subscriptions.push(
         vscode.workspace.onDidSaveTextDocument(doc => {
             if (doc.uri.scheme !== 'file') { return; }
-            if (doc.languageId === 'verilog' || doc.languageId === 'systemverilog') {
+            if (VERILOG_LANGS.has(doc.languageId)) {
                 index.updateFileFromText(doc.uri.fsPath, doc.getText());
             }
         }),
@@ -416,7 +420,7 @@ export function registerSymbolProviders(context: vscode.ExtensionContext): Veril
         vscode.workspace.onDidChangeTextDocument(event => {
             const doc = event.document;
             if (doc.uri.scheme !== 'file') { return; }
-            if (doc.languageId !== 'verilog' && doc.languageId !== 'systemverilog') { return; }
+            if (!VERILOG_LANGS.has(doc.languageId)) { return; }
             const fsPath = doc.uri.fsPath;
             if (!fsPath) { return; }
             const existing = debounceTimers.get(fsPath);
@@ -432,7 +436,7 @@ export function registerSymbolProviders(context: vscode.ExtensionContext): Veril
     context.subscriptions.push(
         vscode.workspace.onDidOpenTextDocument(doc => {
             if (doc.uri.scheme !== 'file') { return; }
-            if (doc.languageId === 'verilog' || doc.languageId === 'systemverilog') {
+            if (VERILOG_LANGS.has(doc.languageId)) {
                 index.updateFileFromText(doc.uri.fsPath, doc.getText());
             }
         }),

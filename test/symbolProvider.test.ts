@@ -11,8 +11,20 @@
 // =========================================================================
 
 import { VerilogDocumentSymbolProvider } from '../src/features/verilog/symbolProvider';
+import * as fs from 'fs';
+import * as path from 'path';
 
 describe('VerilogDocumentSymbolProvider', () => {
+    it('大纲 Provider 应覆盖所有 Verilog 语言 id', () => {
+        const sourcePath = path.join(__dirname, '..', 'src', 'features', 'verilog', 'symbolProvider.ts');
+        const sourceText = fs.readFileSync(sourcePath, 'utf8');
+
+        expect(sourceText).toContain("language: 'verilog'");
+        expect(sourceText).toContain("language: 'systemverilog'");
+        expect(sourceText).toContain("language: 'verilog-hdl'");
+        expect(sourceText).toContain("language: 'systemverilog-hdl'");
+    });
+
     it('应识别参数列表换行的模块例化', () => {
         const text = [
             'module top;',

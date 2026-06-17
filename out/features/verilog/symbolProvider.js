@@ -375,7 +375,10 @@ exports.VerilogDocumentSymbolProvider = VerilogDocumentSymbolProvider;
 const VERILOG_SELECTOR = [
     { language: 'verilog' },
     { language: 'systemverilog' },
+    { language: 'verilog-hdl' },
+    { language: 'systemverilog-hdl' },
 ];
+const VERILOG_LANGS = new Set(VERILOG_SELECTOR.map(selector => selector.language));
 /**
  * @brief 注册语法跳转、悬停与大纲 Provider
  * @param context 扩展上下文
@@ -388,7 +391,7 @@ function registerSymbolProviders(context) {
         if (doc.uri.scheme !== 'file') {
             return;
         }
-        if (doc.languageId === 'verilog' || doc.languageId === 'systemverilog') {
+        if (VERILOG_LANGS.has(doc.languageId)) {
             index.updateFileFromText(doc.uri.fsPath, doc.getText());
         }
     }));
@@ -399,7 +402,7 @@ function registerSymbolProviders(context) {
         if (doc.uri.scheme !== 'file') {
             return;
         }
-        if (doc.languageId !== 'verilog' && doc.languageId !== 'systemverilog') {
+        if (!VERILOG_LANGS.has(doc.languageId)) {
             return;
         }
         const fsPath = doc.uri.fsPath;
@@ -420,7 +423,7 @@ function registerSymbolProviders(context) {
         if (doc.uri.scheme !== 'file') {
             return;
         }
-        if (doc.languageId === 'verilog' || doc.languageId === 'systemverilog') {
+        if (VERILOG_LANGS.has(doc.languageId)) {
             index.updateFileFromText(doc.uri.fsPath, doc.getText());
         }
     }));
