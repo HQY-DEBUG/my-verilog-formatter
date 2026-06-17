@@ -20,10 +20,25 @@ module.exports = {
         file: (p) => ({ fsPath: p, scheme: 'file', path: p }),
     },
     Range: class Range {
-        constructor(sl, sc, el, ec) { this.start = { line: sl, character: sc }; this.end = { line: el, character: ec }; }
+        constructor(sl, sc, el, ec) {
+            if (typeof sl === 'object' && typeof sc === 'object') {
+                this.start = sl;
+                this.end = sc;
+            } else {
+                this.start = { line: sl, character: sc };
+                this.end = { line: el, character: ec };
+            }
+        }
     },
     DocumentSymbol: class DocumentSymbol {
         constructor(name, detail, kind, range, selectionRange) {
+            const afterStart = selectionRange.start.line > range.start.line
+                || (selectionRange.start.line === range.start.line && selectionRange.start.character >= range.start.character);
+            const beforeEnd = selectionRange.end.line < range.end.line
+                || (selectionRange.end.line === range.end.line && selectionRange.end.character <= range.end.character);
+            if (!afterStart || !beforeEnd) {
+                throw new Error('selectionRange must be contained in fullRange');
+            }
             this.name = name;
             this.detail = detail;
             this.kind = kind;

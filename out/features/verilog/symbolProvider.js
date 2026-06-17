@@ -309,10 +309,7 @@ class VerilogDocumentSymbolProvider {
             }
             // endmodule — 扩展 module 范围结束
             if (/^endmodule\b/.test(trimmed)) {
-                if (mod) {
-                    mod.range = new vscode.Range(mod.range.start, range.end);
-                    mod = null;
-                }
+                mod = null;
                 continue;
             }
             if (!mod) {
@@ -321,7 +318,8 @@ class VerilogDocumentSymbolProvider {
             if (pendingInst) {
                 const pendingM = trimmed.match(/^\)\s*(\w+)\s*\(/);
                 if (pendingM && !KW.test(pendingM[1])) {
-                    mod.children.push(new vscode.DocumentSymbol(`${pendingM[1]}  (${pendingInst.typeName})`, 'instantiation', vscode.SymbolKind.Object, pendingInst.range, range));
+                    const fullRange = new vscode.Range(pendingInst.range.start, range.end);
+                    mod.children.push(new vscode.DocumentSymbol(`${pendingM[1]}  (${pendingInst.typeName})`, 'instantiation', vscode.SymbolKind.Object, fullRange, range));
                     pendingInst = null;
                     continue;
                 }
@@ -472,7 +470,9 @@ function registerSymbolProviders(context) {
         ].join('\n');
         vscode.window.showInformationMessage(msg, { modal: true });
     }));
-    context.subscriptions.push(vscode.languages.registerDefinitionProvider(VERILOG_SELECTOR, new VerilogDefinitionProvider(index)), vscode.languages.registerHoverProvider(VERILOG_SELECTOR, new VerilogHoverProvider(index)), vscode.languages.registerDocumentSymbolProvider(VERILOG_SELECTOR, new VerilogDocumentSymbolProvider()));
+    for (const selector of VERILOG_SELECTOR) {
+        context.subscriptions.push(vscode.languages.registerDefinitionProvider(selector, new VerilogDefinitionProvider(index)), vscode.languages.registerHoverProvider(selector, new VerilogHoverProvider(index)), vscode.languages.registerDocumentSymbolProvider(selector, new VerilogDocumentSymbolProvider()));
+    }
     return index;
 }
 //# sourceMappingURL=symbolProvider.js.map

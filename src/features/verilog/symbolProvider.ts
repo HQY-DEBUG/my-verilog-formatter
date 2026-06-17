@@ -298,10 +298,7 @@ export class VerilogDocumentSymbolProvider implements vscode.DocumentSymbolProvi
 
             // endmodule — 扩展 module 范围结束
             if (/^endmodule\b/.test(trimmed)) {
-                if (mod) {
-                    mod.range = new vscode.Range(mod.range.start, range.end);
-                    mod = null;
-                }
+                mod = null;
                 continue;
             }
 
@@ -310,11 +307,12 @@ export class VerilogDocumentSymbolProvider implements vscode.DocumentSymbolProvi
             if (pendingInst) {
                 const pendingM = trimmed.match(/^\)\s*(\w+)\s*\(/);
                 if (pendingM && !KW.test(pendingM[1])) {
+                    const fullRange = new vscode.Range(pendingInst.range.start, range.end);
                     mod.children.push(new vscode.DocumentSymbol(
                         `${pendingM[1]}  (${pendingInst.typeName})`,
                         'instantiation',
                         vscode.SymbolKind.Object,
-                        pendingInst.range, range,
+                        fullRange, range,
                     ));
                     pendingInst = null;
                     continue;
@@ -389,7 +387,7 @@ export class VerilogDocumentSymbolProvider implements vscode.DocumentSymbolProvi
 // ---- 注册函数 ----//
 const VERILOG_LANG_IDS = ['verilog', 'systemverilog', 'verilog-hdl', 'systemverilog-hdl'];
 const VERILOG_FILE_EXTS = new Set(['.v', '.vh', '.sv', '.svh']);
-const VERILOG_SELECTOR: vscode.DocumentSelector = [
+const VERILOG_SELECTOR: vscode.DocumentFilter[] = [
     { language: 'verilog'          },
     { language: 'systemverilog'    },
     { language: 'verilog-hdl'      },
@@ -493,11 +491,13 @@ export function registerSymbolProviders(context: vscode.ExtensionContext): Veril
         }),
     );
 
-    context.subscriptions.push(
-        vscode.languages.registerDefinitionProvider(VERILOG_SELECTOR, new VerilogDefinitionProvider(index)),
-        vscode.languages.registerHoverProvider(VERILOG_SELECTOR, new VerilogHoverProvider(index)),
-        vscode.languages.registerDocumentSymbolProvider(VERILOG_SELECTOR, new VerilogDocumentSymbolProvider()),
-    );
+    for (const selector of VERILOG_SELECTOR) {
+        context.subscriptions.push(
+            vscode.languages.registerDefinitionProvider(selector, new VerilogDefinitionProvider(index)),
+            vscode.languages.registerHoverProvider(selector, new VerilogHoverProvider(index)),
+            vscode.languages.registerDocumentSymbolProvider(selector, new VerilogDocumentSymbolProvider()),
+        );
+    }
 
     return index;
 }
