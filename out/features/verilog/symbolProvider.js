@@ -470,9 +470,7 @@ function registerSymbolProviders(context) {
         ].join('\n');
         vscode.window.showInformationMessage(msg, { modal: true });
     }));
-    for (const selector of VERILOG_SELECTOR) {
-        context.subscriptions.push(vscode.languages.registerDefinitionProvider(selector, new VerilogDefinitionProvider(index)), vscode.languages.registerHoverProvider(selector, new VerilogHoverProvider(index)), vscode.languages.registerDocumentSymbolProvider(selector, new VerilogDocumentSymbolProvider()));
-    }
+    context.subscriptions.push(vscode.languages.registerDefinitionProvider(VERILOG_SELECTOR, new VerilogDefinitionProvider(index)), vscode.languages.registerHoverProvider(VERILOG_SELECTOR, new VerilogHoverProvider(index)), vscode.languages.registerDocumentSymbolProvider(VERILOG_SELECTOR, new VerilogDocumentSymbolProvider()));
     return index;
 }
 //# sourceMappingURL=symbolProvider.js.map
