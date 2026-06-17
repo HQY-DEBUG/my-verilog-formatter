@@ -89,7 +89,8 @@ function parseModule(text) {
         if (inParam) {
             const pm = trimmed.match(RE_PARAM);
             if (pm) {
-                params.push({ name: pm[1], defaultVal: pm[2].trim() });
+                const defaultVal = pm[2].replace(/\s*\/\/.*$/, '').trim();
+                params.push({ name: pm[1], defaultVal });
             }
             if (trimmed.includes(')')) {
                 inParam = false;
