@@ -277,13 +277,15 @@ export class VerilogDocumentSymbolProvider implements vscode.DocumentSymbolProvi
         const lines  = document.getText().split(/\r?\n/);
         const result : vscode.DocumentSymbol[] = [];
         let   mod    : vscode.DocumentSymbol | null = null;
+        let   pendingInst: { typeName: string; range: vscode.Range } | null = null;
 
         // 关键字黑名单，避免将控制语句误识别为例化
         const KW = /^(always|initial|if|else|for|case|casez|casex|begin|end|assign|module|endmodule|parameter|localparam|reg|wire|logic|input|output|inout|integer|generate|endgenerate|task|function|endtask|endfunction)$/;
 
         for (let i = 0; i < lines.length; i++) {
             const line    = lines[i];
-            const trimmed = line.trimStart();
+            const code    = line.replace(/\/\/.*$/, '');
+            const trimmed = code.trimStart();
             const range   = new vscode.Range(i, 0, i, line.length);
 
             // module 声明
@@ -304,6 +306,23 @@ export class VerilogDocumentSymbolProvider implements vscode.DocumentSymbolProvi
             }
 
             if (!mod) { continue; }
+
+            if (pendingInst) {
+                const pendingM = trimmed.match(/^\)\s*(\w+)\s*\(/);
+                if (pendingM && !KW.test(pendingM[1])) {
+                    mod.children.push(new vscode.DocumentSymbol(
+                        `${pendingM[1]}  (${pendingInst.typeName})`,
+                        'instantiation',
+                        vscode.SymbolKind.Object,
+                        pendingInst.range, range,
+                    ));
+                    pendingInst = null;
+                    continue;
+                }
+                if (/;\s*$/.test(trimmed)) {
+                    pendingInst = null;
+                }
+            }
 
             // parameter / localparam
             const paramM = trimmed.match(/^(?:localparam|parameter)\b\s*(?:\[[^\]]*\]\s*)?(\w+)\s*[=,]/);
@@ -343,6 +362,23 @@ export class VerilogDocumentSymbolProvider implements vscode.DocumentSymbolProvi
                     vscode.SymbolKind.Object,
                     range, range,
                 ));
+                continue;
+            }
+
+            // 参数化模块例化允许参数列表换行：ModuleName #( ... ) u_inst (
+            const paramInstM = trimmed.match(/^(\w+)\s*#\s*\(/);
+            if (paramInstM && !KW.test(paramInstM[1])) {
+                const sameLineM = trimmed.match(/^(\w+)\s*#\s*\(.*\)\s*(\w+)\s*\(/);
+                if (sameLineM && !KW.test(sameLineM[2])) {
+                    mod.children.push(new vscode.DocumentSymbol(
+                        `${sameLineM[2]}  (${sameLineM[1]})`,
+                        'instantiation',
+                        vscode.SymbolKind.Object,
+                        range, range,
+                    ));
+                } else {
+                    pendingInst = { typeName: paramInstM[1], range };
+                }
             }
         }
 

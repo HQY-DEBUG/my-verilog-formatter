@@ -22,6 +22,17 @@ module.exports = {
     Range: class Range {
         constructor(sl, sc, el, ec) { this.start = { line: sl, character: sc }; this.end = { line: el, character: ec }; }
     },
+    DocumentSymbol: class DocumentSymbol {
+        constructor(name, detail, kind, range, selectionRange) {
+            this.name = name;
+            this.detail = detail;
+            this.kind = kind;
+            this.range = range;
+            this.selectionRange = selectionRange;
+            this.children = [];
+        }
+    },
+    SymbolKind: { Module: 1, Field: 2, Constant: 3, Variable: 4, Object: 5 },
     EventEmitter: class EventEmitter {
         constructor() { this._listeners = []; }
         get event() { return (cb) => this._listeners.push(cb); }
