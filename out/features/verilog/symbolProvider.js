@@ -372,13 +372,28 @@ class VerilogDocumentSymbolProvider {
 }
 exports.VerilogDocumentSymbolProvider = VerilogDocumentSymbolProvider;
 // ---- 注册函数 ----//
+const VERILOG_LANG_IDS = ['verilog', 'systemverilog', 'verilog-hdl', 'systemverilog-hdl'];
+const VERILOG_FILE_EXTS = new Set(['.v', '.vh', '.sv', '.svh']);
 const VERILOG_SELECTOR = [
     { language: 'verilog' },
     { language: 'systemverilog' },
     { language: 'verilog-hdl' },
     { language: 'systemverilog-hdl' },
+    { scheme: 'file', pattern: '**/*.v' },
+    { scheme: 'file', pattern: '**/*.vh' },
+    { scheme: 'file', pattern: '**/*.sv' },
+    { scheme: 'file', pattern: '**/*.svh' },
 ];
-const VERILOG_LANGS = new Set(VERILOG_SELECTOR.map(selector => selector.language));
+const VERILOG_LANGS = new Set(VERILOG_LANG_IDS);
+function isVerilogDocument(doc) {
+    if (VERILOG_LANGS.has(doc.languageId)) {
+        return true;
+    }
+    if (doc.uri.scheme !== 'file') {
+        return false;
+    }
+    return VERILOG_FILE_EXTS.has(path.extname(doc.uri.fsPath).toLowerCase());
+}
 /**
  * @brief 注册语法跳转、悬停与大纲 Provider
  * @param context 扩展上下文
@@ -391,7 +406,7 @@ function registerSymbolProviders(context) {
         if (doc.uri.scheme !== 'file') {
             return;
         }
-        if (VERILOG_LANGS.has(doc.languageId)) {
+        if (isVerilogDocument(doc)) {
             index.updateFileFromText(doc.uri.fsPath, doc.getText());
         }
     }));
@@ -402,7 +417,7 @@ function registerSymbolProviders(context) {
         if (doc.uri.scheme !== 'file') {
             return;
         }
-        if (!VERILOG_LANGS.has(doc.languageId)) {
+        if (!isVerilogDocument(doc)) {
             return;
         }
         const fsPath = doc.uri.fsPath;
@@ -423,7 +438,7 @@ function registerSymbolProviders(context) {
         if (doc.uri.scheme !== 'file') {
             return;
         }
-        if (VERILOG_LANGS.has(doc.languageId)) {
+        if (isVerilogDocument(doc)) {
             index.updateFileFromText(doc.uri.fsPath, doc.getText());
         }
     }));

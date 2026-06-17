@@ -23,6 +23,10 @@ describe('VerilogDocumentSymbolProvider', () => {
         expect(sourceText).toContain("language: 'systemverilog'");
         expect(sourceText).toContain("language: 'verilog-hdl'");
         expect(sourceText).toContain("language: 'systemverilog-hdl'");
+        expect(sourceText).toContain("pattern: '**/*.v'");
+        expect(sourceText).toContain("pattern: '**/*.vh'");
+        expect(sourceText).toContain("pattern: '**/*.sv'");
+        expect(sourceText).toContain("pattern: '**/*.svh'");
     });
 
     it('应识别参数列表换行的模块例化', () => {
