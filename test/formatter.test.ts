@@ -160,6 +160,8 @@ describe('VerilogFormatter', () => {
             'QZ_0xBF090: Y_fankui <= qz_0xbf090_fkda;',
             'QZ_0x85480: Y_fankui <= Velocity1;           //Mode2',
             'GAVLO_POSITION_INTERP : Y_fankui <= w_cmd_Y; //插值点反馈位置',
+            'QZ_0xBF0C0: Y_fankui <= QZ_0xBF0C0_FKDA;',
+            'QZ_0xBF040: Y_fankui <= QZ_0xBF040_FKDA;',
             'default         :   Y_fankui <= gavlo_state;',
             'endcase',
         ].join('\n');
@@ -176,6 +178,8 @@ describe('VerilogFormatter', () => {
             '  QZ_0xBF090            : Y_fankui <= qz_0xbf090_fkda;',
             '  QZ_0x85480            : Y_fankui <= Velocity1; //Mode2',
             '  GAVLO_POSITION_INTERP : Y_fankui <= w_cmd_Y;   //插值点反馈位置',
+            '  QZ_0xBF0C0            : Y_fankui <= QZ_0xBF0C0_FKDA;',
+            '  QZ_0xBF040            : Y_fankui <= QZ_0xBF040_FKDA;',
             '  default               : Y_fankui <= gavlo_state;',
             'endcase',
         ].join('\n');

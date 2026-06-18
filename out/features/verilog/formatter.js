@@ -89,7 +89,6 @@ class VerilogFormatter {
         r = this.reindent(r, config.indentSize);
         r = this.alignAssignContinuations(r);
         r = this.alignAssignStatements(r);
-        r = this.alignCaseItems(r);
         r = this.alignProceduralAssignments(r);
         r = this.alignLocalparams(r);
         r = this.alignSignalDeclarations(r);
@@ -98,6 +97,7 @@ class VerilogFormatter {
         if (config.alignPortComment) {
             r = this.alignTrailingComments(r);
         }
+        r = this.alignCaseItems(r);
         r = this.trimTrailingWhitespace(r);
         return r;
     }
@@ -268,6 +268,16 @@ class VerilogFormatter {
     alignCaseItems(code) {
         const lines = code.split('\n');
         let i = 0;
+        const splitTrailingComment = (statement) => {
+            const idx = statement.indexOf('//');
+            if (idx < 0) {
+                return { code: statement.trimEnd(), comment: '' };
+            }
+            return {
+                code: statement.slice(0, idx).trimEnd(),
+                comment: statement.slice(idx).trim(),
+            };
+        };
         const parseCaseItem = (line, index) => {
             if (/^\s*\/\//.test(line)) {
                 return null;
@@ -286,7 +296,8 @@ class VerilogFormatter {
             if (statement.length > 0 && !this.isStatementTerminated(statement)) {
                 return null;
             }
-            return { index, indent, label, statement };
+            const split = splitTrailingComment(statement);
+            return { index, indent, label, statement, code: split.code, comment: split.comment };
         };
         while (i < lines.length) {
             if (!/^\s*case[xz]?\b/.test(lines[i].trim())) {
@@ -322,8 +333,17 @@ class VerilogFormatter {
                     continue;
                 }
                 const labelWidth = Math.max(...group.map(item => item.label.length));
+                const commentItems = group.filter(item => item.comment.length > 0);
+                const codeWidth = commentItems.length > 1
+                    ? Math.max(...commentItems.map(item => item.code.length))
+                    : 0;
                 for (const item of group) {
-                    const suffix = item.statement.length > 0 ? ` ${item.statement}` : '';
+                    let suffix = '';
+                    if (item.statement.length > 0) {
+                        const code = codeWidth > 0 ? item.code.padEnd(codeWidth) : item.code;
+                        const comment = item.comment.length > 0 ? ` ${item.comment}` : '';
+                        suffix = ` ${code}${comment}`;
+                    }
                     lines[item.index] = `${item.indent}${item.label.padEnd(labelWidth)} :${suffix}`;
                 }
             }
