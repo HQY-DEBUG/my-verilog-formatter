@@ -82,6 +82,7 @@ export class VerilogFormatter
         r = this.reindent(r, config.indentSize);
         r = this.alignAssignContinuations(r);
         r = this.alignAssignStatements(r);
+        r = this.alignCaseItems(r);
         r = this.alignProceduralAssignments(r);
         r = this.alignLocalparams(r);
         r = this.alignSignalDeclarations(r);
@@ -245,6 +246,71 @@ export class VerilogFormatter
 
     private isStatementTerminated(line: string): boolean {
         return /;\s*(?:(?:\/\/.*)|(?:\/\*.*\*\/\s*))?$/.test(line.trim());
+    }
+
+    // ---- 对齐 case item 单行语句 ----//
+    private alignCaseItems(code: string): string {
+        const lines = code.split('\n');
+        const result: string[] = [];
+        let i = 0;
+
+        interface CaseItem { indent: string; label: string; statement: string; raw: string; }
+        const parseCaseItem = (line: string): CaseItem | null => {
+            if (!this.isStatementTerminated(line)) { return null; }
+            if (/^\s*\/\//.test(line)) { return null; }
+            const m = line.match(/^(\s*)([^:]+?)\s*:\s*(.+)$/);
+            if (!m) { return null; }
+            const label = m[2].trim();
+            if (!label || /^(case|casex|casez)\b/.test(label)) { return null; }
+            if (!/^(?:default|[A-Za-z_][\w$]*)$/.test(label)) { return null; }
+            return { indent: m[1], label, statement: m[3].trim(), raw: line };
+        };
+        const isGap = (line: string): boolean => line.trim() === '' || /^\s*\/\//.test(line);
+
+        while (i < lines.length) {
+            const first = parseCaseItem(lines[i]);
+            if (!first) {
+                result.push(lines[i++]);
+                continue;
+            }
+
+            const block: string[] = [lines[i]];
+            i++;
+            while (i < lines.length) {
+                const next = parseCaseItem(lines[i]);
+                if (next && next.indent === first.indent) {
+                    block.push(lines[i++]);
+                    continue;
+                }
+                if (isGap(lines[i])) {
+                    let j = i + 1;
+                    while (j < lines.length && isGap(lines[j])) { j++; }
+                    const afterGap = j < lines.length ? parseCaseItem(lines[j]) : null;
+                    if (afterGap && afterGap.indent === first.indent) {
+                        while (i < j) { block.push(lines[i++]); }
+                        continue;
+                    }
+                }
+                break;
+            }
+
+            const group = block
+                .map(line => parseCaseItem(line))
+                .filter((item): item is CaseItem => item !== null);
+            if (group.length === 1) {
+                result.push(group[0].raw);
+                continue;
+            }
+
+            const labelWidth = Math.max(...group.map(item => item.label.length)) + 1;
+            result.push(...block.map(line => {
+                const item = parseCaseItem(line);
+                if (!item) { return line; }
+                return `${item.indent}${item.label.padEnd(labelWidth)} : ${item.statement}`;
+            }));
+        }
+
+        return result.join('\n');
     }
 
     // ---- 对齐 assign 多行表达式续行 ----//
