@@ -241,76 +241,90 @@ export class VerilogFormatter
 
     private isStandaloneCaseItem(line: string): boolean {
         const noComment = line.replace(/\/\/.*$/, '').trim();
-        return /^default\s*:\s*$/.test(noComment) || /^[^:]+:\s*$/.test(noComment);
+        const colonIdx = this.findCaseLabelColon(noComment);
+        if (colonIdx < 0) { return false; }
+        const label = noComment.slice(0, colonIdx).trim();
+        const rest = noComment.slice(colonIdx + 1).trim();
+        return rest === '' && this.isCaseLabel(label);
     }
 
     private isStatementTerminated(line: string): boolean {
         return /;\s*(?:(?:\/\/.*)|(?:\/\*.*\*\/\s*))?$/.test(line.trim());
     }
 
-    // ---- 对齐 case item 单行语句 ----//
+    private findCaseLabelColon(text: string): number {
+        let bracketDepth = 0;
+        for (let idx = 0; idx < text.length; idx++) {
+            if (text[idx] === '[') { bracketDepth++; }
+            if (text[idx] === ']') { bracketDepth = Math.max(0, bracketDepth - 1); }
+            if (text[idx] === ':' && bracketDepth === 0) { return idx; }
+        }
+        return -1;
+    }
+
+    private isCaseLabel(label: string): boolean {
+        return /^(?:default|[A-Za-z_][\w$]*(?:\[[^\]]+\])?)$/.test(label);
+    }
+
+    // ---- 对齐 case item 标签 ----//
     private alignCaseItems(code: string): string {
         const lines = code.split('\n');
-        const result: string[] = [];
         let i = 0;
 
-        interface CaseItem { indent: string; label: string; statement: string; raw: string; }
-        const parseCaseItem = (line: string): CaseItem | null => {
-            if (!this.isStatementTerminated(line)) { return null; }
+        interface CaseItem { index: number; indent: string; label: string; statement: string; }
+        const parseCaseItem = (line: string, index: number): CaseItem | null => {
             if (/^\s*\/\//.test(line)) { return null; }
-            const m = line.match(/^(\s*)([^:]+?)\s*:\s*(.+)$/);
-            if (!m) { return null; }
-            const label = m[2].trim();
-            if (!label || /^(case|casex|casez)\b/.test(label)) { return null; }
-            if (!/^(?:default|[A-Za-z_][\w$]*)$/.test(label)) { return null; }
-            return { indent: m[1], label, statement: m[3].trim(), raw: line };
+            const indent = (line.match(/^(\s*)/) ?? ['', ''])[1];
+            const body = line.slice(indent.length);
+            const colonIdx = this.findCaseLabelColon(body);
+            if (colonIdx < 0) { return null; }
+            const label = body.slice(0, colonIdx).trim();
+            const statement = body.slice(colonIdx + 1).trim();
+            if (!this.isCaseLabel(label)) { return null; }
+            if (statement.length > 0 && !this.isStatementTerminated(statement)) { return null; }
+            return { index, indent, label, statement };
         };
-        const isGap = (line: string): boolean => line.trim() === '' || /^\s*\/\//.test(line);
 
         while (i < lines.length) {
-            const first = parseCaseItem(lines[i]);
-            if (!first) {
-                result.push(lines[i++]);
+            if (!/^\s*case[xz]?\b/.test(lines[i].trim())) {
+                i++;
                 continue;
             }
 
-            const block: string[] = [lines[i]];
+            const blockStart = i + 1;
+            let depth = 1;
             i++;
-            while (i < lines.length) {
-                const next = parseCaseItem(lines[i]);
-                if (next && next.indent === first.indent) {
-                    block.push(lines[i++]);
-                    continue;
+            while (i < lines.length && depth > 0) {
+                const trimmed = lines[i].trim();
+                if (/^case[xz]?\b/.test(trimmed)) {
+                    depth++;
+                } else if (/^endcase\b/.test(trimmed)) {
+                    depth--;
                 }
-                if (isGap(lines[i])) {
-                    let j = i + 1;
-                    while (j < lines.length && isGap(lines[j])) { j++; }
-                    const afterGap = j < lines.length ? parseCaseItem(lines[j]) : null;
-                    if (afterGap && afterGap.indent === first.indent) {
-                        while (i < j) { block.push(lines[i++]); }
-                        continue;
-                    }
-                }
-                break;
+                i++;
+            }
+            const blockEnd = i - 1;
+            const groups = new Map<string, CaseItem[]>();
+
+            for (let lineIdx = blockStart; lineIdx < blockEnd; lineIdx++) {
+                const item = parseCaseItem(lines[lineIdx], lineIdx);
+                if (!item) { continue; }
+                const group = groups.get(item.indent) ?? [];
+                group.push(item);
+                groups.set(item.indent, group);
             }
 
-            const group = block
-                .map(line => parseCaseItem(line))
-                .filter((item): item is CaseItem => item !== null);
-            if (group.length === 1) {
-                result.push(group[0].raw);
-                continue;
+            for (const group of groups.values()) {
+                if (group.length < 2) { continue; }
+                const labelWidth = Math.max(...group.map(item => item.label.length));
+                for (const item of group) {
+                    const suffix = item.statement.length > 0 ? ` ${item.statement}` : '';
+                    lines[item.index] = `${item.indent}${item.label.padEnd(labelWidth)} :${suffix}`;
+                }
             }
-
-            const labelWidth = Math.max(...group.map(item => item.label.length)) + 1;
-            result.push(...block.map(line => {
-                const item = parseCaseItem(line);
-                if (!item) { return line; }
-                return `${item.indent}${item.label.padEnd(labelWidth)} : ${item.statement}`;
-            }));
         }
 
-        return result.join('\n');
+        return lines.join('\n');
     }
 
     // ---- 对齐 assign 多行表达式续行 ----//

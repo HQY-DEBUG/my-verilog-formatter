@@ -80,7 +80,7 @@ describe('VerilogFormatter', () => {
             'always @(*)',
             '  begin',
             '    case (state)',
-            '      S_INIT :',
+            '      S_INIT  :',
             '        begin',
             '          next_state = S_FRAME;',
             '        end',
@@ -88,6 +88,59 @@ describe('VerilogFormatter', () => {
             '        next_state = S_INIT;',
             '    endcase',
             '  end',
+        ].join('\n');
+
+        expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
+    test('case item 块式标签应按冒号列对齐', () => {
+        const input = [
+            'case (R_cmd_x[19:4])',
+            'GAVLO_READY[19:4] :',
+            'begin',
+            'X_FK_STA <= GAVLO_READY;',
+            'X_QZBK_STA <= GAVLO_READY;',
+            'end',
+            'GAVLO_POSITION[19:4] :',
+            'begin',
+            'X_FK_STA <= GAVLO_POSITION;',
+            'X_QZBK_STA <= GAVLO_POSITION;',
+            'end',
+            'SN_LOW16BITS[19:4] :',
+            'begin',
+            'X_FK_STA <= SN_LOW16BITS;',
+            'X_QZBK_STA <= SN_LOW16BITS;',
+            'end',
+            'FIRM_VERSION[19:4] :',
+            'begin',
+            'X_FK_STA <= FIRM_VERSION;',
+            'X_QZBK_STA <= FIRM_VERSION;',
+            'end',
+            'endcase',
+        ].join('\n');
+        const expected = [
+            'case (R_cmd_x[19:4])',
+            '  GAVLO_READY[19:4]    :',
+            '    begin',
+            '      X_FK_STA   <= GAVLO_READY;',
+            '      X_QZBK_STA <= GAVLO_READY;',
+            '    end',
+            '  GAVLO_POSITION[19:4] :',
+            '    begin',
+            '      X_FK_STA   <= GAVLO_POSITION;',
+            '      X_QZBK_STA <= GAVLO_POSITION;',
+            '    end',
+            '  SN_LOW16BITS[19:4]   :',
+            '    begin',
+            '      X_FK_STA   <= SN_LOW16BITS;',
+            '      X_QZBK_STA <= SN_LOW16BITS;',
+            '    end',
+            '  FIRM_VERSION[19:4]   :',
+            '    begin',
+            '      X_FK_STA   <= FIRM_VERSION;',
+            '      X_QZBK_STA <= FIRM_VERSION;',
+            '    end',
+            'endcase',
         ].join('\n');
 
         expect(fmt['format'](input, defaultCfg)).toBe(expected);
@@ -112,18 +165,18 @@ describe('VerilogFormatter', () => {
         ].join('\n');
         const expected = [
             'case (Y_FK_STA_d2)',
-            '  GAVLO_READY            : Y_fankui <= gavlo_state;',
-            '  GAVLO_POSITION         : Y_fankui <= 20\'hFFFFF - {AD_DATA1, 2\'b00};',
-            '  SN_LOW16BITS           : Y_fankui <= SN_L16;',
-            '  ERROR_CODE             : Y_fankui <= ERROR_C;',
+            '  GAVLO_READY           : Y_fankui <= gavlo_state;',
+            '  GAVLO_POSITION        : Y_fankui <= 20\'hFFFFF - {AD_DATA1, 2\'b00};',
+            '  SN_LOW16BITS          : Y_fankui <= SN_L16;',
+            '  ERROR_CODE            : Y_fankui <= ERROR_C;',
             '  //前瞻--反馈数据',
-            '  QZ_0x85260             : Y_fankui <= QZ_0x85260_FKDA;',
-            '  QZ_0x8E000             : Y_fankui <= QZ_0x8E000_FKDA;',
+            '  QZ_0x85260            : Y_fankui <= QZ_0x85260_FKDA;',
+            '  QZ_0x8E000            : Y_fankui <= QZ_0x8E000_FKDA;',
             '  // QZ_0xBF090: Y_fankui <= QZ_0xBF090_FKDA;',
-            '  QZ_0xBF090             : Y_fankui <= qz_0xbf090_fkda;',
-            '  QZ_0x85480             : Y_fankui <= Velocity1; //Mode2',
-            '  GAVLO_POSITION_INTERP  : Y_fankui <= w_cmd_Y;   //插值点反馈位置',
-            '  default                : Y_fankui <= gavlo_state;',
+            '  QZ_0xBF090            : Y_fankui <= qz_0xbf090_fkda;',
+            '  QZ_0x85480            : Y_fankui <= Velocity1; //Mode2',
+            '  GAVLO_POSITION_INTERP : Y_fankui <= w_cmd_Y;   //插值点反馈位置',
+            '  default               : Y_fankui <= gavlo_state;',
             'endcase',
         ].join('\n');
 
