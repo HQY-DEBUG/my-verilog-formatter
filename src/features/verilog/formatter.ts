@@ -449,13 +449,13 @@ export class VerilogFormatter
         return result.join('\n');
     }
 
-    // ---- 对齐 localparam 块 ----//
+    // ---- 对齐 parameter / localparam 块 ----//
     // 情况1（多参数）：localparam NAME = v, NAME2 = v2;  续行逗号分隔，末行分号
-    // 情况2（连续单行）：多行 localparam NAME = value; 作为一组四列对齐
+    // 情况2（连续单行）：多行 parameter/localparam [W] NAME = value; 作为一组对齐
     private alignLocalparams(code: string): string {
-        const FIRST_RE = /^(\s*)(localparam)\s+(\w+)\s*=\s*([^,;]+?)\s*([,;])\s*(\/\/.*)?$/;
+        const FIRST_RE = /^(\s*)(parameter|localparam)\b\s*(?:(\[[^\]]+\])\s*)?(\w+)\s*=\s*([^,;]+?)\s*([,;])\s*(\/\/.*)?$/;
         const CONT_RE  = /^(\s*)(\w+)\s*=\s*([^,;]+?)\s*([,;])\s*(\/\/.*)?$/;
-        interface Entry { name: string; value: string; term: string; comment: string; }
+        interface Entry { width: string; name: string; value: string; term: string; comment: string; }
 
         const lines  = code.split('\n');
         const result: string[] = [];
@@ -468,35 +468,37 @@ export class VerilogFormatter
             const baseIndent = fm[1];
             const keyword    = fm[2];
 
-            if (fm[5] === ';') {
-                // 情况2：收集连续的同缩进 localparam ... ; 行作为一组对齐
-                const group: Entry[] = [{ name: fm[3], value: fm[4].trim(), term: fm[5], comment: fm[6] ?? '' }];
+            if (fm[6] === ';') {
+                // 情况2：收集连续的同缩进 parameter/localparam ... ; 行作为一组对齐
+                const group: Entry[] = [{ width: fm[3] ?? '', name: fm[4], value: fm[5].trim(), term: fm[6], comment: fm[7] ?? '' }];
                 i++;
                 while (i < lines.length) {
                     const nm = lines[i].match(FIRST_RE);
-                    if (nm && nm[1] === baseIndent && nm[5] === ';') {
-                        group.push({ name: nm[3], value: nm[4].trim(), term: nm[5], comment: nm[6] ?? '' });
+                    if (nm && nm[1] === baseIndent && nm[2] === keyword && nm[6] === ';') {
+                        group.push({ width: nm[3] ?? '', name: nm[4], value: nm[5].trim(), term: nm[6], comment: nm[7] ?? '' });
                         i++;
                     } else {
                         break;
                     }
                 }
+                const maxWidth = Math.max(...group.map(e => e.width.length));
                 const maxName  = Math.max(...group.map(e => e.name.length));
                 const maxValue = Math.max(...group.map(e => e.value.length));
                 group.forEach(e => {
-                    const n = e.name.padEnd(maxName);
-                    const v = e.value.padEnd(maxValue);
-                    const c = e.comment ? ` ${e.comment}` : '';
-                    result.push(`${baseIndent}${keyword}  ${n} = ${v}${e.term}${c}`);
+                    const width = maxWidth > 0 ? `${e.width.padEnd(maxWidth)} ` : '';
+                    const n     = e.name.padEnd(maxName);
+                    const v     = e.value.padEnd(maxValue);
+                    const c     = e.comment ? ` ${e.comment}` : '';
+                    result.push(`${baseIndent}${keyword} ${width}${n} = ${v}${e.term}${c}`);
                 });
             } else {
                 // 情况1：多参数逗号分隔块
-                const entries: Entry[] = [{ name: fm[3], value: fm[4].trim(), term: fm[5], comment: fm[6] ?? '' }];
+                const entries: Entry[] = [{ width: '', name: fm[4], value: fm[5].trim(), term: fm[6], comment: fm[7] ?? '' }];
                 i++;
                 while (i < lines.length) {
                     const cm = lines[i].match(CONT_RE);
                     if (!cm) { break; }
-                    entries.push({ name: cm[2], value: cm[3].trim(), term: cm[4], comment: cm[5] ?? '' });
+                    entries.push({ width: '', name: cm[2], value: cm[3].trim(), term: cm[4], comment: cm[5] ?? '' });
                     i++;
                     if (cm[4] === ';') { break; }
                 }
@@ -509,7 +511,7 @@ export class VerilogFormatter
                     const v = e.value.padEnd(maxValue);
                     const c = e.comment ? ` ${e.comment}` : '';
                     if (idx === 0) {
-                        result.push(`${baseIndent}${keyword}  ${n} = ${v}${e.term}${c}`);
+                        result.push(`${baseIndent}${keyword} ${n} = ${v}${e.term}${c}`);
                     } else {
                         result.push(`${contIndent}${n} = ${v}${e.term}${c}`);
                     }

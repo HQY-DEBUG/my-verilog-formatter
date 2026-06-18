@@ -268,6 +268,29 @@ describe('VerilogFormatter', () => {
         expect(fmt['format'](input, defaultCfg)).toBe(expected);
     });
 
+    test('连续 parameter 位宽声明应对齐名称和等号列', () => {
+        const input = [
+            '//前瞻握手命令对应的返回状态字',
+            'parameter [19:0] QZ_0x85260_FKDA   = 20\'h00000;',
+            'parameter [19:0] QZ_0x8E000_FKDA_1 = 20\'h28040;',
+            'parameter [19:0] QZ_0xBF0C0_FKDA   = 20\'hBF0C0;',
+            'parameter [19:0] QZ_0xBF0A0_FKDA= 20\'h00780;',
+            'parameter [19:0] QZ_0xBF020_FKDA= 20\'h0B8E0;',
+            'parameter [19:0] QZ_0x98B50_FKDA= 20\'h02050;',
+        ].join('\n');
+        const expected = [
+            '//前瞻握手命令对应的返回状态字',
+            'parameter [19:0] QZ_0x85260_FKDA   = 20\'h00000;',
+            'parameter [19:0] QZ_0x8E000_FKDA_1 = 20\'h28040;',
+            'parameter [19:0] QZ_0xBF0C0_FKDA   = 20\'hBF0C0;',
+            'parameter [19:0] QZ_0xBF0A0_FKDA   = 20\'h00780;',
+            'parameter [19:0] QZ_0xBF020_FKDA   = 20\'h0B8E0;',
+            'parameter [19:0] QZ_0x98B50_FKDA   = 20\'h02050;',
+        ].join('\n');
+
+        expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
     test('例化参数和端口连接行应缩进两个空格', () => {
         const input = [
             'clk_gen #(',
