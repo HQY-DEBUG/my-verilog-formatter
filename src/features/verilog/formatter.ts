@@ -485,7 +485,7 @@ export class VerilogFormatter
     // 情况1（多参数）：localparam NAME = v, NAME2 = v2;  续行逗号分隔，末行分号
     // 情况2（连续单行）：多行 parameter/localparam [W] NAME = value; 作为一组对齐
     private alignLocalparams(code: string): string {
-        const FIRST_RE = /^(\s*)(parameter|localparam)\b\s*(?:(\[[^\]]+\])\s*)?(\w+)\s*=\s*([^,;]+?)\s*([,;])\s*(\/\/.*)?$/;
+        const FIRST_RE = /^(\s*)(parameter|localparam)\b\s*(?:(\[[^\]]+\])\s*)?(\w+)\s*=\s*([^,;]+?)\s*([,;]?)\s*(\/\/.*)?$/;
         const CONT_RE  = /^(\s*)(\w+)\s*=\s*([^,;]+?)\s*([,;])\s*(\/\/.*)?$/;
         interface Entry { width: string; name: string; value: string; term: string; comment: string; }
 
@@ -500,13 +500,14 @@ export class VerilogFormatter
             const baseIndent = fm[1];
             const keyword    = fm[2];
 
-            if (fm[6] === ';') {
+            const isSemicolonGroup = fm[6] === ';';
+            if (isSemicolonGroup || this.startsKeywordParamGroup(lines, i, FIRST_RE)) {
                 // 情况2：收集连续的同缩进 parameter/localparam ... ; 行作为一组对齐
                 const group: Entry[] = [{ width: fm[3] ?? '', name: fm[4], value: fm[5].trim(), term: fm[6], comment: fm[7] ?? '' }];
                 i++;
                 while (i < lines.length) {
                     const nm = lines[i].match(FIRST_RE);
-                    if (nm && nm[1] === baseIndent && nm[2] === keyword && nm[6] === ';') {
+                    if (nm && nm[1] === baseIndent && nm[2] === keyword && (nm[6] === ';') === isSemicolonGroup) {
                         group.push({ width: nm[3] ?? '', name: nm[4], value: nm[5].trim(), term: nm[6], comment: nm[7] ?? '' });
                         i++;
                     } else {
@@ -519,7 +520,7 @@ export class VerilogFormatter
                 group.forEach(e => {
                     const width = maxWidth > 0 ? `${e.width.padEnd(maxWidth)} ` : '';
                     const n     = e.name.padEnd(maxName);
-                    const v     = e.value.padEnd(maxValue);
+                    const v     = isSemicolonGroup ? e.value.padEnd(maxValue) : e.value;
                     const c     = e.comment ? ` ${e.comment}` : '';
                     result.push(`${baseIndent}${keyword} ${width}${n} = ${v}${e.term}${c}`);
                 });
@@ -552,6 +553,13 @@ export class VerilogFormatter
         }
 
         return result.join('\n');
+    }
+
+    private startsKeywordParamGroup(lines: string[], index: number, re: RegExp): boolean {
+        const first = lines[index].match(re);
+        const next  = lines[index + 1]?.match(re);
+        if (!first || !next) { return false; }
+        return first[6] !== ';' && next[6] !== ';' && first[1] === next[1] && first[2] === next[2];
     }
 
     // ---- 对齐信号声明（reg / wire / logic / integer）----//

@@ -348,6 +348,27 @@ describe('VerilogFormatter', () => {
         expect(fmt['format'](input, defaultCfg)).toBe(expected);
     });
 
+    test('模块参数列表应对齐名称等号和值列', () => {
+        const input = [
+            'module data_gen #(',
+            '  parameter MAX_DATA_NUM = 1048576, // 输出数据个数',
+            '  parameter DATA_WIDTH = 20,        // 数据位宽',
+            '  parameter CNT_WIDTH    = 32       // 计数器位宽',
+            ') (',
+            ');',
+        ].join('\n');
+        const expected = [
+            'module data_gen #(',
+            '  parameter MAX_DATA_NUM = 1048576, // 输出数据个数',
+            '  parameter DATA_WIDTH   = 20,      // 数据位宽',
+            '  parameter CNT_WIDTH    = 32       // 计数器位宽',
+            ') (',
+            ');',
+        ].join('\n');
+
+        expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
     test('例化参数和端口连接行应缩进两个空格', () => {
         const input = [
             'clk_gen #(',
