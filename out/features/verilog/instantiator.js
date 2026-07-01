@@ -81,24 +81,25 @@ function parseModule(text) {
         if (trimmed.startsWith('/*')) {
             continue;
         }
+        const codeLine = trimmed.replace(/\s*\/\/.*$/, '').trim();
         // endmodule 停止
-        if (/\bendmodule\b/.test(trimmed)) {
+        if (/\bendmodule\b/.test(codeLine)) {
             break;
         }
         // 参数区
         if (inParam) {
-            const pm = trimmed.match(RE_PARAM);
+            const pm = codeLine.match(RE_PARAM);
             if (pm) {
-                const defaultVal = pm[2].replace(/\s*\/\/.*$/, '').trim();
+                const defaultVal = pm[2].trim();
                 params.push({ name: pm[1], defaultVal });
             }
-            if (trimmed.includes(')')) {
+            if (codeLine.includes(')')) {
                 inParam = false;
             }
             continue;
         }
         // 端口行
-        const pm = trimmed.match(RE_PORT);
+        const pm = codeLine.match(RE_PORT);
         if (pm) {
             const dir = pm[1];
             const width = pm[4] ? pm[4].trim() : '';
