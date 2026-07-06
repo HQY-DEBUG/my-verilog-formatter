@@ -61,6 +61,23 @@ describe('VerilogFormatter', () => {
         expect(new Set(semicolonCols).size).toBe(1);
     });
 
+    test('带 unpacked array 维度的信号声明参与对齐', () => {
+        const input = [
+            'reg run; // 工作使能',
+            'reg [DLY_WIDTH-1:0] delay_cnt; // 时钟拍计数',
+            'reg [ADDR_WIDTH-1:0] wr_ptr; // 写指针',
+            'reg [DATA_WIDTH-1:0] ram_data [0:MEM_DEPTH-1]; // 数据缓冲',
+        ].join('\n');
+        const expected = [
+            'reg                       run                         ; // 工作使能',
+            'reg    [DLY_WIDTH-1:0]    delay_cnt                   ; // 时钟拍计数',
+            'reg    [ADDR_WIDTH-1:0]   wr_ptr                      ; // 写指针',
+            'reg    [DATA_WIDTH-1:0]   ram_data [0:MEM_DEPTH-1]    ; // 数据缓冲',
+        ].join('\n');
+
+        expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
     // ---- case 标签下 begin/end 缩进 ----//
     test('case 标签下 begin/end 和 default 语句缩进', () => {
         const input = [

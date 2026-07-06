@@ -593,7 +593,7 @@ class VerilogFormatter {
     alignSignalDeclarations(code) {
         // 支持综合属性前缀、signed/unsigned、多名称声明、带初值；空行/注释行不断开 block
         // 但只合并 attr 结构相同的信号行（都有属性 or 都没有属性），避免跨组错乱
-        const RE = /^(\s*)(\(\*[^*]*\*\)\s*)?(reg|wire|logic|integer)\b\s*(signed|unsigned)?\s*(\[[^\]]*\])?\s*(\w+(?:\s*,\s*\w+)*)\s*(=\s*[^;\/]+)?\s*;?\s*(\/\/.*)?$/;
+        const RE = /^(\s*)(\(\*[^*]*\*\)\s*)?(reg|wire|logic|integer)\b\s*(signed|unsigned)?\s*(\[[^\]]*\])?\s*(\w+(?:\s*\[[^\]]+\])?(?:\s*,\s*\w+(?:\s*\[[^\]]+\])?)*)\s*(=\s*[^;\/]+)?\s*;?\s*(\/\/.*)?$/;
         const ATTR_RE = /^\s*\(\*/;
         const isGap = (l) => l.trim() === '' || /^\s*\/\//.test(l);
         const lines = code.split('\n');
