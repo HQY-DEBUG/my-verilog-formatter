@@ -377,8 +377,29 @@ describe('VerilogFormatter', () => {
         const expected = [
             'module data_gen #(',
             '  parameter MAX_DATA_NUM = 1048576, // 输出数据个数',
-            '  parameter DATA_WIDTH   = 20,      // 数据位宽',
+            '  parameter DATA_WIDTH   = 20     , // 数据位宽',
             '  parameter CNT_WIDTH    = 32       // 计数器位宽',
+            ') (',
+            ');',
+        ].join('\n');
+
+        expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
+    test('模块参数列表应对齐逗号列', () => {
+        const input = [
+            'module fix_delay #(',
+            '  parameter DATA_WIDTH = 16, // 数据位宽',
+            '  parameter TARGET_DELAY_CYCLES = 110*32, // 固定延时窗口',
+            '  parameter CLKS_PER_SAMPLE = 32 // 样本间隔拍数',
+            ') (',
+            ');',
+        ].join('\n');
+        const expected = [
+            'module fix_delay #(',
+            '  parameter DATA_WIDTH          = 16    , // 数据位宽',
+            '  parameter TARGET_DELAY_CYCLES = 110*32, // 固定延时窗口',
+            '  parameter CLKS_PER_SAMPLE     = 32      // 样本间隔拍数',
             ') (',
             ');',
         ].join('\n');

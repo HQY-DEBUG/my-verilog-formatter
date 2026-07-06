@@ -540,7 +540,7 @@ export class VerilogFormatter
                 group.forEach(e => {
                     const width = maxWidth > 0 ? `${e.width.padEnd(maxWidth)} ` : '';
                     const n     = e.name.padEnd(maxName);
-                    const v     = isSemicolonGroup ? e.value.padEnd(maxValue) : e.value;
+                    const v     = e.value.padEnd(maxValue);
                     const c     = e.comment ? ` ${e.comment}` : '';
                     result.push(`${baseIndent}${keyword} ${width}${n} = ${v}${e.term}${c}`);
                 });
