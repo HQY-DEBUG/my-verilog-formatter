@@ -18,7 +18,7 @@ const RE_MODULE       = /^\s*module\s+(\w+)\s*(?:#\s*\(|(?:\()|$)/;
 // 匹配端口声明行
 const RE_PORT         = /^\s*(input|output|inout)\b\s*(wire|reg|logic)?\s*(signed|unsigned)?\s*(\[[^\]]*\])?\s*([\w,\s]+)\s*(?:[,;)]|$)/;
 // 匹配 parameter 声明（在 #() 内）
-const RE_PARAM        = /^\s*parameter\s+(?:\[[^\]]*\]\s*)?(\w+)\s*=\s*([^,)]+)/;
+const RE_PARAM        = /^\s*parameter\s+(?:(?:integer|real|realtime|time)\s+)?(?:\[[^\]]*\]\s*)?(\w+)\s*=\s*([^,)]+)/;
 
 // ---- 数据结构 ----//
 interface PortInfo  { dir: string; width: string; names: string[]; }
