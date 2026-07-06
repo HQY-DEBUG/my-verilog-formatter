@@ -153,7 +153,9 @@ class VerilogFormatter {
         const sp = (n) => ' '.repeat(Math.max(0, n));
         let contentIndent = 0; // 当前作用域内代码行的缩进量
         const stack = []; // begin/case/function/task/generate 嵌套栈
-        let pendingExtra = false; // if/else/always/for 后下一行需 +indentSize
+        let pendingIndent = null; // 控制关键字后下一行的目标缩进
+        let pendingKind = null;
+        let danglingIfIndent = null; // 无 begin 的 if 体结束后，else 对齐到该列
         for (const rawLine of lines) {
             const line = rawLine.trim();
             if (line === '') {
@@ -168,7 +170,8 @@ class VerilogFormatter {
                 if (norm === ');') {
                     contentIndent = 0;
                 }
-                pendingExtra = false;
+                pendingIndent = null;
+                pendingKind = null;
                 continue;
             }
             // ") (" 形式（关闭参数列表后紧接端口列表），在第 0 列
@@ -180,7 +183,8 @@ class VerilogFormatter {
             if (!isComment && /^endmodule\b/.test(line)) {
                 result.push(line);
                 contentIndent = 0;
-                pendingExtra = false;
+                pendingIndent = null;
+                pendingKind = null;
                 continue;
             }
             // 所有 end* 关键字：弹栈，打印在对应 begin 所在列
@@ -193,14 +197,21 @@ class VerilogFormatter {
                 else {
                     result.push(line);
                 }
-                pendingExtra = false;
+                pendingIndent = null;
+                pendingKind = null;
                 continue;
             }
             // 计算本行实际缩进
-            const lineIndent = (!isComment && pendingExtra)
-                ? contentIndent + indentSize
-                : contentIndent;
-            pendingExtra = false;
+            const isElse = /^else\b/.test(line);
+            if (!isComment && !isElse && pendingKind !== 'ifBody') {
+                danglingIfIndent = null;
+            }
+            const lineIndent = (!isComment && isElse && danglingIfIndent !== null)
+                ? danglingIfIndent
+                : (pendingIndent ?? contentIndent);
+            const consumedPendingKind = pendingKind;
+            pendingIndent = null;
+            pendingKind = null;
             result.push(sp(lineIndent) + line);
             if (isComment) {
                 continue;
@@ -217,7 +228,8 @@ class VerilogFormatter {
                 contentIndent = lineIndent + indentSize;
             }
             else if (stack[stack.length - 1]?.kind === 'case' && this.isStandaloneCaseItem(line)) {
-                pendingExtra = true;
+                pendingIndent = lineIndent + indentSize;
+                pendingKind = 'caseItem';
             }
             else if (/^module\b/.test(line)) {
                 // 有端口/参数列表时缩进 indentSize；直接以 ; 结尾时不缩进
@@ -225,10 +237,19 @@ class VerilogFormatter {
             }
             else if (/^(always|initial|if|for|while|forever)\b/.test(line)) {
                 // 控制关键字后接单条语句（无 begin）：下一行临时 +indentSize
-                pendingExtra = true;
+                pendingIndent = lineIndent + indentSize;
+                pendingKind = /^if\b/.test(line) ? 'ifBody' : 'control';
+                if (/^if\b/.test(line)) {
+                    danglingIfIndent = lineIndent;
+                }
             }
             else if (/^else\b/.test(line)) {
-                pendingExtra = true;
+                pendingIndent = lineIndent + indentSize;
+                pendingKind = /^else\s+if\b/.test(line) ? 'ifBody' : 'control';
+                danglingIfIndent = /^else\s+if\b/.test(line) ? lineIndent : null;
+            }
+            else if (consumedPendingKind !== 'ifBody') {
+                danglingIfIndent = null;
             }
         }
         return result.join('\n');

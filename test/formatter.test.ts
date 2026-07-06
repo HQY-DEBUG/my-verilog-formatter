@@ -471,6 +471,35 @@ describe('VerilogFormatter', () => {
         expect(fmt['format'](input, defaultCfg)).toBe(expected);
     });
 
+    test('无 begin 的 if else 链保持单语句缩进', () => {
+        const input = [
+            '// 开始判断',
+            'always @(posedge clk or negedge rstn)',
+            'if(rstn ==1\'b0)',
+            'start_ <= 1\'b0;',
+            'else if (start && (start_r == 1\'b0))',
+            'start_ <= 1\'b1;',
+            'else if (stop && (stop_r == 1\'b0))',
+            'start_ <= 1\'b0;',
+            'else',
+            'start_ <= start_;',
+        ].join('\n');
+        const expected = [
+            '// 开始判断',
+            'always @(posedge clk or negedge rstn)',
+            '  if(rstn ==1\'b0)',
+            '    start_ <= 1\'b0;',
+            '  else if (start && (start_r == 1\'b0))',
+            '    start_ <= 1\'b1;',
+            '  else if (stop && (stop_r == 1\'b0))',
+            '    start_ <= 1\'b0;',
+            '  else',
+            '    start_ <= start_;',
+        ].join('\n');
+
+        expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
     // ---- 样例文件对比（集成测试）----//
     test('样例文件格式化输出符合预期', () => {
         const input    = fs.readFileSync(path.join(SAMPLES, 'input_messy.v'), 'utf8');
