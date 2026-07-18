@@ -78,6 +78,31 @@ describe('VerilogFormatter', () => {
         expect(fmt['format'](input, defaultCfg)).toBe(expected);
     });
 
+    test('端口声明的位宽列应与 signed 修饰符分列对齐', () => {
+        const input = [
+            'module data_proc #(',
+            'parameter DATA_WIDTH = 20',
+            ') (',
+            'input wire clk,',
+            'input wire signed [DATA_WIDTH-1:0] x_data,',
+            'input wire [1:0] data_mode,',
+            'output wire signed [DATA_WIDTH-1:0] x_data_out',
+            ');',
+        ].join('\n');
+        const expected = [
+            'module data_proc #(',
+            '  parameter DATA_WIDTH = 20',
+            ') (',
+            '  input   wire                          clk       ,',
+            '  input   wire  signed [DATA_WIDTH-1:0] x_data    ,',
+            '  input   wire         [1:0]            data_mode ,',
+            '  output  wire  signed [DATA_WIDTH-1:0] x_data_out',
+            ');',
+        ].join('\n');
+
+        expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
     // ---- case 标签下 begin/end 缩进 ----//
     test('case 标签下 begin/end 和 default 语句缩进', () => {
         const input = [
