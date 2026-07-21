@@ -50,6 +50,7 @@ exports.activate = activate;
 exports.deactivate = deactivate;
 const vscode = __importStar(require("vscode"));
 const formatter_1 = require("./features/verilog/formatter");
+const adcFormatter_1 = require("./features/verilog/adcFormatter");
 const instantiator_1 = require("./features/verilog/instantiator");
 const fileTree_1 = require("./features/verilog/fileTree");
 const symbolProvider_1 = require("./features/verilog/symbolProvider");
@@ -63,17 +64,19 @@ const todoStatusBar_1 = require("./features/todo/todoStatusBar");
 exports.VERILOG_LANGS = ['verilog', 'systemverilog', 'verilog-hdl', 'systemverilog-hdl'];
 function activate(context) {
     const formatter = new formatter_1.VerilogFormatter();
+    const adcFormatter = new adcFormatter_1.AdcFormatter();
     // ---- 格式化 ----//
     for (const lang of exports.VERILOG_LANGS) {
         context.subscriptions.push(vscode.languages.registerDocumentFormattingEditProvider({ language: lang }, formatter), vscode.languages.registerDocumentRangeFormattingEditProvider({ language: lang }, formatter));
     }
+    context.subscriptions.push(vscode.languages.registerDocumentFormattingEditProvider({ language: 'anlogic-adc' }, adcFormatter), vscode.languages.registerDocumentRangeFormattingEditProvider({ language: 'anlogic-adc' }, adcFormatter));
     // ---- 保存时自动格式化 ----//
     context.subscriptions.push(vscode.workspace.onDidSaveTextDocument(async (doc) => {
         const cfg = vscode.workspace.getConfiguration('verilogFormatter');
         if (!cfg.get('formatOnSave', false)) {
             return;
         }
-        if (!exports.VERILOG_LANGS.includes(doc.languageId)) {
+        if (!exports.VERILOG_LANGS.includes(doc.languageId) && doc.languageId !== 'anlogic-adc') {
             return;
         }
         await vscode.commands.executeCommand('editor.action.formatDocument', doc.uri);

@@ -416,7 +416,7 @@
             {
                 "command": "editor.action.formatDocument",
                 "key": "ctrl+alt+f",
-                "when": "editorTextFocus && editorLangId =~ /verilog|systemverilog/"
+                "when": "editorTextFocus && editorLangId =~ /verilog|systemverilog|anlogic-adc/"
             },
             {
                 "command": "verilogFormatter.instantiate",

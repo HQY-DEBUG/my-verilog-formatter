@@ -113,6 +113,8 @@ module_name u_module_name (
 | `.do` | ModelSim DO 脚本 |
 | `.cst` | 高云 CST 约束 |
 
+Anlogic ADC 文件支持整文档或选区格式化，可自动对齐信号名及 `LOCATION`、`IOSTANDARD`、`DRIVESTRENGTH` 等属性列。
+
 ---
 
 #### 🔍 语法跳转 & 定义悬停

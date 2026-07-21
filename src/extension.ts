@@ -13,6 +13,7 @@
 
 import * as vscode from 'vscode';
 import { VerilogFormatter }          from './features/verilog/formatter';
+import { AdcFormatter }              from './features/verilog/adcFormatter';
 import { registerInstantiatorCommands } from './features/verilog/instantiator';
 import { registerFileTree }          from './features/verilog/fileTree';
 import { registerSymbolProviders }   from './features/verilog/symbolProvider';
@@ -28,6 +29,7 @@ export const VERILOG_LANGS = ['verilog', 'systemverilog', 'verilog-hdl', 'system
 
 export function activate(context: vscode.ExtensionContext): void {
     const formatter = new VerilogFormatter();
+    const adcFormatter = new AdcFormatter();
 
     // ---- 格式化 ----//
     for (const lang of VERILOG_LANGS) {
@@ -36,13 +38,17 @@ export function activate(context: vscode.ExtensionContext): void {
             vscode.languages.registerDocumentRangeFormattingEditProvider({ language: lang }, formatter),
         );
     }
+    context.subscriptions.push(
+        vscode.languages.registerDocumentFormattingEditProvider({ language: 'anlogic-adc' }, adcFormatter),
+        vscode.languages.registerDocumentRangeFormattingEditProvider({ language: 'anlogic-adc' }, adcFormatter),
+    );
 
     // ---- 保存时自动格式化 ----//
     context.subscriptions.push(
         vscode.workspace.onDidSaveTextDocument(async doc => {
             const cfg = vscode.workspace.getConfiguration('verilogFormatter');
             if (!cfg.get<boolean>('formatOnSave', false)) { return; }
-            if (!VERILOG_LANGS.includes(doc.languageId)) { return; }
+            if (!VERILOG_LANGS.includes(doc.languageId) && doc.languageId !== 'anlogic-adc') { return; }
             await vscode.commands.executeCommand('editor.action.formatDocument', doc.uri);
         }),
     );
