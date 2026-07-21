@@ -1,0 +1,66 @@
+{
+  "name": "Anlogic ADC Constraint",
+  "scopeName": "source.adc",
+  "fileTypes": ["adc"],
+  "patterns": [
+    { "include": "#line_comment" },
+    { "include": "#block_comment" },
+    { "include": "#string" },
+    { "include": "#command" },
+    { "include": "#property" },
+    { "include": "#io_standard" },
+    { "include": "#boolean" },
+    { "include": "#pin" },
+    { "include": "#number" },
+    { "include": "#operator" },
+    { "include": "#terminator" }
+  ],
+  "repository": {
+    "line_comment": {
+      "name": "comment.line.hash.adc",
+      "match": "#.*$"
+    },
+    "block_comment": {
+      "name": "comment.block.adc",
+      "begin": "/\\*",
+      "end": "\\*/"
+    },
+    "string": {
+      "name": "string.quoted.double.adc",
+      "begin": "\"",
+      "end": "\""
+    },
+    "command": {
+      "name": "keyword.control.adc",
+      "match": "\\b(set_pin_assignment|set_location_assignment|set_instance_assignment|set_global_assignment)\\b"
+    },
+    "property": {
+      "name": "support.constant.property.adc",
+      "match": "\\b(LOCATION|IOSTANDARD|DRIVESTRENGTH|SLEWRATE|PULLTYPE|PULLUP|PULLDOWN|SCHMITT_TRIGGER|DIFFRESISTOR|TERMINATION|VREF|CURRENT_STRENGTH_NEW|WEAK_PULL_UP_RESISTOR|ENABLE_BUS_HOLD_CIRCUITRY)\\b"
+    },
+    "io_standard": {
+      "name": "support.constant.property-value.adc",
+      "match": "\\b(LVCMOS(?:10|12|15|18|25|33)|LVTTL|LVDS|MINI_LVDS|RSDS|PPDS|TMDS|HSTL(?:_I|_II)?|SSTL(?:_I|_II)?|PCI|PCI_X|CML|LVPECL)\\b"
+    },
+    "boolean": {
+      "name": "constant.language.boolean.adc",
+      "match": "\\b(ON|OFF|TRUE|FALSE|YES|NO|NONE|UP|DOWN|FAST|SLOW)\\b"
+    },
+    "pin": {
+      "name": "constant.other.pin.adc",
+      "match": "\\bP\\d+[A-Z]?\\b"
+    },
+    "number": {
+      "name": "constant.numeric.adc",
+      "match": "(?<![A-Za-z_])-?\\b\\d+(?:\\.\\d+)?\\b"
+    },
+    "operator": {
+      "name": "keyword.operator.assignment.adc",
+      "match": "="
+    },
+    "terminator": {
+      "name": "punctuation.terminator.statement.adc",
+      "match": ";"
+    }
+  }
+}

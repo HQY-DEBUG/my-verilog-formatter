@@ -14,12 +14,21 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 describe('Verilog TextMate grammar', () => {
+    function loadGrammar(fileName: string): {
+        scopeName: string;
+        fileTypes: string[];
+        patterns: Array<{ include?: string }>;
+        repository: Record<string, any>;
+    } {
+        const grammarPath = path.join(__dirname, '..', 'resources', 'verilog', 'syntaxes', fileName);
+        return JSON.parse(fs.readFileSync(grammarPath, 'utf8'));
+    }
+
     function loadVerilogGrammar(): {
         patterns: Array<{ include?: string }>;
         repository: Record<string, any>;
     } {
-        const grammarPath = path.join(__dirname, '..', 'resources', 'verilog', 'syntaxes', 'verilog.tmLanguage.json');
-        return JSON.parse(fs.readFileSync(grammarPath, 'utf8'));
+        return loadGrammar('verilog.tmLanguage.json');
     }
 
     it('普通标识符不应被全局标记为 variable/constant scope', () => {
@@ -63,5 +72,49 @@ describe('Verilog TextMate grammar', () => {
         for (const lang of formatterLangs) {
             expect(grammarLangs).toContain(lang);
         }
+    });
+
+    it('应注册 Anlogic ADC 与 SDC 约束语言和 grammar', () => {
+        const pkgPath = path.join(__dirname, '..', 'package.json');
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8')) as {
+            activationEvents: string[];
+            contributes: {
+                languages: Array<{ id: string; extensions: string[] }>;
+                grammars: Array<{ language: string; scopeName: string; path: string }>;
+            };
+        };
+
+        for (const expected of [
+            { id: 'anlogic-adc', extension: '.adc', scopeName: 'source.adc' },
+            { id: 'sdc', extension: '.sdc', scopeName: 'source.sdc' },
+        ]) {
+            expect(pkg.activationEvents).toContain(`onLanguage:${expected.id}`);
+            expect(pkg.contributes.languages).toContainEqual(expect.objectContaining({
+                id: expected.id,
+                extensions: expect.arrayContaining([expected.extension]),
+            }));
+            expect(pkg.contributes.grammars).toContainEqual(expect.objectContaining({
+                language: expected.id,
+                scopeName: expected.scopeName,
+            }));
+        }
+    });
+
+    it('Anlogic ADC grammar 应识别引脚约束命令、属性和管脚号', () => {
+        const grammar = loadGrammar('adc.tmLanguage.json');
+
+        expect(grammar.scopeName).toBe('source.adc');
+        expect(new RegExp(grammar.repository.command.match).test('set_pin_assignment')).toBe(true);
+        expect(new RegExp(grammar.repository.property.match).test('DRIVESTRENGTH')).toBe(true);
+        expect(new RegExp(grammar.repository.pin.match).test('P54')).toBe(true);
+    });
+
+    it('SDC grammar 应识别时序命令、对象查询和选项', () => {
+        const grammar = loadGrammar('sdc.tmLanguage.json');
+
+        expect(grammar.scopeName).toBe('source.sdc');
+        expect(new RegExp(grammar.repository.command.match).test('create_generated_clock')).toBe(true);
+        expect(new RegExp(grammar.repository.collection_command.match).test('get_ports')).toBe(true);
+        expect(new RegExp(grammar.repository.option.match).test('-divide_by')).toBe(true);
     });
 });

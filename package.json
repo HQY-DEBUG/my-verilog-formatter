@@ -19,6 +19,8 @@
         "onLanguage:systemverilog-hdl",
         "onLanguage:ucf",
         "onLanguage:xdc",
+        "onLanguage:anlogic-adc",
+        "onLanguage:sdc",
         "onLanguage:vhdl",
         "onLanguage:tcl",
         "onLanguage:modelsim-do",
@@ -75,6 +77,28 @@
                 ],
                 "extensions": [
                     ".xdc"
+                ],
+                "configuration": "./resources/verilog/language-configurations/language-configuration.json"
+            },
+            {
+                "id": "anlogic-adc",
+                "aliases": [
+                    "Anlogic ADC Constraint",
+                    "adc"
+                ],
+                "extensions": [
+                    ".adc"
+                ],
+                "configuration": "./resources/verilog/language-configurations/language-configuration.json"
+            },
+            {
+                "id": "sdc",
+                "aliases": [
+                    "SDC Constraint",
+                    "sdc"
+                ],
+                "extensions": [
+                    ".sdc"
                 ],
                 "configuration": "./resources/verilog/language-configurations/language-configuration.json"
             },
@@ -170,6 +194,16 @@
                 "language": "xdc",
                 "scopeName": "source.xdc",
                 "path": "./resources/verilog/syntaxes/xdc.tmLanguage.json"
+            },
+            {
+                "language": "anlogic-adc",
+                "scopeName": "source.adc",
+                "path": "./resources/verilog/syntaxes/adc.tmLanguage.json"
+            },
+            {
+                "language": "sdc",
+                "scopeName": "source.sdc",
+                "path": "./resources/verilog/syntaxes/sdc.tmLanguage.json"
             },
             {
                 "language": "vhdl",

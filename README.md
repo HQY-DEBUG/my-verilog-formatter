@@ -107,6 +107,8 @@ module_name u_module_name (
 | `.vhd` / `.vhdl` | VHDL |
 | `.ucf` | Xilinx UCF 约束 |
 | `.xdc` | Xilinx XDC 约束 |
+| `.adc` | Anlogic ADC 引脚约束 |
+| `.sdc` | SDC 时序约束 |
 | `.tcl` | Tcl 脚本 |
 | `.do` | ModelSim DO 脚本 |
 | `.cst` | 高云 CST 约束 |

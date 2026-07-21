@@ -1,0 +1,51 @@
+{
+  "name": "SDC Constraint",
+  "scopeName": "source.sdc",
+  "fileTypes": ["sdc"],
+  "patterns": [
+    { "include": "#line_comment" },
+    { "include": "#block_comment" },
+    { "include": "#string" },
+    { "include": "#command" },
+    { "include": "#collection_command" },
+    { "include": "#option" },
+    { "include": "#variable" },
+    { "include": "#number" }
+  ],
+  "repository": {
+    "line_comment": {
+      "name": "comment.line.hash.sdc",
+      "match": "#.*$"
+    },
+    "block_comment": {
+      "name": "comment.block.sdc",
+      "begin": "/\\*",
+      "end": "\\*/"
+    },
+    "string": {
+      "name": "string.quoted.double.sdc",
+      "begin": "\"",
+      "end": "\""
+    },
+    "command": {
+      "name": "keyword.control.sdc",
+      "match": "\\b(create_clock|create_generated_clock|set_clock_groups|set_clock_latency|set_clock_transition|set_clock_uncertainty|set_input_delay|set_output_delay|set_false_path|set_multicycle_path|set_max_delay|set_min_delay|set_data_check|set_disable_timing|set_case_analysis|set_input_transition|set_load|set_drive|set_driving_cell|set_max_capacitance|set_min_capacitance|set_max_fanout|set_max_transition|set_operating_conditions|set_wire_load_model|set_propagated_clock|set_ideal_network|set_time_format|set_units|set_hierarchy_separator|group_path|current_design|current_instance|read_sdc|write_sdc|source)\\b"
+    },
+    "collection_command": {
+      "name": "support.function.sdc",
+      "match": "\\b(get_ports|get_pins|get_nets|get_cells|get_clocks|get_registers|get_designs|get_libs|get_lib_cells|get_lib_pins|all_clocks|all_inputs|all_outputs|all_registers|filter_collection|add_to_collection|remove_from_collection|sizeof_collection|foreach_in_collection)\\b"
+    },
+    "option": {
+      "name": "support.constant.property.sdc",
+      "match": "(?<![\\w:])-{1,2}(?:name|period|waveform|source|master_clock|divide_by|multiply_by|edges|edge_shift|combinational|add|from|to|through|rise|fall|rise_from|rise_to|fall_from|fall_to|setup|hold|start|end|min|max|clock|clock_fall|level_sensitive|datapath_only|of_objects|filter|regexp|nocase|hierarchical|quiet|verbose|unit|decimal_places)\\b"
+    },
+    "variable": {
+      "name": "variable.other.tcl",
+      "match": "\\$\\{?[\\w:]+\\}?"
+    },
+    "number": {
+      "name": "constant.numeric.sdc",
+      "match": "(?<![A-Za-z_])-?\\b\\d+(?:\\.\\d+)?(?:e[+-]?\\d+)?\\b"
+    }
+  }
+}
