@@ -13,11 +13,11 @@ module test_input #(
   parameter DATA_WIDTH = 16,
   parameter ADDR_WIDTH = 8
 ) (
-  input   wire                   clk  , // 时钟
-  input   wire                   rstn , // 复位
-  input   wire  [DATA_WIDTH-1:0] din  , // 数据输入
-  output  reg   [DATA_WIDTH-1:0] dout , // 数据输出
-  output  wire                   valid  // 数据有效
+  input   wire                   clk, // 时钟
+  input   wire                   rstn, // 复位
+  input   wire  [DATA_WIDTH-1:0] din, // 数据输入
+  output  reg   [DATA_WIDTH-1:0] dout, // 数据输出
+  output  wire                   valid // 数据有效
 );
 
 // 信号定义（未对齐）

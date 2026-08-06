@@ -800,6 +800,7 @@ export class VerilogFormatter
         const maxSign      = Math.max(...parsed.map(p => p.sign.length));
         const maxWidth     = Math.max(...parsed.map(p => p.width.length));
         const maxName      = Math.max(...parsed.map(p => p.name.length));
+        const hasComment   = parsed.some(p => p.comment.length > 0);
 
         return parsed.map(p => {
             if (!p.dir) { return p.name; }
@@ -808,9 +809,10 @@ export class VerilogFormatter
             // signed/unsigned 与位宽分别成列，确保无符号位宽也与有符号位宽左对齐。
             const signPad  = maxSign > 0 ? p.sign.padEnd(maxSign + 1) : '';
             const widthPad = maxWidth > 0 ? p.width.padEnd(maxWidth + 1) : '';
-            const namePad  = p.name.padEnd(maxName);
+            // 端口行带注释时，注释紧跟逗号，避免长端口名造成大段空白。
+            const namePad  = hasComment ? p.name : p.name.padEnd(maxName);
             const cmt      = p.comment
-                ? `  ${p.comment.startsWith('//') ? p.comment : '// ' + p.comment}`
+                ? `${hasComment ? ' ' : '  '}${p.comment.startsWith('//') ? p.comment : '// ' + p.comment}`
                 : '';
             // 属性前缀保留原文，与方向之间用 2 个空格分隔
             const attrPad = p.attr ? p.attr + '  ' : '';
@@ -826,6 +828,11 @@ export class VerilogFormatter
         let   i      = 0;
 
         while (i < lines.length) {
+            if (this.isPortDeclarationWithComment(lines[i])) {
+                result.push(lines[i]);
+                i++;
+                continue;
+            }
             if (!this.hasTrailingComment(lines[i])) {
                 result.push(lines[i]);
                 i++;
@@ -852,6 +859,9 @@ export class VerilogFormatter
 
     // 将块内所有行的 // 对齐到最大代码列 + 1 空格
     private alignCommentBlock(lines: string[]): string[] {
+        if (lines.every(line => this.isPortDeclarationWithComment(line))) {
+            return lines;
+        }
         const GAP = 1;
         const codeParts = lines.map(line => {
             const idx = line.indexOf('//');
@@ -866,6 +876,10 @@ export class VerilogFormatter
             const comment = line.substring(idx);
             return codeParts[i].padEnd(commentCol) + comment;
         });
+    }
+
+    private isPortDeclarationWithComment(line: string): boolean {
+        return /^\s*(?:\(\*[^*]*\*\)\s*)?(?:input|output|inout)\b.*?,\s*\/\//.test(line);
     }
 
     // ---- 通用：找到匹配正则的连续行块并批量处理（允许空行/注释行作为间隔）----//
