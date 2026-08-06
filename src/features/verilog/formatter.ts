@@ -555,8 +555,8 @@ export class VerilogFormatter
                     i++;
                     if (cm[4] === ';') { break; }
                 }
-                // 续行缩进 = baseIndent + keyword + 2 空格
-                const contIndent = baseIndent + ' '.repeat(keyword.length + 2);
+                // 续行名称与首行名称对齐。
+                const contIndent = baseIndent + ' '.repeat(keyword.length + 1);
                 const maxName    = Math.max(...entries.map(e => e.name.length));
                 const maxValue   = Math.max(...entries.map(e => e.value.length));
                 entries.forEach((e, idx) => {

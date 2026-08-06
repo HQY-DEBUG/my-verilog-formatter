@@ -390,6 +390,25 @@ describe('VerilogFormatter', () => {
         expect(fmt['format'](input, defaultCfg)).toBe(expected);
     });
 
+    test('同一 parameter 语句的续行名称应与首行对齐', () => {
+        const input = [
+            'parameter IDLE = 5\'b00001,',
+            'LOADBYTE = 5\'b00010,',
+            'START = 5\'b00100,',
+            'TRANSMIT = 5\'b01000,',
+            'DONE = 5\'b10000;',
+        ].join('\n');
+        const expected = [
+            'parameter IDLE     = 5\'b00001,',
+            '          LOADBYTE = 5\'b00010,',
+            '          START    = 5\'b00100,',
+            '          TRANSMIT = 5\'b01000,',
+            '          DONE     = 5\'b10000;',
+        ].join('\n');
+
+        expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
     test('模块参数列表应对齐名称等号和值列', () => {
         const input = [
             'module data_gen #(',
