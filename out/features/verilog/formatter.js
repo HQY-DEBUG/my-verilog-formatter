@@ -815,12 +815,12 @@ class VerilogFormatter {
                 comment: m[9] ?? '',
             };
         });
-        const maxDir = Math.max(...parsed.map(p => p.dir.length));
-        const maxType = Math.max(...parsed.map(p => p.ptype.length));
-        const maxSign = Math.max(...parsed.map(p => p.sign.length));
-        const maxWidth = Math.max(...parsed.map(p => p.width.length));
-        const maxName = Math.max(...parsed.map(p => p.name.length));
-        const hasComment = parsed.some(p => p.comment.length > 0);
+        const ports = parsed.filter(p => p.dir.length > 0);
+        const maxDir = Math.max(...ports.map(p => p.dir.length));
+        const maxType = Math.max(...ports.map(p => p.ptype.length));
+        const maxSign = Math.max(...ports.map(p => p.sign.length));
+        const maxWidth = Math.max(...ports.map(p => p.width.length));
+        const maxName = Math.max(...ports.map(p => p.name.length));
         return parsed.map(p => {
             if (!p.dir) {
                 return p.name;
@@ -830,10 +830,9 @@ class VerilogFormatter {
             // signed/unsigned 与位宽分别成列，确保无符号位宽也与有符号位宽左对齐。
             const signPad = maxSign > 0 ? p.sign.padEnd(maxSign + 1) : '';
             const widthPad = maxWidth > 0 ? p.width.padEnd(maxWidth + 1) : '';
-            // 端口行带注释时，注释紧跟逗号，避免长端口名造成大段空白。
-            const namePad = hasComment ? p.name : p.name.padEnd(maxName);
+            const namePad = p.name.padEnd(maxName);
             const cmt = p.comment
-                ? `${hasComment ? ' ' : '  '}${p.comment.startsWith('//') ? p.comment : '// ' + p.comment}`
+                ? `  ${p.comment.startsWith('//') ? p.comment : '// ' + p.comment}`
                 : '';
             // 属性前缀保留原文，与方向之间用 2 个空格分隔
             const attrPad = p.attr ? p.attr + '  ' : '';
@@ -847,11 +846,6 @@ class VerilogFormatter {
         const result = [];
         let i = 0;
         while (i < lines.length) {
-            if (this.isPortDeclarationWithComment(lines[i])) {
-                result.push(lines[i]);
-                i++;
-                continue;
-            }
             if (!this.hasTrailingComment(lines[i])) {
                 result.push(lines[i]);
                 i++;
@@ -877,9 +871,6 @@ class VerilogFormatter {
     }
     // 将块内所有行的 // 对齐到最大代码列 + 1 空格
     alignCommentBlock(lines) {
-        if (lines.every(line => this.isPortDeclarationWithComment(line))) {
-            return lines;
-        }
         const GAP = 1;
         const codeParts = lines.map(line => {
             const idx = line.indexOf('//');
@@ -895,9 +886,6 @@ class VerilogFormatter {
             const comment = line.substring(idx);
             return codeParts[i].padEnd(commentCol) + comment;
         });
-    }
-    isPortDeclarationWithComment(line) {
-        return /^\s*(?:\(\*[^*]*\*\)\s*)?(?:input|output|inout)\b.*?,\s*\/\//.test(line);
     }
     // ---- 通用：找到匹配正则的连续行块并批量处理（允许空行/注释行作为间隔）----//
     // 遇到空行或注释行时向前预看，后面仍有匹配行则将间隔行纳入同一 block

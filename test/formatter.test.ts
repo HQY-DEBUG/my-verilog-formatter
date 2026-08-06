@@ -390,19 +390,21 @@ describe('VerilogFormatter', () => {
         expect(fmt['format'](input, defaultCfg)).toBe(expected);
     });
 
-    test('带注释的端口行不应为对齐逗号补充过多空格', () => {
+    test('带注释的端口行应忽略被注释端口的长度', () => {
         const input = [
             'module rd26bhjc (',
             'input wire CLKIN, // 46.08 MHz 系统时钟',
             'input wire CLOCK_XY2_100, // XY2-100 时钟',
+            '// input wire A_VERY_LONG_DISABLED_PORT, // 禁用端口',
             'output wire TEST1, // 测试信号 1',
             ');',
         ].join('\n');
         const expected = [
             'module rd26bhjc (',
-            '  input   wire  CLKIN, // 46.08 MHz 系统时钟',
+            '  input   wire  CLKIN        , // 46.08 MHz 系统时钟',
             '  input   wire  CLOCK_XY2_100, // XY2-100 时钟',
-            '  output  wire  TEST1, // 测试信号 1',
+            '  // input wire A_VERY_LONG_DISABLED_PORT, // 禁用端口',
+            '  output  wire  TEST1        , // 测试信号 1',
             ');',
         ].join('\n');
 
