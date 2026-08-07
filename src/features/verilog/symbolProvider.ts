@@ -68,8 +68,8 @@ function extractSignalNamesFromLine(line: string): string[] {
         .filter(n => n.length > 0 && !/^(reg|wire|logic|integer|signed|unsigned)$/.test(n));
 }
 
-// 从单行端口声明中提取所有端口名（支持多名称）
-const RE_PORT_LINE = /^\s*(?:\(\*[^*]*\*\)\s*)?(input|output|inout)\b\s*(?:wire|reg|logic)?\s*(?:signed|unsigned)?\s*(?:\[[^\]]*\])?\s*(.+?)\s*[,;)]\s*(?:\/\/.*)?$/;
+// 从单行端口声明中提取所有端口名（支持多名称及下一行闭合的末端口）
+const RE_PORT_LINE = /^\s*(?:\(\*[^*]*\*\)\s*)?(input|output|inout)\b\s*(?:wire|reg|logic)?\s*(?:signed|unsigned)?\s*(?:\[[^\]]*\])?\s*(.+?)\s*(?:[,;)]\s*)?$/;
 
 function extractPortNamesFromLine(line: string): string[] {
     const noComment = line.replace(/\/\/.*$/, '');
@@ -137,6 +137,15 @@ function extractSymbols(filePath: string): SymbolInfo[] {
     let text: string;
     try { text = fs.readFileSync(filePath, 'utf8'); } catch { return []; }
     return extractSymbolsFromText(filePath, text);
+}
+
+/**
+ * @brief 从当前编辑器缓冲区查找符号
+ * @details 跳转和悬停必须直接读取当前文档，避免文件位于索引范围外或索引尚未刷新时误用其他文件的同名符号。
+ */
+function findSymbolsInDocument(document: vscode.TextDocument, name: string): SymbolInfo[] {
+    return extractSymbolsFromText(document.uri.fsPath, document.getText())
+        .filter(symbol => symbol.name === name);
 }
 
 // ---- 符号索引 ----//
@@ -209,8 +218,8 @@ export class VerilogDefinitionProvider implements vscode.DefinitionProvider {
         if (!wordRange) { return []; }
         const word = document.getText(wordRange);
 
-        // 先在当前文件查找，再跨文件查找
-        const localHits = this.index.findInFile(word, document.uri.fsPath);
+        // 当前编辑器缓冲区优先，未找到时才跨文件查询索引
+        const localHits = findSymbolsInDocument(document, word);
         const hits      = localHits.length > 0 ? localHits : this.index.find(word);
 
         return hits.map(s => new vscode.Location(
@@ -235,8 +244,8 @@ export class VerilogHoverProvider implements vscode.HoverProvider {
         if (!wordRange) { return null; }
         const word = document.getText(wordRange);
 
-        // 优先查找当前文件的定义
-        const localHits = this.index.findInFile(word, document.uri.fsPath);
+        // 当前编辑器缓冲区优先，避免显示其他文件的同名定义
+        const localHits = findSymbolsInDocument(document, word);
         const allHits   = this.index.find(word);
         if (localHits.length === 0 && allHits.length === 0) { return null; }
 

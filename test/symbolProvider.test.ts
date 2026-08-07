@@ -10,7 +10,12 @@
 //  v0.1.0  2026/06/17  创建测试文件
 // =========================================================================
 
-import { VerilogDocumentSymbolProvider } from '../src/features/verilog/symbolProvider';
+import {
+    VerilogDefinitionProvider,
+    VerilogDocumentSymbolProvider,
+    VerilogHoverProvider,
+    VerilogSymbolIndex,
+} from '../src/features/verilog/symbolProvider';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -47,5 +52,61 @@ describe('VerilogDocumentSymbolProvider', () => {
         const children = symbols[0].children;
 
         expect(children.some(sym => sym.name === 'u_data_split  (data_split)' && sym.detail === 'instantiation')).toBe(true);
+    });
+});
+
+describe('VerilogDefinitionProvider', () => {
+    function createDocument(filePath: string, text: string, word: string): any {
+        const wordRange = { start: { line: 4, character: 4 }, end: { line: 4, character: 15 } };
+        return {
+            uri: { fsPath: filePath, scheme: 'file' },
+            getWordRangeAtPosition: () => wordRange,
+            getText: (range?: unknown) => range ? word : text,
+        };
+    }
+
+    it('当前文件不在索引中时仍应跳转到当前缓冲区的端口声明', () => {
+        const index = new VerilogSymbolIndex();
+        index.updateFileFromText('E:\\project\\rxdydata.v', [
+            'module rxdydata;',
+            "reg frame_error = 1'b0;",
+            'endmodule',
+        ].join('\n'));
+
+        const document = createDocument('E:\\external\\uart_recv.v', [
+            'module uart_recv (',
+            '  input  wire clk,',
+            '  output reg  rx_valid,',
+            '  output reg  frame_error',
+            ');',
+            '  always @(posedge clk)',
+            "    frame_error <= 1'b0;",
+            'endmodule',
+        ].join('\n'), 'frame_error');
+
+        const provider = new VerilogDefinitionProvider(index);
+        const locations = provider.provideDefinition(document, { line: 6, character: 8 } as any);
+
+        expect(locations).toHaveLength(1);
+        expect(locations[0].uri.fsPath).toBe('E:\\external\\uart_recv.v');
+        expect(locations[0].range.start.line).toBe(3);
+    });
+
+    it('悬停应优先显示当前缓冲区的端口声明', () => {
+        const index = new VerilogSymbolIndex();
+        index.updateFileFromText('E:\\project\\rxdydata.v', "reg frame_error = 1'b0;");
+        const document = createDocument('E:\\external\\uart_recv.v', [
+            'module uart_recv (',
+            '  output reg frame_error',
+            ');',
+            'endmodule',
+        ].join('\n'), 'frame_error');
+
+        const provider = new VerilogHoverProvider(index);
+        const hover = provider.provideHover(document, { line: 1, character: 15 } as any) as any;
+
+        expect(hover.contents.value).toContain('frame_error** — port');
+        expect(hover.contents.value).toContain('output reg frame_error');
+        expect(hover.contents.value).not.toContain("reg frame_error = 1'b0;");
     });
 });

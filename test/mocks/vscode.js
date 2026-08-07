@@ -19,6 +19,33 @@ module.exports = {
     Uri: {
         file: (p) => ({ fsPath: p, scheme: 'file', path: p }),
     },
+    Position: class Position {
+        constructor(line, character) {
+            this.line = line;
+            this.character = character;
+        }
+    },
+    Location: class Location {
+        constructor(uri, rangeOrPosition) {
+            this.uri = uri;
+            this.range = typeof rangeOrPosition.line === 'number'
+                ? { start: rangeOrPosition, end: rangeOrPosition }
+                : rangeOrPosition;
+        }
+    },
+    MarkdownString: class MarkdownString {
+        constructor() { this.value = ''; }
+        appendMarkdown(value) { this.value += value; }
+        appendCodeblock(value, language) {
+            this.value += `\n\n\`\`\`${language}\n${value}\n\`\`\``;
+        }
+    },
+    Hover: class Hover {
+        constructor(contents, range) {
+            this.contents = contents;
+            this.range = range;
+        }
+    },
     Range: class Range {
         constructor(sl, sc, el, ec) {
             if (typeof sl === 'object' && typeof sc === 'object') {
