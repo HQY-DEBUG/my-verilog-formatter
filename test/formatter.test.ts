@@ -135,6 +135,37 @@ describe('VerilogFormatter', () => {
         expect(fmt['format'](input, defaultCfg)).toBe(expected);
     });
 
+    test('数值 case 标签下的 begin 应增加一级缩进', () => {
+        const input = [
+            'case (byte_index)',
+            '4\'d0:',
+            'begin',
+            'checksum <= 8\'h00;',
+            'checksum_ok <= 1\'b0;',
+            'end',
+            '4\'d1:',
+            'begin',
+            'checksum <= rx_data;',
+            'end',
+            'endcase',
+        ].join('\n');
+        const expected = [
+            'case (byte_index)',
+            '  4\'d0 :',
+            '    begin',
+            '      checksum    <= 8\'h00;',
+            '      checksum_ok <= 1\'b0;',
+            '    end',
+            '  4\'d1 :',
+            '    begin',
+            '      checksum <= rx_data;',
+            '    end',
+            'endcase',
+        ].join('\n');
+
+        expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
     test('case item 块式标签应按冒号列对齐', () => {
         const input = [
             'case (R_cmd_x[19:4])',

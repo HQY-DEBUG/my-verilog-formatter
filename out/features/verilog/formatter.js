@@ -283,7 +283,7 @@ class VerilogFormatter {
         return -1;
     }
     isCaseLabel(label) {
-        return /^(?:default|[A-Za-z_][\w$]*(?:\[[^\]]+\])?)$/.test(label);
+        return /^(?:default|[A-Za-z_][\w$]*(?:\[[^\]]+\])?|(?:\d+)?'[sS]?[bBoOdDhH][0-9a-fA-FxXzZ?_]+|\d+)$/.test(label);
     }
     // ---- 对齐 case item 标签 ----//
     alignCaseItems(code) {

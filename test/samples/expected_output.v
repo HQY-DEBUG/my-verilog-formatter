@@ -48,8 +48,8 @@ always @(posedge clk or negedge rstn)
 always @(*)
   begin
     case (cnt)
-      4'd0: dout = 16'h0000;
-      4'd1: dout = 16'hFFFF;
+      4'd0 : dout = 16'h0000;
+      4'd1 : dout = 16'hFFFF;
     endcase
   end
 
