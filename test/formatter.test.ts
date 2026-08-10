@@ -438,6 +438,27 @@ describe('VerilogFormatter', () => {
         expect(fmt['format'](input, defaultCfg)).toBe(expected);
     });
 
+    test('带类型和位宽的模块参数应对齐名称与等号列', () => {
+        const input = [
+            'module axis_monitor_core #(',
+            'parameter integer DELAY_ADDR_WIDTH = 10,',
+            'parameter ADD_FEEDBACK = 1\'b0,',
+            'parameter [15:0] DEFAULT_TRACK_ERROR_SAMPLES = 16\'d52',
+            ') (',
+            ');',
+        ].join('\n');
+        const expected = [
+            'module axis_monitor_core #(',
+            '  parameter integer        DELAY_ADDR_WIDTH            = 10    ,',
+            '  parameter                ADD_FEEDBACK                = 1\'b0  ,',
+            '  parameter         [15:0] DEFAULT_TRACK_ERROR_SAMPLES = 16\'d52',
+            ') (',
+            ');',
+        ].join('\n');
+
+        expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
     test('带注释的端口行应忽略被注释端口的长度', () => {
         const input = [
             'module rd26bhjc (',

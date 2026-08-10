@@ -509,9 +509,9 @@ export class VerilogFormatter
     // 情况1（多参数）：localparam NAME = v, NAME2 = v2;  续行逗号分隔，末行分号
     // 情况2（连续单行）：多行 parameter/localparam [W] NAME = value; 作为一组对齐
     private alignLocalparams(code: string): string {
-        const FIRST_RE = /^(\s*)(parameter|localparam)\b\s*(?:(\[[^\]]+\])\s*)?(\w+)\s*=\s*([^,;]+?)\s*([,;]?)\s*(\/\/.*)?$/;
+        const FIRST_RE = /^(\s*)(parameter|localparam)\b\s*(?:(integer|int|logic|reg|wire)\b\s*)?(signed|unsigned)?\s*(?:(\[[^\]]+\])\s*)?(\w+)\s*=\s*([^,;]+?)\s*([,;]?)\s*(\/\/.*)?$/;
         const CONT_RE  = /^(\s*)(\w+)\s*=\s*([^,;]+?)\s*([,;])\s*(\/\/.*)?$/;
-        interface Entry { width: string; name: string; value: string; term: string; comment: string; }
+        interface Entry { type: string; sign: string; width: string; name: string; value: string; term: string; comment: string; }
 
         const lines  = code.split('\n');
         const result: string[] = [];
@@ -524,43 +524,49 @@ export class VerilogFormatter
             const baseIndent = fm[1];
             const keyword    = fm[2];
 
-            const isSemicolonGroup = fm[6] === ';';
+            const isSemicolonGroup = fm[8] === ';';
             if (isSemicolonGroup || this.startsKeywordParamGroup(lines, i, FIRST_RE)) {
                 // 情况2：收集连续的同缩进 parameter/localparam ... ; 行作为一组对齐
-                const group: Entry[] = [{ width: fm[3] ?? '', name: fm[4], value: fm[5].trim(), term: fm[6], comment: fm[7] ?? '' }];
+                const group: Entry[] = [{ type: fm[3] ?? '', sign: fm[4] ?? '', width: fm[5] ?? '', name: fm[6], value: fm[7].trim(), term: fm[8], comment: fm[9] ?? '' }];
                 i++;
                 while (i < lines.length) {
                     const nm = lines[i].match(FIRST_RE);
-                    if (nm && nm[1] === baseIndent && nm[2] === keyword && (nm[6] === ';') === isSemicolonGroup) {
-                        group.push({ width: nm[3] ?? '', name: nm[4], value: nm[5].trim(), term: nm[6], comment: nm[7] ?? '' });
+                    if (nm && nm[1] === baseIndent && nm[2] === keyword && (nm[8] === ';') === isSemicolonGroup) {
+                        group.push({ type: nm[3] ?? '', sign: nm[4] ?? '', width: nm[5] ?? '', name: nm[6], value: nm[7].trim(), term: nm[8], comment: nm[9] ?? '' });
                         i++;
                     } else {
                         break;
                     }
                 }
+                const maxType  = Math.max(...group.map(e => e.type.length));
+                const maxSign  = Math.max(...group.map(e => e.sign.length));
                 const maxWidth = Math.max(...group.map(e => e.width.length));
                 const maxName  = Math.max(...group.map(e => e.name.length));
                 const maxValue = Math.max(...group.map(e => e.value.length));
                 group.forEach(e => {
-                    const width = maxWidth > 0 ? `${e.width.padEnd(maxWidth)} ` : '';
-                    const n     = e.name.padEnd(maxName);
-                    const v     = e.value.padEnd(maxValue);
-                    const c     = e.comment ? ` ${e.comment}` : '';
-                    result.push(`${baseIndent}${keyword} ${width}${n} = ${v}${e.term}${c}`);
+                    const type  = maxType > 0 ? e.type.padEnd(maxType + 1) : '';
+                    const sign  = maxSign > 0 ? e.sign.padEnd(maxSign + 1) : '';
+                    const width = maxWidth > 0 ? e.width.padEnd(maxWidth + 1) : '';
+                    const n = e.name.padEnd(maxName);
+                    const v = e.value.padEnd(maxValue);
+                    const c = e.comment ? ` ${e.comment}` : '';
+                    result.push(`${baseIndent}${keyword} ${type}${sign}${width}${n} = ${v}${e.term}${c}`);
                 });
             } else {
                 // 情况1：多参数逗号分隔块
-                const entries: Entry[] = [{ width: '', name: fm[4], value: fm[5].trim(), term: fm[6], comment: fm[7] ?? '' }];
+                const entries: Entry[] = [{ type: fm[3] ?? '', sign: fm[4] ?? '', width: fm[5] ?? '', name: fm[6], value: fm[7].trim(), term: fm[8], comment: fm[9] ?? '' }];
                 i++;
                 while (i < lines.length) {
                     const cm = lines[i].match(CONT_RE);
                     if (!cm) { break; }
-                    entries.push({ width: '', name: cm[2], value: cm[3].trim(), term: cm[4], comment: cm[5] ?? '' });
+                    entries.push({ type: '', sign: '', width: '', name: cm[2], value: cm[3].trim(), term: cm[4], comment: cm[5] ?? '' });
                     i++;
                     if (cm[4] === ';') { break; }
                 }
                 // 续行名称与首行名称对齐。
-                const contIndent = baseIndent + ' '.repeat(keyword.length + 1);
+                const modifierPrefix = [entries[0].type, entries[0].sign, entries[0].width].filter(Boolean).join(' ');
+                const prefix = modifierPrefix ? `${modifierPrefix} ` : '';
+                const contIndent = baseIndent + ' '.repeat(keyword.length + 1 + prefix.length);
                 const maxName    = Math.max(...entries.map(e => e.name.length));
                 const maxValue   = Math.max(...entries.map(e => e.value.length));
                 entries.forEach((e, idx) => {
@@ -568,7 +574,7 @@ export class VerilogFormatter
                     const v = e.value.padEnd(maxValue);
                     const c = e.comment ? ` ${e.comment}` : '';
                     if (idx === 0) {
-                        result.push(`${baseIndent}${keyword} ${n} = ${v}${e.term}${c}`);
+                        result.push(`${baseIndent}${keyword} ${prefix}${n} = ${v}${e.term}${c}`);
                     } else {
                         result.push(`${contIndent}${n} = ${v}${e.term}${c}`);
                     }
@@ -583,7 +589,7 @@ export class VerilogFormatter
         const first = lines[index].match(re);
         const next  = lines[index + 1]?.match(re);
         if (!first || !next) { return false; }
-        return first[6] !== ';' && next[6] !== ';' && first[1] === next[1] && first[2] === next[2];
+        return first[8] !== ';' && next[8] !== ';' && first[1] === next[1] && first[2] === next[2];
     }
 
     // ---- 对齐信号声明（reg / wire / logic / integer）----//
