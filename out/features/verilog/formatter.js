@@ -193,9 +193,11 @@ class VerilogFormatter {
                 if (entry !== undefined) {
                     result.push(sp(entry.beginIndent) + line);
                     contentIndent = entry.parentContentIndent;
+                    danglingIfIndent = entry.ifIndent;
                 }
                 else {
                     result.push(line);
+                    danglingIfIndent = null;
                 }
                 pendingIndent = null;
                 pendingKind = null;
@@ -219,12 +221,13 @@ class VerilogFormatter {
             // 后处理：更新栈和 contentIndent
             if (/\bbegin\b/.test(line)) {
                 // begin 压栈，后续内容缩进 = begin 列 + indentSize
-                stack.push({ beginIndent: lineIndent, parentContentIndent: contentIndent, kind: 'block' });
+                const ifIndent = consumedPendingKind === 'ifBody' ? danglingIfIndent : null;
+                stack.push({ beginIndent: lineIndent, parentContentIndent: contentIndent, kind: 'block', ifIndent });
                 contentIndent = lineIndent + indentSize;
             }
             else if (/^(case[xz]?|function|task|generate)\b/.test(line)) {
                 const kind = /^case[xz]?\b/.test(line) ? 'case' : 'block';
-                stack.push({ beginIndent: lineIndent, parentContentIndent: contentIndent, kind });
+                stack.push({ beginIndent: lineIndent, parentContentIndent: contentIndent, kind, ifIndent: null });
                 contentIndent = lineIndent + indentSize;
             }
             else if (stack[stack.length - 1]?.kind === 'case' && this.isStandaloneCaseItem(line)) {

@@ -634,6 +634,53 @@ describe('VerilogFormatter', () => {
         expect(fmt['format'](input, defaultCfg)).toBe(expected);
     });
 
+    test('end 后的 else if 应与对应的外层 if 对齐', () => {
+        const input = [
+            'always @(posedge clk or negedge rstn)',
+            'begin',
+            'if (rstn == 1\'b0)',
+            'begin',
+            'pair_error <= 1\'b0;',
+            'end',
+            'else',
+            'begin',
+            'if (cmd_valid == 1\'b1)',
+            'begin',
+            'if (cmd_pending == 1\'b1)',
+            'pair_error <= 1\'b1;',
+            'end',
+            'else if (ad_valid == 1\'b1)',
+            'begin',
+            'pair_error <= 1\'b1;',
+            'end',
+            'end',
+            'end',
+        ].join('\n');
+        const expected = [
+            'always @(posedge clk or negedge rstn)',
+            '  begin',
+            '    if (rstn == 1\'b0)',
+            '      begin',
+            '        pair_error <= 1\'b0;',
+            '      end',
+            '    else',
+            '      begin',
+            '        if (cmd_valid == 1\'b1)',
+            '          begin',
+            '            if (cmd_pending == 1\'b1)',
+            '              pair_error <= 1\'b1;',
+            '          end',
+            '        else if (ad_valid == 1\'b1)',
+            '          begin',
+            '            pair_error <= 1\'b1;',
+            '          end',
+            '      end',
+            '  end',
+        ].join('\n');
+
+        expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
     // ---- 样例文件对比（集成测试）----//
     test('样例文件格式化输出符合预期', () => {
         const input    = fs.readFileSync(path.join(SAMPLES, 'input_messy.v'), 'utf8');
