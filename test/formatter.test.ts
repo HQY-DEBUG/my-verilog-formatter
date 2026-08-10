@@ -78,6 +78,23 @@ describe('VerilogFormatter', () => {
         expect(fmt['format'](input, defaultCfg)).toBe(expected);
     });
 
+    test('信号声明的位宽列应与 signed 修饰符分列对齐', () => {
+        const input = [
+            'reg signed [15:0] ad_pipeline; // 延迟一拍的AD反馈',
+            'reg [15:0] error_count; // 连续超差样本计数器',
+            'wire [15:0] delayed_bits;',
+            'wire signed [16:0] delayed_cmd;',
+        ].join('\n');
+        const expected = [
+            'reg     signed [15:0]   ad_pipeline     ; // 延迟一拍的AD反馈',
+            'reg            [15:0]   error_count     ; // 连续超差样本计数器',
+            'wire           [15:0]   delayed_bits    ;',
+            'wire    signed [16:0]   delayed_cmd     ;',
+        ].join('\n');
+
+        expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
     test('端口声明的位宽列应与 signed 修饰符分列对齐', () => {
         const input = [
             'module data_proc #(',

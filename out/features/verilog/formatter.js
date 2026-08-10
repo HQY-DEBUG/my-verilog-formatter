@@ -592,7 +592,7 @@ class VerilogFormatter {
         return first[6] !== ';' && next[6] !== ';' && first[1] === next[1] && first[2] === next[2];
     }
     // ---- 对齐信号声明（reg / wire / logic / integer）----//
-    // 格式：[属性]  类型    [signed] [位宽]   名称[= 初值]    ;   // 注释
+    // 格式：[属性]  类型    [signed]  [位宽]   名称[= 初值]    ;   // 注释
     alignSignalDeclarations(code) {
         // 支持综合属性前缀、signed/unsigned、多名称声明、带初值；空行/注释行不断开 block
         // 但只合并 attr 结构相同的信号行（都有属性 or 都没有属性），避免跨组错乱
@@ -641,11 +641,8 @@ class VerilogFormatter {
         const parsed = lines.map(line => {
             const m = line.match(RE);
             if (!m) {
-                return { indent: '', attr: '', type: '', signWidth: '', name: line, comment: '' };
+                return { indent: '', attr: '', type: '', sign: '', width: '', name: line, comment: '' };
             }
-            const sign = m[4] ?? '';
-            const width = m[5] ?? '';
-            const signWidth = [sign, width].filter(s => s).join(' ');
             const baseName = m[6].replace(/\s*,\s*/g, ', ');
             const initVal = m[7] ? m[7].trim() : '';
             const name = initVal ? `${baseName} ${initVal}` : baseName;
@@ -653,14 +650,16 @@ class VerilogFormatter {
                 indent: m[1],
                 attr: m[2] ? m[2].trimEnd() : '',
                 type: m[3],
-                signWidth,
+                sign: m[4] ?? '',
+                width: m[5] ?? '',
                 name,
                 comment: m[8] ?? '',
             };
         });
         const maxAttr = Math.max(...parsed.map(p => p.attr.length));
         const maxType = Math.max(...parsed.map(p => p.type.length));
-        const maxSignWidth = Math.max(...parsed.map(p => p.signWidth.length));
+        const maxSign = Math.max(...parsed.map(p => p.sign.length));
+        const maxWidth = Math.max(...parsed.map(p => p.width.length));
         const maxName = Math.max(...parsed.map(p => p.name.length));
         return parsed.map(p => {
             if (!p.type) {
@@ -671,12 +670,13 @@ class VerilogFormatter {
                 ? (p.attr ? p.attr : '').padEnd(maxAttr) + '  '
                 : '';
             const typePad = p.type.padEnd(maxType + 4);
-            const signWidthPad = p.signWidth.padEnd(maxSignWidth + 3);
+            const signPad = maxSign > 0 ? p.sign.padEnd(maxSign + 1) : '';
+            const widthPad = p.width.padEnd(maxWidth + 3);
             const namePad = p.name.padEnd(maxName + 4);
             const cmt = p.comment
                 ? ` ${p.comment.startsWith('//') ? p.comment : '// ' + p.comment}`
                 : '';
-            return `${p.indent}${attrPad}${typePad}${signWidthPad}${namePad};${cmt}`;
+            return `${p.indent}${attrPad}${typePad}${signPad}${widthPad}${namePad};${cmt}`;
         });
     }
     // ---- 对齐例化端口连接 ----//

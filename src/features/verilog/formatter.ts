@@ -587,7 +587,7 @@ export class VerilogFormatter
     }
 
     // ---- 对齐信号声明（reg / wire / logic / integer）----//
-    // 格式：[属性]  类型    [signed] [位宽]   名称[= 初值]    ;   // 注释
+    // 格式：[属性]  类型    [signed]  [位宽]   名称[= 初值]    ;   // 注释
     private alignSignalDeclarations(code: string): string {
         // 支持综合属性前缀、signed/unsigned、多名称声明、带初值；空行/注释行不断开 block
         // 但只合并 attr 结构相同的信号行（都有属性 or 都没有属性），避免跨组错乱
@@ -632,14 +632,11 @@ export class VerilogFormatter
         lines: string[],
         RE: RegExp
     ): string[] {
-        interface P { indent: string; attr: string; type: string; signWidth: string; name: string; comment: string; }
+        interface P { indent: string; attr: string; type: string; sign: string; width: string; name: string; comment: string; }
 
         const parsed: P[] = lines.map(line => {
             const m = line.match(RE);
-            if (!m) { return { indent: '', attr: '', type: '', signWidth: '', name: line, comment: '' }; }
-            const sign      = m[4] ?? '';
-            const width     = m[5] ?? '';
-            const signWidth = [sign, width].filter(s => s).join(' ');
+            if (!m) { return { indent: '', attr: '', type: '', sign: '', width: '', name: line, comment: '' }; }
             const baseName  = m[6].replace(/\s*,\s*/g, ', ');
             const initVal   = m[7] ? m[7].trim() : '';
             const name      = initVal ? `${baseName} ${initVal}` : baseName;
@@ -647,16 +644,18 @@ export class VerilogFormatter
                 indent:    m[1],
                 attr:      m[2] ? m[2].trimEnd() : '',
                 type:      m[3],
-                signWidth,
+                sign:      m[4] ?? '',
+                width:     m[5] ?? '',
                 name,
                 comment:   m[8] ?? '',
             };
         });
 
-        const maxAttr      = Math.max(...parsed.map(p => p.attr.length));
-        const maxType      = Math.max(...parsed.map(p => p.type.length));
-        const maxSignWidth = Math.max(...parsed.map(p => p.signWidth.length));
-        const maxName      = Math.max(...parsed.map(p => p.name.length));
+        const maxAttr = Math.max(...parsed.map(p => p.attr.length));
+        const maxType = Math.max(...parsed.map(p => p.type.length));
+        const maxSign = Math.max(...parsed.map(p => p.sign.length));
+        const maxWidth = Math.max(...parsed.map(p => p.width.length));
+        const maxName = Math.max(...parsed.map(p => p.name.length));
 
         return parsed.map(p => {
             if (!p.type) { return p.name; }
@@ -664,13 +663,14 @@ export class VerilogFormatter
             const attrPad      = maxAttr > 0
                 ? (p.attr ? p.attr : '').padEnd(maxAttr) + '  '
                 : '';
-            const typePad      = p.type.padEnd(maxType + 4);
-            const signWidthPad = p.signWidth.padEnd(maxSignWidth + 3);
-            const namePad      = p.name.padEnd(maxName + 4);
-            const cmt          = p.comment
+            const typePad = p.type.padEnd(maxType + 4);
+            const signPad = maxSign > 0 ? p.sign.padEnd(maxSign + 1) : '';
+            const widthPad = p.width.padEnd(maxWidth + 3);
+            const namePad = p.name.padEnd(maxName + 4);
+            const cmt = p.comment
                 ? ` ${p.comment.startsWith('//') ? p.comment : '// ' + p.comment}`
                 : '';
-            return `${p.indent}${attrPad}${typePad}${signWidthPad}${namePad};${cmt}`;
+            return `${p.indent}${attrPad}${typePad}${signPad}${widthPad}${namePad};${cmt}`;
         });
     }
 
