@@ -1,12 +1,20 @@
-# my-verilog-formatter
+# hanxuyao-plugin
 
-面向 FPGA 开发者的 VS Code Verilog / SystemVerilog 全功能辅助插件，提供代码格式化、文件树、一键例化、语法高亮、跳转悬停、语法检查、代码补全、Snippet 等功能。
+面向 FPGA 与嵌入式开发者的 VS Code Verilog / SystemVerilog / C / C++ 辅助插件，提供代码格式化、文件树、一键例化、语法高亮、跳转悬停、语法检查、代码补全、Snippet 等功能。
 
 > 版本：v0.2.0　日期：2026/05/25
 
 ---
 
 ## 功能列表
+
+### C / C++
+
+支持 `.c`、`.cpp`、`.h` 文件，使用 `Ctrl+Alt+F` 或 `Shift+Alt+F` 格式化：
+
+- 对齐连续的变量定义。
+- 将多行函数调用整理为单行。
+- 将函数定义的 `{` 放在函数签名最后一行末尾。
 
 ### Verilog
 
@@ -283,7 +291,7 @@ npm run compile
 
 ```bash
 npx vsce package --no-dependencies
-code --install-extension my-verilog-formatter-0.2.0.vsix --force
+code --install-extension hanxuyao-plugin-1.0.0.vsix --force
 ```
 
 ---
@@ -291,7 +299,7 @@ code --install-extension my-verilog-formatter-0.2.0.vsix --force
 ## 代码结构
 
 ```
-my-verilog-formatter/
+hanxuyao-plugin/
 ├── src/
 │   ├── extension.ts               # 入口，注册所有 Provider 和命令
 │   └── features/

@@ -82,7 +82,7 @@ function convertUcfLine(line: string): string[] {
 function convertUcfContent(ucfContent: string): string {
     const lines  = ucfContent.split(/\r?\n/);
     const output: string[] = [
-        '# 由 UCF 自动转换为 XDC（my-verilog-formatter）',
+        '# 由 UCF 自动转换为 XDC（hanxuyao-plugin）',
         `# 转换时间: ${new Date().toLocaleString()}`,
         '',
     ];

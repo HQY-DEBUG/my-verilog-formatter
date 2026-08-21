@@ -45,10 +45,11 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.VERILOG_LANGS = void 0;
+exports.C_LANGS = exports.VERILOG_LANGS = void 0;
 exports.activate = activate;
 exports.deactivate = deactivate;
 const vscode = __importStar(require("vscode"));
+const cFormatter_1 = require("./features/c/cFormatter");
 const formatter_1 = require("./features/verilog/formatter");
 const adcFormatter_1 = require("./features/verilog/adcFormatter");
 const instantiator_1 = require("./features/verilog/instantiator");
@@ -62,12 +63,17 @@ const todoTreeProvider_1 = require("./features/todo/todoTreeProvider");
 const todoDecorator_1 = require("./features/todo/todoDecorator");
 const todoStatusBar_1 = require("./features/todo/todoStatusBar");
 exports.VERILOG_LANGS = ['verilog', 'systemverilog', 'verilog-hdl', 'systemverilog-hdl'];
+exports.C_LANGS = ['c', 'cpp'];
 function activate(context) {
     const formatter = new formatter_1.VerilogFormatter();
+    const cFormatter = new cFormatter_1.CFormatter();
     const adcFormatter = new adcFormatter_1.AdcFormatter();
     // ---- 格式化 ----//
     for (const lang of exports.VERILOG_LANGS) {
         context.subscriptions.push(vscode.languages.registerDocumentFormattingEditProvider({ language: lang }, formatter), vscode.languages.registerDocumentRangeFormattingEditProvider({ language: lang }, formatter));
+    }
+    for (const lang of exports.C_LANGS) {
+        context.subscriptions.push(vscode.languages.registerDocumentFormattingEditProvider({ language: lang }, cFormatter), vscode.languages.registerDocumentRangeFormattingEditProvider({ language: lang }, cFormatter));
     }
     context.subscriptions.push(vscode.languages.registerDocumentFormattingEditProvider({ language: 'anlogic-adc' }, adcFormatter), vscode.languages.registerDocumentRangeFormattingEditProvider({ language: 'anlogic-adc' }, adcFormatter));
     // ---- 保存时自动格式化 ----//
@@ -76,7 +82,9 @@ function activate(context) {
         if (!cfg.get('formatOnSave', false)) {
             return;
         }
-        if (!exports.VERILOG_LANGS.includes(doc.languageId) && doc.languageId !== 'anlogic-adc') {
+        if (!exports.VERILOG_LANGS.includes(doc.languageId)
+            && !exports.C_LANGS.includes(doc.languageId)
+            && doc.languageId !== 'anlogic-adc') {
             return;
         }
         await vscode.commands.executeCommand('editor.action.formatDocument', doc.uri);
