@@ -2,12 +2,13 @@
 // =========================================================================
 // 文件    : cFormatter.ts
 // 描述    : C/C++ 变量定义、函数调用和函数花括号格式化
-// 版本    : v1.1.0
+// 版本    : v1.2.0
 // 日期    : 2026/08/21
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.2.0  2026/08/21  增加结构体成员的类型、名称、分号和注释多列对齐
 //  v1.1.0  2026/08/21  创建文件
 // =========================================================================
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
@@ -235,7 +236,24 @@ function alignVariableDeclarations(code) {
         }
         else {
             const maxType = Math.max(...block.map(item => item.typePrefix.length));
-            result.push(...block.map(item => `${item.typePrefix.padEnd(maxType + 1)}${item.pointer}${item.name}${item.suffix}`));
+            const alignAsFields = block.every(item => !item.initializer);
+            if (alignAsFields) {
+                const declarations = block.map(item => `${item.pointer}${item.name}${item.arraySuffix}`);
+                const maxDeclaration = Math.max(...declarations.map(item => item.length));
+                result.push(...block.map((item, index) => {
+                    const declaration = declarations[index].padEnd(maxDeclaration + 1);
+                    const comment = item.comment ? `  ${item.comment}` : '';
+                    return `${item.typePrefix.padEnd(maxType + 1)}${declaration};${comment}`;
+                }));
+            }
+            else {
+                result.push(...block.map(item => {
+                    const declaration = `${item.pointer}${item.name}${item.arraySuffix}`;
+                    const initializer = item.initializer ? ` ${item.initializer}` : '';
+                    const comment = item.comment ? ` ${item.comment}` : '';
+                    return `${item.typePrefix.padEnd(maxType + 1)}${declaration}${initializer};${comment}`;
+                }));
+            }
         }
         i = end;
     }
@@ -243,15 +261,20 @@ function alignVariableDeclarations(code) {
 }
 function parseDeclaration(line) {
     const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('//') || !trimmed.endsWith(';')) {
-        return undefined;
-    }
-    if (trimmed.includes('(') || trimmed.includes(',') || /^(?:typedef|using)\b/.test(trimmed)) {
+    if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('//')) {
         return undefined;
     }
     const commentIndex = line.indexOf('//');
-    const comment = commentIndex >= 0 ? line.slice(commentIndex) : '';
+    const comment = commentIndex >= 0 ? line.slice(commentIndex).trim() : '';
     const statement = (commentIndex >= 0 ? line.slice(0, commentIndex) : line).trimEnd();
+    const trimmedStatement = statement.trim();
+    if (!trimmedStatement.endsWith(';')
+        || /^[{}]/.test(trimmedStatement)
+        || trimmedStatement.includes('(')
+        || trimmedStatement.includes(',')
+        || /^(?:typedef|using)\b/.test(trimmedStatement)) {
+        return undefined;
+    }
     const semicolon = statement.lastIndexOf(';');
     if (semicolon < 0) {
         return undefined;
@@ -272,12 +295,13 @@ function parseDeclaration(line) {
     if (!typePart || NON_TYPE_KEYWORDS.has(firstWord) || !/[\s*&]$/.test(match[2])) {
         return undefined;
     }
-    const suffix = `${match[4]}${initializer ? ` ${initializer}` : ''};${comment ? ` ${comment}` : ''}`;
     return {
         typePrefix: match[1] + typePart,
         pointer,
         name: match[3],
-        suffix,
+        arraySuffix: match[4].trimEnd(),
+        initializer,
+        comment,
     };
 }
 class CFormatter {

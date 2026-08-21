@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.test.ts
 // 描述    : C/C++ 格式化器回归测试
-// 版本    : v1.1.0
+// 版本    : v1.2.0
 // 日期    : 2026/08/21
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.2.0  2026/08/21  增加结构体成员多列对齐测试
 //  v1.1.0  2026/08/21  创建文件
 // =========================================================================
 
@@ -25,6 +26,45 @@ describe('C/C++ formatter', () => {
             'const uint32_t *long_value = NULL;',
             'char           name[16];',
         ].join('\n'));
+    });
+
+    it('按类型、名称、分号和注释对齐结构体成员', () => {
+        const input = [
+            'typedef struct ListMem',
+            '{',
+            '    uint32_t total_pos; // 总 storage positions 数',
+            '    ListRegion list1; // List1',
+            '    ListRegion list2; // List2（size=0 表示未启用）',
+            '    ListRegion list3; // List3 - 受保护区，由剩余空间自动派生',
+            '    ListPointer in_ptr; // 输入指针',
+            '    ListPointer out_ptr; // 输出指针',
+            '    ListId curr_load_list; // 当前加载中的 List',
+            '    ListId curr_exec_list; // 当前执行中的 List',
+            '    CmdBuffer cmd; // 命令缓存',
+            '    ListMemAppendDiag append_diag; // 最近一次追加命令的诊断信息',
+            '    ListStatus list_status; // List 状态',
+            '    ExecStatus exec_status; // 执行状态',
+            '} ListMem;',
+        ].join('\n');
+
+        expect(formatC(input)).toBe([
+            'typedef struct ListMem',
+            '{',
+            '    uint32_t          total_pos      ;  // 总 storage positions 数',
+            '    ListRegion        list1          ;  // List1',
+            '    ListRegion        list2          ;  // List2（size=0 表示未启用）',
+            '    ListRegion        list3          ;  // List3 - 受保护区，由剩余空间自动派生',
+            '    ListPointer       in_ptr         ;  // 输入指针',
+            '    ListPointer       out_ptr        ;  // 输出指针',
+            '    ListId            curr_load_list ;  // 当前加载中的 List',
+            '    ListId            curr_exec_list ;  // 当前执行中的 List',
+            '    CmdBuffer         cmd            ;  // 命令缓存',
+            '    ListMemAppendDiag append_diag    ;  // 最近一次追加命令的诊断信息',
+            '    ListStatus        list_status    ;  // List 状态',
+            '    ExecStatus        exec_status    ;  // 执行状态',
+            '} ListMem;',
+        ].join('\n'));
+        expect(formatC(formatC(input))).toBe(formatC(input));
     });
 
     it('把多行函数调用整理为单行', () => {
