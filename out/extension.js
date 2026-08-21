@@ -2,12 +2,13 @@
 // =========================================================================
 // 文件    : extension.ts
 // 描述    : VS Code 扩展入口，注册所有 Provider 和命令
-// 版本    : v1.2.1
+// 版本    : v1.4.1
 // 日期    : 2026/08/21
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.4.1  2026/08/21  主动触发 C/C++ 自动建议和函数参数提示
 //  v1.2.1  2026/08/21  使用插件专用命令执行快捷键格式化
 //  v1.1.0  2026/08/21  注册 C/C++ 格式化器并扩展保存时格式化范围
 //  v0.2.0  2026/05/25  新增文件树、例化、跳转、悬停、语法检查、UCF转XDC、数字编辑
@@ -111,6 +112,33 @@ function activate(context) {
         if (!applied) {
             vscode.window.showWarningMessage('hanxuyao-plugin：格式化修改未能应用。');
         }
+    }));
+    // ---- C/C++ 自动建议：候选内容仍由 clangd/cpptools 提供 ----//
+    let cSuggestTimer;
+    context.subscriptions.push(vscode.workspace.onDidChangeTextDocument(event => {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor
+            || editor.document !== event.document
+            || !exports.C_LANGS.includes(event.document.languageId)
+            || event.contentChanges.length === 0) {
+            return;
+        }
+        const insertedText = event.contentChanges[event.contentChanges.length - 1].text;
+        if (insertedText === '(') {
+            void vscode.commands.executeCommand('editor.action.triggerParameterHints');
+            return;
+        }
+        if (!/^[A-Za-z0-9_]$/.test(insertedText)) {
+            return;
+        }
+        if (cSuggestTimer) {
+            clearTimeout(cSuggestTimer);
+        }
+        cSuggestTimer = setTimeout(() => {
+            if (vscode.window.activeTextEditor?.document === event.document) {
+                void vscode.commands.executeCommand('editor.action.triggerSuggest');
+            }
+        }, 120);
     }));
     // ---- 保存时自动格式化 ----//
     context.subscriptions.push(vscode.workspace.onDidSaveTextDocument(async (doc) => {
