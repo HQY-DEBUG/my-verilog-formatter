@@ -2,12 +2,13 @@
 // =========================================================================
 // 文件    : extension.ts
 // 描述    : VS Code 扩展入口，注册所有 Provider 和命令
-// 版本    : v1.1.0
+// 版本    : v1.2.1
 // 日期    : 2026/08/21
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.2.1  2026/08/21  使用插件专用命令执行快捷键格式化
 //  v1.1.0  2026/08/21  注册 C/C++ 格式化器并扩展保存时格式化范围
 //  v0.2.0  2026/05/25  新增文件树、例化、跳转、悬停、语法检查、UCF转XDC、数字编辑
 //  v0.1.0  2026/05/25  创建文件
@@ -77,6 +78,40 @@ function activate(context) {
         context.subscriptions.push(vscode.languages.registerDocumentFormattingEditProvider({ language: lang }, cFormatter), vscode.languages.registerDocumentRangeFormattingEditProvider({ language: lang }, cFormatter));
     }
     context.subscriptions.push(vscode.languages.registerDocumentFormattingEditProvider({ language: 'anlogic-adc' }, adcFormatter), vscode.languages.registerDocumentRangeFormattingEditProvider({ language: 'anlogic-adc' }, adcFormatter));
+    // ---- 插件专用格式化命令，避免被其他语言的默认 formatter 截获 ----//
+    context.subscriptions.push(vscode.commands.registerCommand('verilogFormatter.formatDocument', async () => {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+            return;
+        }
+        const document = editor.document;
+        const tabSize = typeof editor.options.tabSize === 'number' ? editor.options.tabSize : 2;
+        const insertSpaces = typeof editor.options.insertSpaces === 'boolean'
+            ? editor.options.insertSpaces
+            : true;
+        const options = { tabSize, insertSpaces };
+        let edits = [];
+        if (exports.C_LANGS.includes(document.languageId)) {
+            edits = cFormatter.provideDocumentFormattingEdits(document);
+        }
+        else if (exports.VERILOG_LANGS.includes(document.languageId)) {
+            edits = formatter.provideDocumentFormattingEdits(document, options);
+        }
+        else if (document.languageId === 'anlogic-adc') {
+            edits = adcFormatter.provideDocumentFormattingEdits(document);
+        }
+        if (edits.length === 0) {
+            return;
+        }
+        const applied = await editor.edit(builder => {
+            for (const edit of edits) {
+                builder.replace(edit.range, edit.newText);
+            }
+        });
+        if (!applied) {
+            vscode.window.showWarningMessage('hanxuyao-plugin：格式化修改未能应用。');
+        }
+    }));
     // ---- 保存时自动格式化 ----//
     context.subscriptions.push(vscode.workspace.onDidSaveTextDocument(async (doc) => {
         const cfg = vscode.workspace.getConfiguration('verilogFormatter');
