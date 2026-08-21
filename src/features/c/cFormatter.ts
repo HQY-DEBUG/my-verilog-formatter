@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.ts
 // 描述    : C/C++ 变量定义、函数调用和函数花括号格式化
-// 版本    : v1.3.3
+// 版本    : v1.4.0
 // 日期    : 2026/08/21
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.4.0  2026/08/21  按代码块层级重算 C/C++ 缩进
 //  v1.3.3  2026/08/21  修正单行函数签名的左花括号位置识别
 //  v1.3.2  2026/08/21  将枚举左花括号放到类型声明末尾
 //  v1.3.1  2026/08/21  将结构体和联合体左花括号放到类型声明末尾
@@ -47,6 +48,7 @@ export function formatC(code: string): string {
     normalized = collapseMultilineCalls(normalized);
     normalized = placeFunctionOpeningBraces(normalized);
     normalized = placeTypeOpeningBraces(normalized);
+    normalized = reindentCBlocks(normalized);
     normalized = alignVariableDeclarations(normalized);
     normalized = alignEnumDeclarations(normalized);
     normalized = ensureBlankLineAfterTypeDeclarations(normalized);
@@ -209,6 +211,81 @@ function placeTypeOpeningBraces(code: string): string {
     }
 
     return result.join('\n');
+}
+
+function reindentCBlocks(code: string, indentSize: number = 4): string {
+    const lines = code.split('\n');
+    const result: string[] = [];
+    const existingIndents = lines
+        .filter(line => line.trim() && !line.trim().startsWith('#'))
+        .map(line => line.match(/^\s*/)?.[0].length ?? 0);
+    const baseIndent = existingIndents.length > 0 ? Math.min(...existingIndents) : 0;
+    let braceDepth = 0;
+    let parenthesisDepth = 0;
+    let previousControlWithoutBrace = false;
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) {
+            result.push('');
+            continue;
+        }
+        if (trimmed.startsWith('#')) {
+            result.push(trimmed);
+            previousControlWithoutBrace = false;
+            continue;
+        }
+
+        const continuationLine = parenthesisDepth > 0;
+        let indentDepth = Math.max(0, braceDepth - (trimmed.startsWith('}') ? 1 : 0));
+        if (/^(?:case\b.*:|default\s*:|public:|protected:|private:)$/.test(trimmed)) {
+            indentDepth = Math.max(0, indentDepth - 1);
+        }
+        if (previousControlWithoutBrace && !trimmed.startsWith('{')) {
+            indentDepth++;
+        }
+
+        const originalIndent = line.match(/^\s*/)?.[0] ?? '';
+        const indent = continuationLine
+            ? originalIndent
+            : ' '.repeat(baseIndent + indentDepth * indentSize);
+        result.push(indent + trimmed);
+
+        braceDepth = Math.max(0, braceDepth + structuralBraceDelta(line));
+        parenthesisDepth = Math.max(0, parenthesisDepth + parenthesisDelta(line));
+        previousControlWithoutBrace = isControlWithoutBrace(trimmed);
+    }
+
+    return result.join('\n');
+}
+
+function structuralBraceDelta(line: string): number {
+    let delta = 0;
+    let quote = '';
+    let escaped = false;
+
+    for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        const next = line[i + 1] ?? '';
+        if (!quote && char === '/' && (next === '/' || next === '*')) { break; }
+        if (quote) {
+            if (escaped) { escaped = false; }
+            else if (char === '\\') { escaped = true; }
+            else if (char === quote) { quote = ''; }
+            continue;
+        }
+        if (char === '"' || char === "'") { quote = char; }
+        else if (char === '{') { delta++; }
+        else if (char === '}') { delta--; }
+    }
+
+    return delta;
+}
+
+function isControlWithoutBrace(line: string): boolean {
+    const code = line.replace(/\/\/.*$/, '').trimEnd();
+    return /^(?:if|for|while|switch)\s*\(.*\)\s*$/.test(code)
+        || /^else(?:\s+if\s*\(.*\))?\s*$/.test(code);
 }
 
 function isFunctionSignature(lines: string[], end: number): boolean {

@@ -2,7 +2,7 @@
     "name": "hanxuyao-plugin",
     "displayName": "hanxuyao-plugin",
     "description": "Verilog / SystemVerilog / C / C++ 代码格式化、模块例化、大纲识别、文件树、语法高亮与跳转工具",
-    "version": "1.3.4",
+    "version": "1.4.0",
     "icon": "icon.png",
     "engines": {
         "vscode": "^1.80.0"

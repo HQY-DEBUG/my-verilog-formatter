@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.test.ts
 // 描述    : C/C++ 格式化器回归测试
-// 版本    : v1.3.3
+// 版本    : v1.4.0
 // 日期    : 2026/08/21
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.4.0  2026/08/21  增加函数体及嵌套代码块缩进测试
 //  v1.3.3  2026/08/21  增加 static bool 单行函数签名测试
 //  v1.3.2  2026/08/21  增加枚举左花括号同行测试
 //  v1.3.1  2026/08/21  增加结构体左花括号同行测试
@@ -213,6 +214,45 @@ describe('C/C++ formatter', () => {
             'static bool cmd_buffer_is_vld(uint32_t pos) {',
             '    if (pos > LIST_MEM_MAX_POSITION)',
             '        return false;',
+            '}',
+        ].join('\n'));
+    });
+
+    it('单行 if 返回后恢复函数体缩进', () => {
+        const input = [
+            'static void cmd_position_set_vld(uint32_t pos) {',
+            '        if (pos >= LIST_MEM_MAX_POSITION) return;',
+            '',
+            '            g_list_cmd_vld_map[pos / 8u] |= (1u << (pos % 8u));',
+            '    }',
+        ].join('\n');
+
+        expect(formatC(input)).toBe([
+            'static void cmd_position_set_vld(uint32_t pos) {',
+            '    if (pos >= LIST_MEM_MAX_POSITION) return;',
+            '',
+            '    g_list_cmd_vld_map[pos / 8u] |= (1u << (pos % 8u));',
+            '}',
+        ].join('\n'));
+    });
+
+    it('按花括号层级重算函数内部缩进', () => {
+        const input = [
+            'static void run(bool ready)',
+            '{',
+            'if (ready)',
+            '{',
+            'execute();',
+            '}',
+            '}',
+        ].join('\n');
+
+        expect(formatC(input)).toBe([
+            'static void run(bool ready) {',
+            '    if (ready)',
+            '    {',
+            '        execute();',
+            '    }',
             '}',
         ].join('\n'));
     });
