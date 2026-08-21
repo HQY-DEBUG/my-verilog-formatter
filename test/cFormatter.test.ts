@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.test.ts
 // 描述    : C/C++ 格式化器回归测试
-// 版本    : v1.3.0
+// 版本    : v1.3.1
 // 日期    : 2026/08/21
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.3.1  2026/08/21  增加结构体左花括号同行测试
 //  v1.3.0  2026/08/21  增加枚举项多列对齐测试
 //  v1.2.2  2026/08/21  增加连续类型定义之间的空行测试
 //  v1.2.0  2026/08/21  增加结构体成员多列对齐测试
@@ -50,8 +51,7 @@ describe('C/C++ formatter', () => {
         ].join('\n');
 
         expect(formatC(input)).toBe([
-            'typedef struct ListMem',
-            '{',
+            'typedef struct ListMem {',
             '    uint32_t          total_pos      ;  // 总 storage positions 数',
             '    ListRegion        list1          ;  // List1',
             '    ListRegion        list2          ;  // List2（size=0 表示未启用）',
@@ -83,16 +83,35 @@ describe('C/C++ formatter', () => {
         ].join('\n');
 
         const expected = [
-            'typedef struct ListCmd',
-            '{',
+            'typedef struct ListCmd {',
             '    ListCmdType type;',
             '} ListCmd;',
             '',
             '// List 区域判定',
-            'typedef struct ListRegion',
-            '{',
+            'typedef struct ListRegion {',
             '    ListId id;',
             '} ListRegion;',
+        ].join('\n');
+        expect(formatC(input)).toBe(expected);
+        expect(formatC(expected)).toBe(expected);
+    });
+
+    it('把结构体左花括号放到类型声明末尾', () => {
+        const input = [
+            'typedef struct CmdBuffer',
+            '{',
+            '    ListCmd *data; // 按 Position 索引的命令数组',
+            '    size_t cnt; // 已写入的有效 Position 数，不是数组下标',
+            '    size_t capacity; // 总 Position 数',
+            '} CmdBuffer;',
+        ].join('\n');
+
+        const expected = [
+            'typedef struct CmdBuffer {',
+            '    ListCmd *data    ;  // 按 Position 索引的命令数组',
+            '    size_t  cnt      ;  // 已写入的有效 Position 数，不是数组下标',
+            '    size_t  capacity ;  // 总 Position 数',
+            '} CmdBuffer;',
         ].join('\n');
         expect(formatC(input)).toBe(expected);
         expect(formatC(expected)).toBe(expected);

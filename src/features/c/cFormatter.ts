@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.ts
 // 描述    : C/C++ 变量定义、函数调用和函数花括号格式化
-// 版本    : v1.3.0
+// 版本    : v1.3.1
 // 日期    : 2026/08/21
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.3.1  2026/08/21  将结构体和联合体左花括号放到类型声明末尾
 //  v1.3.0  2026/08/21  增加枚举项名称、赋值、逗号和注释多列对齐
 //  v1.2.2  2026/08/21  在连续类型定义之间保留一个空行
 //  v1.2.0  2026/08/21  增加结构体成员的类型、名称、分号和注释多列对齐
@@ -43,6 +44,7 @@ export function formatC(code: string): string {
     let normalized = code.replace(/\r\n/g, '\n');
     normalized = collapseMultilineCalls(normalized);
     normalized = placeFunctionOpeningBraces(normalized);
+    normalized = placeTypeOpeningBraces(normalized);
     normalized = alignVariableDeclarations(normalized);
     normalized = alignEnumDeclarations(normalized);
     normalized = ensureBlankLineAfterTypeDeclarations(normalized);
@@ -171,6 +173,31 @@ function placeFunctionOpeningBraces(code: string): string {
         let previous = result.length - 1;
         while (previous >= 0 && result[previous].trim() === '') { previous--; }
         if (previous < 0 || !isFunctionSignature(result, previous)) {
+            result.push(line);
+            continue;
+        }
+
+        result.splice(previous + 1);
+        result[previous] = `${result[previous].trimEnd()} {`;
+    }
+
+    return result.join('\n');
+}
+
+function placeTypeOpeningBraces(code: string): string {
+    const lines = code.split('\n');
+    const result: string[] = [];
+
+    for (const line of lines) {
+        if (!/^\s*\{\s*$/.test(line)) {
+            result.push(line);
+            continue;
+        }
+
+        let previous = result.length - 1;
+        while (previous >= 0 && result[previous].trim() === '') { previous--; }
+        if (previous < 0
+            || !/^\s*(?:typedef\s+)?(?:struct|union)\b(?:\s+[A-Za-z_]\w*)?\s*$/.test(result[previous])) {
             result.push(line);
             continue;
         }
