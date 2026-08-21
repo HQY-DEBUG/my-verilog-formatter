@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.test.ts
 // 描述    : C/C++ 格式化器回归测试
-// 版本    : v1.2.0
+// 版本    : v1.2.2
 // 日期    : 2026/08/21
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.2.2  2026/08/21  增加连续类型定义之间的空行测试
 //  v1.2.0  2026/08/21  增加结构体成员多列对齐测试
 //  v1.1.0  2026/08/21  创建文件
 // =========================================================================
@@ -65,6 +66,35 @@ describe('C/C++ formatter', () => {
             '} ListMem;',
         ].join('\n'));
         expect(formatC(formatC(input))).toBe(formatC(input));
+    });
+
+    it('在类型定义结束与后续注释之间增加一个空行', () => {
+        const input = [
+            'typedef struct ListCmd',
+            '{',
+            '    ListCmdType type;',
+            '} ListCmd;',
+            '// List 区域判定',
+            'typedef struct ListRegion',
+            '{',
+            '    ListId id;',
+            '} ListRegion;',
+        ].join('\n');
+
+        const expected = [
+            'typedef struct ListCmd',
+            '{',
+            '    ListCmdType type;',
+            '} ListCmd;',
+            '',
+            '// List 区域判定',
+            'typedef struct ListRegion',
+            '{',
+            '    ListId id;',
+            '} ListRegion;',
+        ].join('\n');
+        expect(formatC(input)).toBe(expected);
+        expect(formatC(expected)).toBe(expected);
     });
 
     it('把多行函数调用整理为单行', () => {

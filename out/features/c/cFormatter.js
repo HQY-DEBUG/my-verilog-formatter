@@ -2,12 +2,13 @@
 // =========================================================================
 // 文件    : cFormatter.ts
 // 描述    : C/C++ 变量定义、函数调用和函数花括号格式化
-// 版本    : v1.2.0
+// 版本    : v1.2.2
 // 日期    : 2026/08/21
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.2.2  2026/08/21  在连续类型定义之间保留一个空行
 //  v1.2.0  2026/08/21  增加结构体成员的类型、名称、分号和注释多列对齐
 //  v1.1.0  2026/08/21  创建文件
 // =========================================================================
@@ -59,6 +60,7 @@ function formatC(code) {
     normalized = collapseMultilineCalls(normalized);
     normalized = placeFunctionOpeningBraces(normalized);
     normalized = alignVariableDeclarations(normalized);
+    normalized = ensureBlankLineAfterTypeDeclarations(normalized);
     normalized = normalized.split('\n').map(line => line.trimEnd()).join('\n');
     return eol === '\n' ? normalized : normalized.replace(/\n/g, '\r\n');
 }
@@ -256,6 +258,18 @@ function alignVariableDeclarations(code) {
             }
         }
         i = end;
+    }
+    return result.join('\n');
+}
+function ensureBlankLineAfterTypeDeclarations(code) {
+    const lines = code.split('\n');
+    const result = [];
+    for (let i = 0; i < lines.length; i++) {
+        result.push(lines[i]);
+        const closesNamedType = /^\s*}\s*[A-Za-z_]\w*\s*;\s*(?:\/\/.*)?$/.test(lines[i]);
+        if (closesNamedType && i + 1 < lines.length && lines[i + 1].trim() !== '') {
+            result.push('');
+        }
     }
     return result.join('\n');
 }
