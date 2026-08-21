@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.ts
 // 描述    : C/C++ 变量定义、函数调用和函数花括号格式化
-// 版本    : v1.3.2
+// 版本    : v1.3.3
 // 日期    : 2026/08/21
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.3.3  2026/08/21  修正单行函数签名的左花括号位置识别
 //  v1.3.2  2026/08/21  将枚举左花括号放到类型声明末尾
 //  v1.3.1  2026/08/21  将结构体和联合体左花括号放到类型声明末尾
 //  v1.3.0  2026/08/21  增加枚举项名称、赋值、逗号和注释多列对齐
@@ -220,12 +221,18 @@ function isFunctionSignature(lines: string[], end: number): boolean {
 
     const signature = lines.slice(start, end + 1).map(line => line.trim()).join(' ');
     const firstWord = signature.match(/^([A-Za-z_]\w*)/)?.[1] ?? '';
-    if (CONTROL_KEYWORDS.has(firstWord) || /^(?:else|do)\b/.test(signature)) { return false; }
+    if (CONTROL_KEYWORDS.has(firstWord)
+        || /^(?:else|do|return|throw|co_return)\b/.test(signature)) { return false; }
 
     const open = signature.indexOf('(');
     if (open < 0 || signature.includes(';') || signature.slice(0, open).includes('=')) { return false; }
-    return /(?:[A-Za-z_]\w*\s+|[*&:]\s*)+[~A-Za-z_]\w*(?:::\w+)*\s*\(/.test(signature)
-        || /(?:^|\s)[A-Za-z_]\w*::[~A-Za-z_]\w*\s*\(/.test(signature);
+
+    const beforeParenthesis = signature.slice(0, open).trimEnd();
+    const nameMatch = beforeParenthesis.match(/([~A-Za-z_]\w*(?:::[~A-Za-z_]\w*)*)$/);
+    if (!nameMatch) { return false; }
+    const functionName = nameMatch[1];
+    const prefix = beforeParenthesis.slice(0, -functionName.length).trim();
+    return prefix.length > 0 || functionName.includes('::');
 }
 
 function alignVariableDeclarations(code: string): string {

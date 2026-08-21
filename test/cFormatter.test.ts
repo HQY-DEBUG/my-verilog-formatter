@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.test.ts
 // 描述    : C/C++ 格式化器回归测试
-// 版本    : v1.3.2
+// 版本    : v1.3.3
 // 日期    : 2026/08/21
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.3.3  2026/08/21  增加 static bool 单行函数签名测试
 //  v1.3.2  2026/08/21  增加枚举左花括号同行测试
 //  v1.3.1  2026/08/21  增加结构体左花括号同行测试
 //  v1.3.0  2026/08/21  增加枚举项多列对齐测试
@@ -197,6 +198,28 @@ describe('C/C++ formatter', () => {
             '    return first + second;',
             '}',
         ].join('\n'));
+    });
+
+    it('单行 static bool 函数的左花括号不换行', () => {
+        const input = [
+            'static bool cmd_buffer_is_vld(uint32_t pos)',
+            '{',
+            '    if (pos > LIST_MEM_MAX_POSITION)',
+            '        return false;',
+            '}',
+        ].join('\n');
+
+        expect(formatC(input)).toBe([
+            'static bool cmd_buffer_is_vld(uint32_t pos) {',
+            '    if (pos > LIST_MEM_MAX_POSITION)',
+            '        return false;',
+            '}',
+        ].join('\n'));
+    });
+
+    it('不把普通函数调用后的代码块误识别为函数定义', () => {
+        const input = ['foo()', '{', '    run();', '}'].join('\n');
+        expect(formatC(input)).toBe(input);
     });
 
     it('不把控制语句的左花括号改成函数样式', () => {
