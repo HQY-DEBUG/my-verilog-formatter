@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : extension.test.ts
 // 描述    : 扩展入口配置测试
-// 版本    : v1.2.2
+// 版本    : v1.3.0
 // 日期    : 2026/08/21
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.3.0  2026/08/21  同步枚举多列对齐功能版本
 //  v1.2.2  2026/08/21  同步类型定义空行功能版本
 //  v1.2.1  2026/08/21  校验插件专用格式化命令及快捷键
 //  v1.2.0  2026/08/21  同步结构体多列对齐功能版本
@@ -35,7 +36,7 @@ describe('extension formatter languages', () => {
         const readme = fs.readFileSync(readmePath, 'utf8');
         expect(pkg.name).toBe('hanxuyao-plugin');
         expect(pkg.displayName).toBe('hanxuyao-plugin');
-        expect(pkg.version).toBe('1.2.2');
+        expect(pkg.version).toBe('1.3.0');
         expect(readme).toContain(`> 版本：v${pkg.version}　日期：2026/08/21`);
         expect(readme).toMatch(/1\. 代码格式化：[\s\S]*2\. 工程浏览：[\s\S]*3\. 代码生成：/);
         expect(pkg.activationEvents).toContain('onCommand:verilogFormatter.formatDocument');

@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.test.ts
 // 描述    : C/C++ 格式化器回归测试
-// 版本    : v1.2.2
+// 版本    : v1.3.0
 // 日期    : 2026/08/21
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.3.0  2026/08/21  增加枚举项多列对齐测试
 //  v1.2.2  2026/08/21  增加连续类型定义之间的空行测试
 //  v1.2.0  2026/08/21  增加结构体成员多列对齐测试
 //  v1.1.0  2026/08/21  创建文件
@@ -92,6 +93,30 @@ describe('C/C++ formatter', () => {
             '{',
             '    ListId id;',
             '} ListRegion;',
+        ].join('\n');
+        expect(formatC(input)).toBe(expected);
+        expect(formatC(expected)).toBe(expected);
+    });
+
+    it('按名称、赋值、逗号和注释对齐枚举项', () => {
+        const input = [
+            'typedef enum',
+            '{',
+            '    APPEND_OK = 0, // 追加成功',
+            '    APPEND_INVALID_STATE, // 状态无效',
+            '    APPEND_NO_POSITION,',
+            '    APPEND_NO_CMD_SLOT',
+            '} ListMemAppendError;',
+        ].join('\n');
+
+        const expected = [
+            'typedef enum',
+            '{',
+            '    APPEND_OK            = 0 ,  // 追加成功',
+            '    APPEND_INVALID_STATE     ,  // 状态无效',
+            '    APPEND_NO_POSITION       ,',
+            '    APPEND_NO_CMD_SLOT',
+            '} ListMemAppendError;',
         ].join('\n');
         expect(formatC(input)).toBe(expected);
         expect(formatC(expected)).toBe(expected);

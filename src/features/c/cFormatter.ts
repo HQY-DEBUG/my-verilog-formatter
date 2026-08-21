@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.ts
 // 描述    : C/C++ 变量定义、函数调用和函数花括号格式化
-// 版本    : v1.2.2
+// 版本    : v1.3.0
 // 日期    : 2026/08/21
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.3.0  2026/08/21  增加枚举项名称、赋值、逗号和注释多列对齐
 //  v1.2.2  2026/08/21  在连续类型定义之间保留一个空行
 //  v1.2.0  2026/08/21  增加结构体成员的类型、名称、分号和注释多列对齐
 //  v1.1.0  2026/08/21  创建文件
@@ -23,6 +24,14 @@ interface DeclarationLine {
     comment: string;
 }
 
+interface EnumMemberLine {
+    indent: string;
+    name: string;
+    assignment: string;
+    comma: boolean;
+    comment: string;
+}
+
 const CONTROL_KEYWORDS = new Set(['if', 'for', 'while', 'switch', 'catch']);
 const NON_TYPE_KEYWORDS = new Set([
     'break', 'case', 'continue', 'delete', 'else', 'goto', 'new', 'return', 'throw', 'using',
@@ -35,6 +44,7 @@ export function formatC(code: string): string {
     normalized = collapseMultilineCalls(normalized);
     normalized = placeFunctionOpeningBraces(normalized);
     normalized = alignVariableDeclarations(normalized);
+    normalized = alignEnumDeclarations(normalized);
     normalized = ensureBlankLineAfterTypeDeclarations(normalized);
     normalized = normalized.split('\n').map(line => line.trimEnd()).join('\n');
     return eol === '\n' ? normalized : normalized.replace(/\n/g, '\r\n');
@@ -251,6 +261,101 @@ function ensureBlankLineAfterTypeDeclarations(code: string): string {
     }
 
     return result.join('\n');
+}
+
+function alignEnumDeclarations(code: string): string {
+    const lines = code.split('\n');
+
+    for (let i = 0; i < lines.length; i++) {
+        if (!/^\s*(?:typedef\s+)?enum(?:\s+[A-Za-z_]\w*)?\s*(?:\{|$)/.test(lines[i])) {
+            continue;
+        }
+
+        let openingLine = i;
+        while (openingLine < lines.length && !lines[openingLine].includes('{')) {
+            openingLine++;
+        }
+        if (openingLine >= lines.length) { break; }
+
+        let depth = 0;
+        let closingLine = openingLine;
+        for (; closingLine < lines.length; closingLine++) {
+            depth += braceDelta(lines[closingLine]);
+            if (depth === 0) { break; }
+        }
+        if (closingLine >= lines.length) { break; }
+
+        alignEnumMemberRange(lines, openingLine + 1, closingLine);
+        i = closingLine;
+    }
+
+    return lines.join('\n');
+}
+
+function braceDelta(line: string): number {
+    const code = line.split('//', 1)[0];
+    return [...code].reduce((depth, char) => {
+        if (char === '{') { return depth + 1; }
+        if (char === '}') { return depth - 1; }
+        return depth;
+    }, 0);
+}
+
+function alignEnumMemberRange(lines: string[], start: number, end: number): void {
+    for (let i = start; i < end;) {
+        const first = parseEnumMember(lines[i]);
+        if (!first) {
+            i++;
+            continue;
+        }
+
+        const members: EnumMemberLine[] = [first];
+        let blockEnd = i + 1;
+        while (blockEnd < end) {
+            const member = parseEnumMember(lines[blockEnd]);
+            if (!member) { break; }
+            members.push(member);
+            blockEnd++;
+        }
+
+        const maxName = Math.max(...members.map(member => member.name.length));
+        const maxAssignment = Math.max(...members.map(member => member.assignment.length));
+        const assignmentWidth = maxAssignment > 0 ? maxAssignment + 1 : 0;
+        for (let offset = 0; offset < members.length; offset++) {
+            const member = members[offset];
+            const name = member.name.padEnd(maxName + 1);
+            const assignment = member.assignment.padEnd(assignmentWidth);
+            const comma = member.comma ? ',' : member.comment ? ' ' : '';
+            const comment = member.comment ? `  ${member.comment}` : '';
+            lines[i + offset] = `${member.indent}${name}${assignment}${comma}${comment}`;
+        }
+        i = blockEnd;
+    }
+}
+
+function parseEnumMember(line: string): EnumMemberLine | undefined {
+    const commentIndex = line.indexOf('//');
+    const comment = commentIndex >= 0 ? line.slice(commentIndex).trim() : '';
+    let code = (commentIndex >= 0 ? line.slice(0, commentIndex) : line).trimEnd();
+    const indent = code.match(/^\s*/)?.[0] ?? '';
+    code = code.trim();
+    if (!code || code.startsWith('#')) { return undefined; }
+
+    const comma = code.endsWith(',');
+    if (comma) { code = code.slice(0, -1).trimEnd(); }
+    const equal = code.search(/(?<![=!<>])=(?!=)/);
+    const name = (equal >= 0 ? code.slice(0, equal) : code).trim();
+    if (!/^[A-Za-z_]\w*$/.test(name)) { return undefined; }
+
+    const value = equal >= 0 ? code.slice(equal + 1).trim() : '';
+    if (equal >= 0 && !value) { return undefined; }
+    return {
+        indent,
+        name,
+        assignment: value ? `= ${value}` : '',
+        comma,
+        comment,
+    };
 }
 
 function parseDeclaration(line: string): DeclarationLine | undefined {
