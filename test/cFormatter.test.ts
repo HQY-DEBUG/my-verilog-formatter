@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.test.ts
 // 描述    : C/C++ 格式化器回归测试
-// 版本    : v1.4.0
+// 版本    : v1.4.2
 // 日期    : 2026/08/21
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.4.2  2026/08/21  增加跨行控制条件单行化测试
 //  v1.4.0  2026/08/21  增加函数体及嵌套代码块缩进测试
 //  v1.3.3  2026/08/21  增加 static bool 单行函数签名测试
 //  v1.3.2  2026/08/21  增加枚举左花括号同行测试
@@ -178,6 +179,25 @@ describe('C/C++ formatter', () => {
             'if (is_ready(device, timeout))',
             '{',
             '    run();',
+            '}',
+        ].join('\n'));
+    });
+
+    it('把跨行 if 条件整理为单行', () => {
+        const input = [
+            'bool list_mem_jump_output(ListMem *mem, uint32_t abs_pos) {',
+            '    if ((target_region == NULL) ||',
+            '        (target_region->id != mem->out_ptr.list_id)) {',
+            '        return false;',
+            '    }',
+            '}',
+        ].join('\n');
+
+        expect(formatC(input)).toBe([
+            'bool list_mem_jump_output(ListMem *mem, uint32_t abs_pos) {',
+            '    if ((target_region == NULL) || (target_region->id != mem->out_ptr.list_id)) {',
+            '        return false;',
+            '    }',
             '}',
         ].join('\n'));
     });

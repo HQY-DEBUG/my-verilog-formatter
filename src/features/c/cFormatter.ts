@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.ts
 // 描述    : C/C++ 变量定义、函数调用和函数花括号格式化
-// 版本    : v1.4.0
+// 版本    : v1.4.2
 // 日期    : 2026/08/21
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.4.2  2026/08/21  将跨行控制条件合并为单行
 //  v1.4.0  2026/08/21  按代码块层级重算 C/C++ 缩进
 //  v1.3.3  2026/08/21  修正单行函数签名的左花括号位置识别
 //  v1.3.2  2026/08/21  将枚举左花括号放到类型声明末尾
@@ -45,6 +46,7 @@ const NON_TYPE_KEYWORDS = new Set([
 export function formatC(code: string): string {
     const eol = code.includes('\r\n') ? '\r\n' : '\n';
     let normalized = code.replace(/\r\n/g, '\n');
+    normalized = collapseMultilineControlConditions(normalized);
     normalized = collapseMultilineCalls(normalized);
     normalized = placeFunctionOpeningBraces(normalized);
     normalized = placeTypeOpeningBraces(normalized);
@@ -90,16 +92,57 @@ function collapseMultilineCalls(code: string): string {
         }
 
         const indent = lines[i].match(/^\s*/)?.[0] ?? '';
-        const callLines = lines.slice(i, end + 1).map(line => line.trim());
-        const joined = callLines.slice(1).reduce((current, next) => {
-            const separator = current.endsWith('(') || /^[),;]/.test(next) ? '' : ' ';
-            return current + separator + next;
-        }, callLines[0]);
+        const joined = joinInlineLines(lines.slice(i, end + 1));
         result.push(indent + joined);
         i = end;
     }
 
     return result.join('\n');
+}
+
+function collapseMultilineControlConditions(code: string): string {
+    const lines = code.split('\n');
+    const result: string[] = [];
+
+    for (let i = 0; i < lines.length; i++) {
+        const trimmed = lines[i].trim();
+        if (!/^(?:(?:if|while|for|switch)\s*\(|else\s+if\s*\()/.test(trimmed)) {
+            result.push(lines[i]);
+            continue;
+        }
+
+        let balance = parenthesisDelta(lines[i]);
+        if (balance <= 0) {
+            result.push(lines[i]);
+            continue;
+        }
+
+        let end = i;
+        let containsComment = hasComment(lines[i]);
+        while (balance > 0 && end + 1 < lines.length) {
+            end++;
+            balance += parenthesisDelta(lines[end]);
+            containsComment ||= hasComment(lines[end]);
+        }
+        if (balance !== 0 || end === i || containsComment) {
+            result.push(lines[i]);
+            continue;
+        }
+
+        const indent = lines[i].match(/^\s*/)?.[0] ?? '';
+        result.push(indent + joinInlineLines(lines.slice(i, end + 1)));
+        i = end;
+    }
+
+    return result.join('\n');
+}
+
+function joinInlineLines(lines: string[]): string {
+    const trimmedLines = lines.map(line => line.trim());
+    return trimmedLines.slice(1).reduce((current, next) => {
+        const separator = current.endsWith('(') || /^[),;]/.test(next) ? '' : ' ';
+        return current + separator + next;
+    }, trimmedLines[0]);
 }
 
 function isCallStart(line: string): boolean {
