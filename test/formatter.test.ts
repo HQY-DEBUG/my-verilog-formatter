@@ -459,6 +459,33 @@ describe('VerilogFormatter', () => {
         expect(fmt['format'](input, defaultCfg)).toBe(expected);
     });
 
+    test('注释和空行之间的 parameter 与 localparam 应统一对齐', () => {
+        const input = [
+            'parameter [19:0] ERROR_TIME = 20\'h85400; // 读错误时间',
+            'parameter [19:0] ERROR_CODE = 20\'h85410; // 读错误信息',
+            '',
+            '// 用户自定义功能',
+            '',
+            'parameter [19:0] ZJ_TEMPER = 20\'h85430; // 读支架温度',
+            'parameter THERMOL_ON = 1\'b1; // 安装温湿度传感器',
+            'parameter [15:0] Firmware = 16\'d2000; // 固件版本',
+            'localparam [19:0] GAVLO_RESET_STATE = 20\'h65650; // 异步复位状态',
+        ].join('\n');
+        const expected = [
+            'parameter  [19:0] ERROR_TIME        = 20\'h85400; // 读错误时间',
+            'parameter  [19:0] ERROR_CODE        = 20\'h85410; // 读错误信息',
+            '',
+            '// 用户自定义功能',
+            '',
+            'parameter  [19:0] ZJ_TEMPER         = 20\'h85430; // 读支架温度',
+            'parameter         THERMOL_ON        = 1\'b1     ; // 安装温湿度传感器',
+            'parameter  [15:0] Firmware          = 16\'d2000 ; // 固件版本',
+            'localparam [19:0] GAVLO_RESET_STATE = 20\'h65650; // 异步复位状态',
+        ].join('\n');
+
+        expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
     test('带注释的端口行应忽略被注释端口的长度', () => {
         const input = [
             'module rd26bhjc (',

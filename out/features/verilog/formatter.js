@@ -512,6 +512,11 @@ class VerilogFormatter {
     alignLocalparams(code) {
         const FIRST_RE = /^(\s*)(parameter|localparam)\b\s*(?:(integer|int|logic|reg|wire)\b\s*)?(signed|unsigned)?\s*(?:(\[[^\]]+\])\s*)?(\w+)\s*=\s*([^,;]+?)\s*([,;]?)\s*(\/\/.*)?$/;
         const CONT_RE = /^(\s*)(\w+)\s*=\s*([^,;]+?)\s*([,;])\s*(\/\/.*)?$/;
+        const makeEntry = (m) => ({
+            keyword: m[2], type: m[3] ?? '', sign: m[4] ?? '', width: m[5] ?? '',
+            name: m[6], value: m[7].trim(), term: m[8], comment: m[9] ?? '',
+        });
+        const isGap = (line) => line.trim() === '' || /^\s*\/\//.test(line);
         const lines = code.split('\n');
         const result = [];
         let i = 0;
@@ -525,44 +530,65 @@ class VerilogFormatter {
             const keyword = fm[2];
             const isSemicolonGroup = fm[8] === ';';
             if (isSemicolonGroup || this.startsKeywordParamGroup(lines, i, FIRST_RE)) {
-                // 情况2：收集连续的同缩进 parameter/localparam ... ; 行作为一组对齐
-                const group = [{ type: fm[3] ?? '', sign: fm[4] ?? '', width: fm[5] ?? '', name: fm[6], value: fm[7].trim(), term: fm[8], comment: fm[9] ?? '' }];
+                // 情况2：注释和空行不拆分参数区域，parameter/localparam 共用对齐列。
+                const group = [makeEntry(fm)];
                 i++;
                 while (i < lines.length) {
                     const nm = lines[i].match(FIRST_RE);
-                    if (nm && nm[1] === baseIndent && nm[2] === keyword && (nm[8] === ';') === isSemicolonGroup) {
-                        group.push({ type: nm[3] ?? '', sign: nm[4] ?? '', width: nm[5] ?? '', name: nm[6], value: nm[7].trim(), term: nm[8], comment: nm[9] ?? '' });
+                    if (nm && nm[1] === baseIndent && (nm[8] === ';') === isSemicolonGroup
+                        && (isSemicolonGroup || nm[2] === keyword)) {
+                        group.push(makeEntry(nm));
                         i++;
+                    }
+                    else if (isSemicolonGroup && isGap(lines[i])) {
+                        let j = i + 1;
+                        while (j < lines.length && isGap(lines[j])) {
+                            j++;
+                        }
+                        const next = lines[j]?.match(FIRST_RE);
+                        if (!next || next[1] !== baseIndent || next[8] !== ';') {
+                            break;
+                        }
+                        while (i < j) {
+                            group.push(lines[i++]);
+                        }
                     }
                     else {
                         break;
                     }
                 }
-                const maxType = Math.max(...group.map(e => e.type.length));
-                const maxSign = Math.max(...group.map(e => e.sign.length));
-                const maxWidth = Math.max(...group.map(e => e.width.length));
-                const maxName = Math.max(...group.map(e => e.name.length));
-                const maxValue = Math.max(...group.map(e => e.value.length));
+                const entries = group.filter((item) => typeof item !== 'string');
+                const maxKeyword = Math.max(...entries.map(e => e.keyword.length));
+                const maxType = Math.max(...entries.map(e => e.type.length));
+                const maxSign = Math.max(...entries.map(e => e.sign.length));
+                const maxWidth = Math.max(...entries.map(e => e.width.length));
+                const maxName = Math.max(...entries.map(e => e.name.length));
+                const maxValue = Math.max(...entries.map(e => e.value.length));
                 group.forEach(e => {
+                    if (typeof e === 'string') {
+                        result.push(e);
+                        return;
+                    }
+                    const keywordPad = e.keyword.padEnd(maxKeyword);
                     const type = maxType > 0 ? e.type.padEnd(maxType + 1) : '';
                     const sign = maxSign > 0 ? e.sign.padEnd(maxSign + 1) : '';
                     const width = maxWidth > 0 ? e.width.padEnd(maxWidth + 1) : '';
                     const n = e.name.padEnd(maxName);
                     const v = e.value.padEnd(maxValue);
                     const c = e.comment ? ` ${e.comment}` : '';
-                    result.push(`${baseIndent}${keyword} ${type}${sign}${width}${n} = ${v}${e.term}${c}`);
+                    result.push(`${baseIndent}${keywordPad} ${type}${sign}${width}${n} = ${v}${e.term}${c}`);
                 });
             }
             else {
                 // 情况1：多参数逗号分隔块
-                const entries = [{ type: fm[3] ?? '', sign: fm[4] ?? '', width: fm[5] ?? '', name: fm[6], value: fm[7].trim(), term: fm[8], comment: fm[9] ?? '' }];
+                const entries = [makeEntry(fm)];
                 i++;
                 while (i < lines.length) {
                     const cm = lines[i].match(CONT_RE);
                     if (!cm) {
                         break;
                     }
-                    entries.push({ type: '', sign: '', width: '', name: cm[2], value: cm[3].trim(), term: cm[4], comment: cm[5] ?? '' });
+                    entries.push({ keyword: '', type: '', sign: '', width: '', name: cm[2], value: cm[3].trim(), term: cm[4], comment: cm[5] ?? '' });
                     i++;
                     if (cm[4] === ';') {
                         break;
