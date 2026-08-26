@@ -86,6 +86,10 @@ function parseModule(text) {
         if (/\bendmodule\b/.test(codeLine)) {
             break;
         }
+        if (!inParam && /^#\s*\(/.test(codeLine)) {
+            inParam = true;
+            continue;
+        }
         // 参数区
         if (inParam) {
             const pm = codeLine.match(RE_PARAM);

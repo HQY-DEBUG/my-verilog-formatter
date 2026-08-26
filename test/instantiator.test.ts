@@ -105,6 +105,28 @@ describe('registerInstantiatorCommands', () => {
         expect(clipboardText).toMatch(/\.CLKS_PER_SAMPLE\s+\(32\)/);
     });
 
+    test('一键例化包含独立成行的参数列表起始符', async () => {
+        activeText = [
+            'module ARM_Processor_System_ps_system',
+            '#(',
+            '  parameter Slave_AXI_HP0_DATA_WIDTH = 64,',
+            '  parameter GPIO_PL_Dot_IO = 64',
+            ')',
+            '(',
+            '  input wire slave_hp0_axi_aclk,',
+            '  output wire p2f_clk0',
+            ');',
+            'endmodule',
+        ].join('\n');
+        registerInstantiatorCommands({ subscriptions: [] } as never);
+
+        await commands.get('verilogFormatter.instantiate')?.();
+
+        expect(clipboardText).toContain('ARM_Processor_System_ps_system #(');
+        expect(clipboardText).toMatch(/\.Slave_AXI_HP0_DATA_WIDTH\s+\(64\),/);
+        expect(clipboardText).toMatch(/\.GPIO_PL_Dot_IO\s+\(64\)/);
+    });
+
     test('一键例化包含带行尾注释且无分隔符的最后一个端口', async () => {
         activeText = [
             'module data_merge (',
