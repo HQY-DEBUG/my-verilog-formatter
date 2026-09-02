@@ -65,6 +65,7 @@ function formatC(code) {
     let normalized = code.replace(/\r\n/g, '\n');
     normalized = collapseMultilineControlConditions(normalized);
     normalized = collapseMultilineCalls(normalized);
+    normalized = collapseMultilineCallExpressions(normalized);
     normalized = placeFunctionOpeningBraces(normalized);
     normalized = placeTypeOpeningBraces(normalized);
     normalized = reindentCBlocks(normalized);
@@ -109,6 +110,37 @@ function collapseMultilineCalls(code) {
     }
     return result.join('\n');
 }
+function collapseMultilineCallExpressions(code) {
+    const lines = code.split('\n');
+    const result = [];
+    for (let i = 0; i < lines.length; i++) {
+        if (!isCallExpressionStart(lines[i])) {
+            result.push(lines[i]);
+            continue;
+        }
+        let end = i;
+        let balance = parenthesisDelta(lines[i]);
+        let containsComment = hasComment(lines[i]);
+        while (!/;\s*$/.test(lines[end].trim()) && end + 1 < lines.length) {
+            end++;
+            balance += parenthesisDelta(lines[end]);
+            containsComment || (containsComment = hasComment(lines[end]));
+        }
+        const block = lines.slice(i, end + 1);
+        if (end === i
+            || balance !== 0
+            || containsComment
+            || !/;\s*$/.test(lines[end].trim())
+            || !block.some(line => /(?:[A-Za-z_]\w*\s*(?:::|\.|->)\s*)*[A-Za-z_]\w*\s*\(/.test(line))) {
+            result.push(lines[i]);
+            continue;
+        }
+        const indent = lines[i].match(/^\s*/)?.[0] ?? '';
+        result.push(indent + joinInlineLines(block));
+        i = end;
+    }
+    return result.join('\n');
+}
 function collapseMultilineControlConditions(code) {
     const lines = code.split('\n');
     const result = [];
@@ -139,6 +171,17 @@ function collapseMultilineControlConditions(code) {
         i = end;
     }
     return result.join('\n');
+}
+function isCallExpressionStart(line) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#') || hasComment(line)) {
+        return false;
+    }
+    if (/^(?:if|for|while|switch|catch|else)\b/.test(trimmed)) {
+        return false;
+    }
+    return (/(?:^|[^=!<>])=(?!=)/.test(trimmed) || /^(?:return|throw|co_return)\b/.test(trimmed))
+        && !/[;{}]\s*$/.test(trimmed);
 }
 function joinInlineLines(lines) {
     const trimmedLines = lines.map(line => line.trim());

@@ -165,6 +165,16 @@ describe('C/C++ formatter', () => {
         expect(formatC(input)).toBe('result = object.build(first, second);');
     });
 
+    it('把赋值表达式中的跨行函数调用整理为单行', () => {
+        const input = [
+            'plan->accel[i] = direction * peak_accel *',
+            '   s_curve_weight(i, step_num, selected_ramp) /',
+            '   (double)selected_ramp;',
+        ].join('\n');
+
+        expect(formatC(input)).toBe('plan->accel[i] = direction * peak_accel * s_curve_weight(i, step_num, selected_ramp) / (double)selected_ramp;');
+    });
+
     it('把控制条件中的多行函数调用整理为单行', () => {
         const input = [
             'if (is_ready(',
