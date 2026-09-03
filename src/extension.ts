@@ -16,6 +16,7 @@
 
 import * as vscode from 'vscode';
 import { CFormatter }                from './features/c/cFormatter';
+import { MatlabFormatter }           from './features/matlab/matlabFormatter';
 import { VerilogFormatter }          from './features/verilog/formatter';
 import { AdcFormatter }              from './features/verilog/adcFormatter';
 import { registerInstantiatorCommands } from './features/verilog/instantiator';
@@ -31,10 +32,12 @@ import { TodoStatusBar }     from './features/todo/todoStatusBar';
 
 export const VERILOG_LANGS = ['verilog', 'systemverilog', 'verilog-hdl', 'systemverilog-hdl'];
 export const C_LANGS = ['c', 'cpp'];
+export const MATLAB_LANGS = ['matlab'];
 
 export function activate(context: vscode.ExtensionContext): void {
     const formatter = new VerilogFormatter();
     const cFormatter = new CFormatter();
+    const matlabFormatter = new MatlabFormatter();
     const adcFormatter = new AdcFormatter();
 
     // ---- 格式化 ----//
@@ -48,6 +51,12 @@ export function activate(context: vscode.ExtensionContext): void {
         context.subscriptions.push(
             vscode.languages.registerDocumentFormattingEditProvider({ language: lang }, cFormatter),
             vscode.languages.registerDocumentRangeFormattingEditProvider({ language: lang }, cFormatter),
+        );
+    }
+    for (const lang of MATLAB_LANGS) {
+        context.subscriptions.push(
+            vscode.languages.registerDocumentFormattingEditProvider({ language: lang }, matlabFormatter),
+            vscode.languages.registerDocumentRangeFormattingEditProvider({ language: lang }, matlabFormatter),
         );
     }
     context.subscriptions.push(
@@ -71,6 +80,8 @@ export function activate(context: vscode.ExtensionContext): void {
 
             if (C_LANGS.includes(document.languageId)) {
                 edits = cFormatter.provideDocumentFormattingEdits(document);
+            } else if (MATLAB_LANGS.includes(document.languageId)) {
+                edits = matlabFormatter.provideDocumentFormattingEdits(document);
             } else if (VERILOG_LANGS.includes(document.languageId)) {
                 edits = formatter.provideDocumentFormattingEdits(document, options);
             } else if (document.languageId === 'anlogic-adc') {
@@ -122,6 +133,7 @@ export function activate(context: vscode.ExtensionContext): void {
             if (!cfg.get<boolean>('formatOnSave', false)) { return; }
             if (!VERILOG_LANGS.includes(doc.languageId)
                 && !C_LANGS.includes(doc.languageId)
+                && !MATLAB_LANGS.includes(doc.languageId)
                 && doc.languageId !== 'anlogic-adc') { return; }
             await vscode.commands.executeCommand('editor.action.formatDocument', doc.uri);
         }),

@@ -48,11 +48,12 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.C_LANGS = exports.VERILOG_LANGS = void 0;
+exports.MATLAB_LANGS = exports.C_LANGS = exports.VERILOG_LANGS = void 0;
 exports.activate = activate;
 exports.deactivate = deactivate;
 const vscode = __importStar(require("vscode"));
 const cFormatter_1 = require("./features/c/cFormatter");
+const matlabFormatter_1 = require("./features/matlab/matlabFormatter");
 const formatter_1 = require("./features/verilog/formatter");
 const adcFormatter_1 = require("./features/verilog/adcFormatter");
 const instantiator_1 = require("./features/verilog/instantiator");
@@ -67,9 +68,11 @@ const todoDecorator_1 = require("./features/todo/todoDecorator");
 const todoStatusBar_1 = require("./features/todo/todoStatusBar");
 exports.VERILOG_LANGS = ['verilog', 'systemverilog', 'verilog-hdl', 'systemverilog-hdl'];
 exports.C_LANGS = ['c', 'cpp'];
+exports.MATLAB_LANGS = ['matlab'];
 function activate(context) {
     const formatter = new formatter_1.VerilogFormatter();
     const cFormatter = new cFormatter_1.CFormatter();
+    const matlabFormatter = new matlabFormatter_1.MatlabFormatter();
     const adcFormatter = new adcFormatter_1.AdcFormatter();
     // ---- 格式化 ----//
     for (const lang of exports.VERILOG_LANGS) {
@@ -77,6 +80,9 @@ function activate(context) {
     }
     for (const lang of exports.C_LANGS) {
         context.subscriptions.push(vscode.languages.registerDocumentFormattingEditProvider({ language: lang }, cFormatter), vscode.languages.registerDocumentRangeFormattingEditProvider({ language: lang }, cFormatter));
+    }
+    for (const lang of exports.MATLAB_LANGS) {
+        context.subscriptions.push(vscode.languages.registerDocumentFormattingEditProvider({ language: lang }, matlabFormatter), vscode.languages.registerDocumentRangeFormattingEditProvider({ language: lang }, matlabFormatter));
     }
     context.subscriptions.push(vscode.languages.registerDocumentFormattingEditProvider({ language: 'anlogic-adc' }, adcFormatter), vscode.languages.registerDocumentRangeFormattingEditProvider({ language: 'anlogic-adc' }, adcFormatter));
     // ---- 插件专用格式化命令，避免被其他语言的默认 formatter 截获 ----//
@@ -94,6 +100,9 @@ function activate(context) {
         let edits = [];
         if (exports.C_LANGS.includes(document.languageId)) {
             edits = cFormatter.provideDocumentFormattingEdits(document);
+        }
+        else if (exports.MATLAB_LANGS.includes(document.languageId)) {
+            edits = matlabFormatter.provideDocumentFormattingEdits(document);
         }
         else if (exports.VERILOG_LANGS.includes(document.languageId)) {
             edits = formatter.provideDocumentFormattingEdits(document, options);
@@ -148,6 +157,7 @@ function activate(context) {
         }
         if (!exports.VERILOG_LANGS.includes(doc.languageId)
             && !exports.C_LANGS.includes(doc.languageId)
+            && !exports.MATLAB_LANGS.includes(doc.languageId)
             && doc.languageId !== 'anlogic-adc') {
             return;
         }

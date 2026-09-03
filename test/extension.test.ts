@@ -64,8 +64,8 @@ describe('extension formatter languages', () => {
         const extensionPath = path.join(__dirname, '..', 'src', 'extension.ts');
         const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8')) as { activationEvents: string[] };
         const extensionText = fs.readFileSync(extensionPath, 'utf8');
-        const matches = [...extensionText.matchAll(/(?:VERILOG|C)_LANGS\s*=\s*\[([^\]]+)\]/g)];
-        expect(matches).toHaveLength(2);
+        const matches = [...extensionText.matchAll(/(?:VERILOG|C|MATLAB)_LANGS\s*=\s*\[([^\]]+)\]/g)];
+        expect(matches).toHaveLength(3);
         const langs = matches.flatMap(match => [...match[1].matchAll(/'([^']+)'/g)].map(item => item[1]));
 
         for (const lang of langs) {

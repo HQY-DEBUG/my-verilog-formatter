@@ -1,7 +1,7 @@
 {
     "name": "hanxuyao-plugin",
     "displayName": "hanxuyao-plugin",
-    "description": "Verilog / SystemVerilog / C / C++ 代码格式化、模块例化、大纲识别、文件树、语法高亮与跳转工具",
+    "description": "Verilog / SystemVerilog / C / C++ / MATLAB 代码格式化、模块例化、大纲识别、文件树、语法高亮与跳转工具",
     "version": "1.4.2",
     "icon": "icon.png",
     "engines": {
@@ -19,6 +19,7 @@
         "onLanguage:systemverilog-hdl",
         "onLanguage:c",
         "onLanguage:cpp",
+        "onLanguage:matlab",
         "onCommand:verilogFormatter.formatDocument",
         "onLanguage:ucf",
         "onLanguage:xdc",
@@ -423,7 +424,7 @@
             {
                 "command": "verilogFormatter.formatDocument",
                 "key": "ctrl+alt+f",
-                "when": "editorTextFocus && editorLangId =~ /verilog|systemverilog|anlogic-adc|c|cpp/"
+                "when": "editorTextFocus && editorLangId =~ /verilog|systemverilog|anlogic-adc|c|cpp|matlab/"
             },
             {
                 "command": "verilogFormatter.instantiate",
@@ -500,7 +501,7 @@
                 "verilogFormatter.formatOnSave": {
                     "type": "boolean",
                     "default": false,
-                    "description": "保存时自动格式化 Verilog/SystemVerilog/C/C++ 文件"
+                    "description": "保存时自动格式化 Verilog/SystemVerilog/C/C++/MATLAB 文件"
                 },
                 "verilogFormatter.todo.tags": {
                     "type": "array",
