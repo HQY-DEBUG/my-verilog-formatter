@@ -473,8 +473,8 @@ function alignMacroDefines(code: string): string {
         if (block.length === 1) {
             result.push(lines[i]);
         } else {
-            const maxName = Math.max(...block.map(item => item.name.length));
-            result.push(...block.map(item => `${item.prefix}${item.name.padEnd(maxName + 1)}${item.body}`));
+            const maxSignature = Math.max(...block.map(item => item.signature.length));
+            result.push(...block.map(item => `${item.prefix}${item.signature.padEnd(maxSignature + 1)}${item.body}`));
         }
         i = end;
     }
@@ -484,16 +484,16 @@ function alignMacroDefines(code: string): string {
 
 interface MacroDefineLine {
     prefix: string;
-    name: string;
+    signature: string;
     body: string;
 }
 
 function parseMacroDefine(line: string): MacroDefineLine | undefined {
-    const match = line.match(/^(\s*#define\s+)([A-Za-z_]\w*)\s+(.+)$/);
+    const match = line.match(/^(\s*#define\s+)([A-Za-z_]\w*(?:\([^)]*\))?)\s+(.+)$/);
     if (!match || hasComment(line)) { return undefined; }
     return {
         prefix: match[1],
-        name: match[2],
+        signature: match[2],
         body: match[3].trim(),
     };
 }

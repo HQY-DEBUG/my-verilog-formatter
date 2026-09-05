@@ -199,6 +199,18 @@ describe('C/C++ formatter', () => {
         ].join('\n'));
     });
 
+    it('对齐连续函数式宏定义的宏体列', () => {
+        const input = [
+            '#define write_reg(base_addr, offset, val) AL_REG32_WRITE((base_addr) + (offset), val)',
+            '#define read_reg(base_addr, offset) AL_REG32_READ((base_addr) + (offset))',
+        ].join('\n');
+
+        expect(formatC(input)).toBe([
+            '#define write_reg(base_addr, offset, val) AL_REG32_WRITE((base_addr) + (offset), val)',
+            '#define read_reg(base_addr, offset)       AL_REG32_READ((base_addr) + (offset))',
+        ].join('\n'));
+    });
+
     it('把控制条件中的多行函数调用整理为单行', () => {
         const input = [
             'if (is_ready(',
