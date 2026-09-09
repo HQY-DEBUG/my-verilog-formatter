@@ -827,6 +827,7 @@ export class VerilogFormatter
         const maxSign      = Math.max(...ports.map(p => p.sign.length));
         const maxWidth     = Math.max(...ports.map(p => p.width.length));
         const maxName      = Math.max(...ports.map(p => p.name.length));
+        const alignNumericWidthRight = ports.filter(p => p.width.length > 0).every(p => /^\[\d+\s*:\s*\d+\]$/.test(p.width));
 
         return parsed.map(p => {
             if (!p.dir) { return p.name; }
@@ -834,7 +835,8 @@ export class VerilogFormatter
             const typePad  = p.ptype.padEnd(maxType + 2);
             // signed/unsigned 与位宽分别成列，确保无符号位宽也与有符号位宽左对齐。
             const signPad  = maxSign > 0 ? p.sign.padEnd(maxSign + 1) : '';
-            const widthPad = maxWidth > 0 ? p.width.padEnd(maxWidth + 1) : '';
+            const widthText = alignNumericWidthRight ? p.width.padStart(maxWidth) : p.width.padEnd(maxWidth);
+            const widthPad = maxWidth > 0 ? widthText + ' ' : '';
             const namePad  = p.name.padEnd(maxName);
             const cmt      = p.comment
                 ? `  ${p.comment.startsWith('//') ? p.comment : '// ' + p.comment}`

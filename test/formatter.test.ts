@@ -120,6 +120,27 @@ describe('VerilogFormatter', () => {
         expect(fmt['format'](input, defaultCfg)).toBe(expected);
     });
 
+    test('端口声明的数字位宽右边界应对齐', () => {
+        const input = [
+            'module adc_capture (',
+            'input wire [19:0] ch0_data,',
+            'input wire [0:0] ch0_valid,',
+            'input wire [19:0] ch1_data,',
+            'input wire [0:0] ch1_valid',
+            ');',
+        ].join('\n');
+        const expected = [
+            'module adc_capture (',
+            '  input  wire  [19:0] ch0_data ,',
+            '  input  wire   [0:0] ch0_valid,',
+            '  input  wire  [19:0] ch1_data ,',
+            '  input  wire   [0:0] ch1_valid',
+            ');',
+        ].join('\n');
+
+        expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
     // ---- case 标签下 begin/end 缩进 ----//
     test('case 标签下 begin/end 和 default 语句缩进', () => {
         const input = [
