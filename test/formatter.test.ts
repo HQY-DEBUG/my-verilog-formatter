@@ -164,6 +164,25 @@ describe('VerilogFormatter', () => {
         expect(fmt['format'](input, defaultCfg)).toBe(expected);
     });
 
+    test('混合参数化位宽时数字位宽仍应冒号前补齐', () => {
+        const input = [
+            'module mixed_width_ports (',
+            'input wire [DATA_WIDTH-1:0] cfg_data,',
+            'input wire [19:0] cfg_interp_para_v,',
+            'input wire [0:0] cfg_interp_para_update_en',
+            ');',
+        ].join('\n');
+        const expected = [
+            'module mixed_width_ports (',
+            '  input  wire  [DATA_WIDTH-1:0] cfg_data                 ,',
+            '  input  wire  [19:0]           cfg_interp_para_v        ,',
+            '  input  wire  [0 :0]           cfg_interp_para_update_en',
+            ');',
+        ].join('\n');
+
+        expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
     // ---- case 标签下 begin/end 缩进 ----//
     test('case 标签下 begin/end 和 default 语句缩进', () => {
         const input = [
