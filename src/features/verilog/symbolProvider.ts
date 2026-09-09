@@ -281,20 +281,82 @@ export class VerilogHoverProvider implements vscode.HoverProvider {
 }
 
 // ---- Document Symbol Provider（大纲面板）----//
+// 排除声明和控制语句，例化识别不依赖 IP 名称或厂商。
+const INSTANCE_KEYWORDS = /^(always|always_ff|always_comb|always_latch|initial|final|if|else|for|foreach|while|repeat|forever|case|casez|casex|begin|end|assign|module|endmodule|parameter|localparam|reg|wire|logic|input|output|inout|integer|int|bit|byte|time|real|genvar|generate|endgenerate|task|function|endtask|endfunction|return|typedef|automatic|static|virtual|interface|endinterface|property|sequence|assert|assume|cover)$/;
+
+function findClosingParenthesis(code: string, start: number): number {
+    let depth = 0;
+    for (let i = start; i < code.length; i++) {
+        if (code[i] === '(') { depth++; }
+        if (code[i] === ')' && --depth === 0) { return i; }
+        // 合法的参数和端口表达式不会跨越分号，避免未完成的例化吞掉后续语句。
+        if (code[i] === ';') { return -1; }
+    }
+    return -1;
+}
+
+function parseInstance(code: string, offset: number): {
+    typeName: string; instName: string; nameOffset: number; endOffset: number;
+} | null {
+    const typePattern = /[ \t]*([A-Za-z_][\w$]*)(?=\s|#)\s*/y;
+    typePattern.lastIndex = offset;
+    const typeMatch = typePattern.exec(code);
+    if (!typeMatch || INSTANCE_KEYWORDS.test(typeMatch[1])) { return null; }
+    let cursor = typePattern.lastIndex;
+
+    if (code[cursor] === '#') {
+        cursor++;
+        while (cursor < code.length && /\s/.test(code[cursor])) { cursor++; }
+        if (code[cursor] !== '(') { return null; }
+        const paramEnd = findClosingParenthesis(code, cursor);
+        if (paramEnd < 0) { return null; }
+        cursor = paramEnd + 1;
+    }
+
+    const namePattern = /\s*([A-Za-z_][\w$]*)\s*\(/y;
+    namePattern.lastIndex = cursor;
+    const nameMatch = namePattern.exec(code);
+    if (!nameMatch || INSTANCE_KEYWORDS.test(nameMatch[1])) { return null; }
+    const portEnd = findClosingParenthesis(code, namePattern.lastIndex - 1);
+    if (portEnd < 0) { return null; }
+    cursor = portEnd + 1;
+    while (cursor < code.length && /\s/.test(code[cursor])) { cursor++; }
+    if (code[cursor] !== ';') { return null; }
+
+    return {
+        typeName: typeMatch[1], instName: nameMatch[1],
+        nameOffset: nameMatch.index + nameMatch[0].indexOf(nameMatch[1]),
+        endOffset: cursor + 1,
+    };
+}
+
 export class VerilogDocumentSymbolProvider implements vscode.DocumentSymbolProvider {
     provideDocumentSymbols(document: vscode.TextDocument): vscode.DocumentSymbol[] {
-        const lines  = document.getText().split(/\r?\n/);
+        // 保留字符偏移和换行，使跨行解析仍能准确定位原文，并忽略注释、字符串中的括号。
+        const code = document.getText().replace(/\/\/[^\r\n]*|\/\*[\s\S]*?\*\/|"(?:\\[\s\S]|[^"\\])*"/g,
+            match => match.replace(/[^\r\n]/g, ' '));
+        const lines = code.split('\n');
+        const lineOffsets: number[] = [];
+        let offset = 0;
+        for (const line of lines) {
+            lineOffsets.push(offset);
+            offset += line.length + 1;
+        }
+        const positionAt = (value: number): vscode.Position => {
+            let low = 0;
+            let high = lineOffsets.length - 1;
+            while (low < high) {
+                const mid = Math.ceil((low + high) / 2);
+                if (lineOffsets[mid] <= value) { low = mid; } else { high = mid - 1; }
+            }
+            return new vscode.Position(low, value - lineOffsets[low]);
+        };
         const result : vscode.DocumentSymbol[] = [];
         let   mod    : vscode.DocumentSymbol | null = null;
-        let   pendingInst: { typeName: string; range: vscode.Range } | null = null;
-
-        // 关键字黑名单，避免将控制语句误识别为例化
-        const KW = /^(always|initial|if|else|for|case|casez|casex|begin|end|assign|module|endmodule|parameter|localparam|reg|wire|logic|input|output|inout|integer|generate|endgenerate|task|function|endtask|endfunction)$/;
 
         for (let i = 0; i < lines.length; i++) {
-            const line    = lines[i];
-            const code    = line.replace(/\/\/.*$/, '');
-            const trimmed = code.trimStart();
+            const line    = lines[i].replace(/\r$/, '');
+            const trimmed = line.trimStart();
             const range   = new vscode.Range(i, 0, i, line.length);
 
             // module 声明
@@ -305,31 +367,14 @@ export class VerilogDocumentSymbolProvider implements vscode.DocumentSymbolProvi
                 continue;
             }
 
-            // endmodule — 扩展 module 范围结束
+            // 父模块范围必须包含实例，否则编辑器无法按端口所在行跟随大纲。
+            if (mod) { mod.range = new vscode.Range(mod.range.start, range.end); }
             if (/^endmodule\b/.test(trimmed)) {
                 mod = null;
                 continue;
             }
 
             if (!mod) { continue; }
-
-            if (pendingInst) {
-                const pendingM = trimmed.match(/^\)\s*(\w+)\s*\(/);
-                if (pendingM && !KW.test(pendingM[1])) {
-                    const fullRange = new vscode.Range(pendingInst.range.start, range.end);
-                    mod.children.push(new vscode.DocumentSymbol(
-                        `${pendingM[1]}  (${pendingInst.typeName})`,
-                        'instantiation',
-                        vscode.SymbolKind.Object,
-                        fullRange, range,
-                    ));
-                    pendingInst = null;
-                    continue;
-                }
-                if (/;\s*$/.test(trimmed)) {
-                    pendingInst = null;
-                }
-            }
 
             // parameter / localparam
             const paramM = trimmed.match(/^(?:localparam|parameter)\b\s*(?:\[[^\]]*\]\s*)?(\w+)\s*[=,]/);
@@ -360,32 +405,19 @@ export class VerilogDocumentSymbolProvider implements vscode.DocumentSymbolProvi
                 continue;
             }
 
-            // 模块例化：ModuleName  u_inst_name  ( 或 ModuleName #( ...
-            const instM = trimmed.match(/^(\w+)\s+(\w+)\s*[#(]/);
-            if (instM && !KW.test(instM[1]) && !KW.test(instM[2])) {
+            const instance = parseInstance(code, lineOffsets[i]);
+            if (instance) {
+                const fullRange = new vscode.Range(range.start, positionAt(instance.endOffset));
+                const selectionRange = new vscode.Range(positionAt(instance.nameOffset),
+                    positionAt(instance.nameOffset + instance.instName.length));
                 mod.children.push(new vscode.DocumentSymbol(
-                    `${instM[2]}  (${instM[1]})`,
+                    `${instance.instName}  (${instance.typeName})`,
                     'instantiation',
                     vscode.SymbolKind.Object,
-                    range, range,
+                    fullRange, selectionRange,
                 ));
-                continue;
-            }
-
-            // 参数化模块例化允许参数列表换行：ModuleName #( ... ) u_inst (
-            const paramInstM = trimmed.match(/^(\w+)\s*#\s*\(/);
-            if (paramInstM && !KW.test(paramInstM[1])) {
-                const sameLineM = trimmed.match(/^(\w+)\s*#\s*\(.*\)\s*(\w+)\s*\(/);
-                if (sameLineM && !KW.test(sameLineM[2])) {
-                    mod.children.push(new vscode.DocumentSymbol(
-                        `${sameLineM[2]}  (${sameLineM[1]})`,
-                        'instantiation',
-                        vscode.SymbolKind.Object,
-                        range, range,
-                    ));
-                } else {
-                    pendingInst = { typeName: paramInstM[1], range };
-                }
+                mod.range = new vscode.Range(mod.range.start, fullRange.end);
+                i = fullRange.end.line;
             }
         }
 

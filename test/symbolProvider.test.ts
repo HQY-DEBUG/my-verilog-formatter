@@ -53,6 +53,87 @@ describe('VerilogDocumentSymbolProvider', () => {
 
         expect(children.some(sym => sym.name === 'u_data_split  (data_split)' && sym.detail === 'instantiation')).toBe(true);
     });
+
+    it.each(['\n', '\r\n'])('应识别 VIO 和 ILA 的换行例化并覆盖整个端口列表（%j）', newline => {
+        const text = [
+            'module top;',
+            'wire Velocity_sel;',
+            'VPI_CONFIG config_ctrl',
+            '(',
+            '  .clk ( CLKIN ),',
+            '  .inprobe0 ( re_max_accel ),',
+            '  .outprobe4 ( Velocity_sel )',
+            ');',
+            'ILA_CAPTURE',
+            '  capture_ctrl // 调试采样',
+            '  /* 端口列表允许注释和空行 */',
+            '',
+            '(',
+            '  .clk ( CLKIN ),',
+            '  .probe0 ( {cnt_max, delay} )',
+            ');',
+            'cal_speed u10 (.clk(CLKIN));',
+            'endmodule',
+        ].join(newline);
+        const symbols = new VerilogDocumentSymbolProvider().provideDocumentSymbols({ getText: () => text } as any);
+        const instances = symbols[0].children.filter(sym => sym.detail === 'instantiation');
+
+        expect(instances.map(sym => sym.name)).toEqual([
+            'config_ctrl  (VPI_CONFIG)', 'capture_ctrl  (ILA_CAPTURE)', 'u10  (cal_speed)',
+        ]);
+        expect(instances[0].range.start.line).toBe(2);
+        expect(instances[0].range.end.line).toBe(7);
+        expect(instances[0].selectionRange.start.line).toBe(2);
+        expect(instances[1].range.end.line).toBe(15);
+        expect(instances[1].selectionRange.start.line).toBe(9);
+        expect(symbols[0].range.end.line).toBe(17);
+    });
+
+    it('应兼容参数嵌套括号以及参数、实例名和端口左括号分别换行', () => {
+        const text = [
+            'module top;',
+            'vio_0 #(',
+            '  .WIDTH ($clog2(256)),',
+            '  .LABEL ("忽略字符串中的 ); 和 //")',
+            ')',
+            'u_vio',
+            '(',
+            '  .probe_in0 ( fn(data) )',
+            ');',
+            'ila_0#(.WIDTH(8)) u_ila (.probe0(data));',
+            'endmodule',
+        ].join('\n');
+        const symbols = new VerilogDocumentSymbolProvider().provideDocumentSymbols({ getText: () => text } as any);
+        expect(symbols[0].children.map(sym => sym.name)).toEqual(['u_vio  (vio_0)', 'u_ila  (ila_0)']);
+        expect(symbols[0].children[0].selectionRange.start.line).toBe(5);
+        expect(symbols[0].children[0].range.end.line).toBe(8);
+    });
+
+    it('不应把注释、控制语句或缺少左括号的文本识别成调试实例', () => {
+        const text = [
+            'module top;',
+            '/*',
+            'vio_0 fake_vio (.clk(clk));',
+            '*/',
+            '// ila_0 fake_ila (.clk(clk));',
+            'VPI_CONFIG incomplete',
+            'wire data;',
+            'always_ff @(posedge clk) begin',
+            '  if (enable) sample(data);',
+            'end',
+            'function automatic sample(input data);',
+            'endfunction',
+            'ila_0 real_ila (.probe0(data));',
+            'endmodule',
+            'module other;',
+            'wire other_signal;',
+            'endmodule',
+        ].join('\n');
+        const symbols = new VerilogDocumentSymbolProvider().provideDocumentSymbols({ getText: () => text } as any);
+        expect(symbols[0].children.filter(sym => sym.detail === 'instantiation').map(sym => sym.name))
+            .toEqual(['real_ila  (ila_0)']);
+        expect(symbols[1].children.map(sym => sym.name)).toEqual(['other_signal']);
+    });
 });
 
 describe('VerilogDefinitionProvider', () => {
