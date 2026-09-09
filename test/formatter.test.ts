@@ -141,6 +141,29 @@ describe('VerilogFormatter', () => {
         expect(fmt['format'](input, defaultCfg)).toBe(expected);
     });
 
+    test('带注释分组的端口数字位宽冒号前补齐', () => {
+        const input = [
+            'module cfg_ports (',
+            'input wire [19:0] cfg_interp_para_v,',
+            'input wire [0:0] cfg_interp_para_update_en,',
+            '// 输出数据（由PS配置，送给外部模块）',
+            'output reg [19:0] re_interp_para_v,',
+            'output reg [0:0] re_interp_para_update_en',
+            ');',
+        ].join('\n');
+        const expected = [
+            'module cfg_ports (',
+            '  input   wire  [19:0] cfg_interp_para_v        ,',
+            '  input   wire  [0 :0] cfg_interp_para_update_en,',
+            '  // 输出数据（由PS配置，送给外部模块）',
+            '  output  reg   [19:0] re_interp_para_v         ,',
+            '  output  reg   [0 :0] re_interp_para_update_en',
+            ');',
+        ].join('\n');
+
+        expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
     // ---- case 标签下 begin/end 缩进 ----//
     test('case 标签下 begin/end 和 default 语句缩进', () => {
         const input = [
