@@ -856,7 +856,9 @@ class VerilogFormatter {
         const maxSign = Math.max(...ports.map(p => p.sign.length));
         const maxWidth = Math.max(...ports.map(p => p.width.length));
         const maxName = Math.max(...ports.map(p => p.name.length));
-        const alignNumericWidthRight = ports.filter(p => p.width.length > 0).every(p => /^\[\d+\s*:\s*\d+\]$/.test(p.width));
+        const numericWidths = ports.map(p => p.width.match(/^\[(\d+)\s*:\s*(\d+)\]$/)).filter(m => m !== null);
+        const alignNumericWidth = numericWidths.length > 0 && numericWidths.length === ports.filter(p => p.width.length > 0).length;
+        const maxNumericMsb = Math.max(0, ...numericWidths.map(m => m[1].length));
         return parsed.map(p => {
             if (!p.dir) {
                 return p.name;
@@ -865,7 +867,10 @@ class VerilogFormatter {
             const typePad = p.ptype.padEnd(maxType + 2);
             // signed/unsigned 与位宽分别成列，确保无符号位宽也与有符号位宽左对齐。
             const signPad = maxSign > 0 ? p.sign.padEnd(maxSign + 1) : '';
-            const widthText = alignNumericWidthRight ? p.width.padStart(maxWidth) : p.width.padEnd(maxWidth);
+            const widthMatch = p.width.match(/^\[(\d+)\s*:\s*(\d+)\]$/);
+            const widthText = alignNumericWidth && widthMatch
+                ? `[${widthMatch[1].padEnd(maxNumericMsb)}:${widthMatch[2]}]`
+                : p.width.padEnd(maxWidth);
             const widthPad = maxWidth > 0 ? widthText + ' ' : '';
             const namePad = p.name.padEnd(maxName);
             const cmt = p.comment

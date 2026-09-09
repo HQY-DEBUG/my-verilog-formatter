@@ -132,9 +132,9 @@ describe('VerilogFormatter', () => {
         const expected = [
             'module adc_capture (',
             '  input  wire  [19:0] ch0_data ,',
-            '  input  wire   [0:0] ch0_valid,',
+            '  input  wire  [0 :0] ch0_valid,',
             '  input  wire  [19:0] ch1_data ,',
-            '  input  wire   [0:0] ch1_valid',
+            '  input  wire  [0 :0] ch1_valid',
             ');',
         ].join('\n');
 
