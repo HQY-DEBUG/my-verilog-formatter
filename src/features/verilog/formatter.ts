@@ -505,9 +505,15 @@ export class VerilogFormatter
             }
 
             const lhsWidth = Math.max(...group.map(item => item.lhs.length));
-            for (const item of group) {
-                result.push(`${item.indent}${item.lhs.padEnd(lhsWidth)} ${item.op} ${item.rhs}`);
-            }
+            const expressions = group.map(item => item.rhs.match(/^((?:"(?:\\.|[^"\\])*"|[^";])+?)\s*;(\s*(?:\/\/.*|\/\*.*\*\/\s*)?)$/));
+            const rhsWidth = Math.max(0, ...expressions.map(match => match ? match[1].trimEnd().length : 0));
+            group.forEach((item, index) => {
+                const expression = expressions[index];
+                const rhs = expression
+                    ? `${expression[1].trimEnd().padEnd(rhsWidth)};${expression[2]}`
+                    : item.rhs;
+                result.push(`${item.indent}${item.lhs.padEnd(lhsWidth)} ${item.op} ${rhs}`);
+            });
         }
 
         return result.join('\n');

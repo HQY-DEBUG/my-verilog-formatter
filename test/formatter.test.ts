@@ -234,7 +234,7 @@ describe('VerilogFormatter', () => {
             '  4\'d0 :',
             '    begin',
             '      checksum    <= 8\'h00;',
-            '      checksum_ok <= 1\'b0;',
+            '      checksum_ok <= 1\'b0 ;',
             '    end',
             '  4\'d1 :',
             '    begin',
@@ -741,17 +741,31 @@ describe('VerilogFormatter', () => {
             '  begin',
             '    if (!rstn)',
             '      begin',
-            '        x_data       <= \'d0;',
+            '        x_data       <= \'d0 ;',
             '        x_data_valid <= 1\'b0;',
-            '        y_data       <= \'d0;',
+            '        y_data       <= \'d0 ;',
             '        y_data_valid <= 1\'b0;',
-            '        z_data       <= \'d0;',
+            '        z_data       <= \'d0 ;',
             '        z_data_valid <= 1\'b0;',
             '      end',
             '  end',
         ].join('\n');
 
         expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
+    test.each(['<=', '='])('连续复位赋值应对齐分号并保留注释 %s', op => {
+        const input = [
+            `cfg_accel_accel_r ${op} 20'b0; // 加速度;`,
+            `cfg_interp_para_update_en_r ${op} 1'b0; // 更新`,
+            `cfg_data_proc_mode_r ${op} 2'b1; /* 模式; */`,
+        ].join('\n');
+        const result = fmt.format(input, defaultCfg);
+        const lines = result.split('\n');
+        expect(new Set(lines.map(line => line.indexOf(';'))).size).toBe(1);
+        expect(new Set(lines.map(line => line.indexOf(op))).size).toBe(1);
+        expect(result.replace(/\s/g, '')).toBe(input.replace(/\s/g, ''));
+        expect(fmt.format(result, defaultCfg)).toBe(result);
     });
 
     test('无 begin 的 if else 链保持单语句缩进', () => {
