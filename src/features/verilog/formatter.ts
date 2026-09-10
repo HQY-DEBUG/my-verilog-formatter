@@ -350,6 +350,14 @@ export class VerilogFormatter
             for (const group of groups.values()) {
                 if (group.length < 2) { continue; }
                 const labelWidth = Math.max(...group.map(item => item.label.length));
+                const assignments = group.map(item => item.code.match(/^([A-Za-z_][\w$]*(?:\s*\[[^\]]+\])?)\s*(<=|=(?!=))\s*(.+)$/));
+                const lhsWidth = Math.max(0, ...assignments.map(match => match ? match[1].trimEnd().length : 0));
+                group.forEach((item, index) => {
+                    const match = assignments[index];
+                    if (match) {
+                        item.code = `${match[1].trimEnd().padEnd(lhsWidth)} ${match[2]} ${match[3]}`;
+                    }
+                });
                 const commentItems = group.filter(item => item.comment.length > 0);
                 const codeWidth = commentItems.length > 1
                     ? Math.max(...commentItems.map(item => item.code.length))

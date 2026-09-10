@@ -299,6 +299,27 @@ describe('VerilogFormatter', () => {
         expect(fmt['format'](input, defaultCfg)).toBe(expected);
     });
 
+    test.each(['<=', '='])('case 分支长短左值与旧空格应统一对齐 %s 并保持幂等', op => {
+        const input = [
+            'case (awaddr_r)',
+            `WR_ADDR_RE_ACCEL_ACCEL : re_accel_accel       ${op} s_axi_wdata[19:0]; // 加速度`,
+            `WR_ADDR_RE_DATA_MERGE_MERGE_THRED: re_data_merge_merge_thred ${op} s_axi_wdata[19:0]; // 阈值`,
+            '// 配置',
+            `WR_ADDR_RE_INTERP_PARA_UPDATE_EN : re_interp_para_update_en    ${op} s_axi_wdata[0];`,
+            `WR_ADDR_RE_DATA_PROC_MODE : re_data_proc_mode ${op} s_axi_wdata[1:0];`,
+            'default : ; // 保持',
+            'endcase',
+        ].join('\n');
+        const result = fmt.format(input, defaultCfg);
+        const assignments = result.split('\n').filter(line => line.includes(op));
+        expect(assignments).toHaveLength(4);
+        expect(new Set(assignments.map(line => line.indexOf(':'))).size).toBe(1);
+        expect(new Set(assignments.map(line => line.indexOf(op))).size).toBe(1);
+        expect(new Set(assignments.map(line => line.indexOf('s_axi_wdata'))).size).toBe(1);
+        expect(result.replace(/\s/g, '')).toBe(input.replace(/\s/g, ''));
+        expect(fmt.format(result, defaultCfg)).toBe(result);
+    });
+
     test('case item 单行赋值应按冒号列对齐', () => {
         const input = [
             'case (Y_FK_STA_d2)',
