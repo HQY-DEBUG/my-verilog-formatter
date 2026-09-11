@@ -2,6 +2,7 @@
 .vscode/**
 .qoder/**
 .codex/**
+.github/**
 AGENTS.md
 docs/**
 src/**

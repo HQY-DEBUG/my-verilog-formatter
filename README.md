@@ -8,7 +8,7 @@
 4. 代码阅读：提供语法高亮、符号跳转、悬停定义和代码补全。
 5. 代码检查：支持 Verilog 语法检查以及 TODO 标签扫描与管理。
 
-> 版本：v1.4.3　日期：2026/09/11
+> 版本：v1.4.5　日期：2026/09/11
 
 ---
 
@@ -313,7 +313,7 @@ npm run compile
 
 ```bash
 npm run package
-code --install-extension hanxuyao-plugin-1.4.3.vsix --force
+code --install-extension hanxuyao-plugin-1.4.5.vsix --force
 ```
 
 ---
@@ -352,8 +352,11 @@ hanxuyao-plugin/
 
 ## 修改记录
 
+GitHub 自动测试、打包和发布的配置及使用方法见 [自动发布](docs/自动发布.md)。
+
 | 版本 | 日期 | 修改内容 |
 |------|------|---------|
+| v1.4.5 | 2026/09/11 | 新增 GitHub Actions 标签自动发布，使用 Microsoft Entra ID 联合身份认证 |
 | v1.4.3 | 2026/09/11 | 新增 Codex 仓库规则，要求每次更新同步版本号和修改记录，并从安装包排除开发规则 |
 | v1.4.2 | 2026/08/21 | 将跨行的 C/C++ 控制条件整理为单行 |
 | v1.4.1 | 2026/08/21 | 输入 C/C++ 标识符时主动显示语言服务器建议，输入 `(` 时显示函数参数提示 |
