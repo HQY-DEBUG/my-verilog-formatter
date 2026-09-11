@@ -11,3 +11,8 @@ test/**
 node_modules/@vscode/ripgrep/**
 tsconfig.json
 .gitignore
+.gitattributes
+
+vendor/**
+scripts/**
+**/*.map

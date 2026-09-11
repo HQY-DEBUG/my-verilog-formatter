@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : extension.ts
 // 描述    : VS Code 扩展入口，注册所有 Provider 和命令
-// 版本    : v1.4.1
-// 日期    : 2026/08/21
+// 版本    : v1.4.4
+// 日期    : 2026/09/11
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.4.4  2026/09/11  内置 MATLAB 官方功能并支持格式化实现切换
 //  v1.4.1  2026/08/21  主动触发 C/C++ 自动建议和函数参数提示
 //  v1.2.1  2026/08/21  使用插件专用命令执行快捷键格式化
 //  v1.1.0  2026/08/21  注册 C/C++ 格式化器并扩展保存时格式化范围
@@ -16,6 +17,7 @@
 
 import * as vscode from 'vscode';
 import { CFormatter }                from './features/c/cFormatter';
+import { activateMatlab, deactivateMatlab, useMathWorksFormatter } from './features/matlab/matlabIntegration';
 import { MatlabFormatter }           from './features/matlab/matlabFormatter';
 import { VerilogFormatter }          from './features/verilog/formatter';
 import { AdcFormatter }              from './features/verilog/adcFormatter';
@@ -34,7 +36,7 @@ export const VERILOG_LANGS = ['verilog', 'systemverilog', 'verilog-hdl', 'system
 export const C_LANGS = ['c', 'cpp'];
 export const MATLAB_LANGS = ['matlab'];
 
-export function activate(context: vscode.ExtensionContext): void {
+export async function activate(context: vscode.ExtensionContext): Promise<void> {
     const formatter = new VerilogFormatter();
     const cFormatter = new CFormatter();
     const matlabFormatter = new MatlabFormatter();
@@ -53,12 +55,21 @@ export function activate(context: vscode.ExtensionContext): void {
             vscode.languages.registerDocumentRangeFormattingEditProvider({ language: lang }, cFormatter),
         );
     }
-    for (const lang of MATLAB_LANGS) {
-        context.subscriptions.push(
-            vscode.languages.registerDocumentFormattingEditProvider({ language: lang }, matlabFormatter),
-            vscode.languages.registerDocumentRangeFormattingEditProvider({ language: lang }, matlabFormatter),
-        );
-    }
+    let matlabProviders: vscode.Disposable[] = [];
+    const updateMatlabFormatter = () => {
+        matlabProviders.forEach(provider => provider.dispose());
+        matlabProviders = useMathWorksFormatter() ? [] : [
+            vscode.languages.registerDocumentFormattingEditProvider({ language: 'matlab' }, matlabFormatter),
+            vscode.languages.registerDocumentRangeFormattingEditProvider({ language: 'matlab' }, matlabFormatter),
+        ];
+    };
+    updateMatlabFormatter();
+    context.subscriptions.push(
+        new vscode.Disposable(() => matlabProviders.forEach(provider => provider.dispose())),
+        vscode.workspace.onDidChangeConfiguration(event => {
+            if (event.affectsConfiguration('MATLAB.formatter')) { updateMatlabFormatter(); }
+        }),
+    );
     context.subscriptions.push(
         vscode.languages.registerDocumentFormattingEditProvider({ language: 'anlogic-adc' }, adcFormatter),
         vscode.languages.registerDocumentRangeFormattingEditProvider({ language: 'anlogic-adc' }, adcFormatter),
@@ -81,7 +92,9 @@ export function activate(context: vscode.ExtensionContext): void {
             if (C_LANGS.includes(document.languageId)) {
                 edits = cFormatter.provideDocumentFormattingEdits(document);
             } else if (MATLAB_LANGS.includes(document.languageId)) {
-                edits = matlabFormatter.provideDocumentFormattingEdits(document);
+                edits = useMathWorksFormatter()
+                    ? await vscode.commands.executeCommand<vscode.TextEdit[]>('vscode.executeFormatDocumentProvider', document.uri, options) ?? []
+                    : matlabFormatter.provideDocumentFormattingEdits(document);
             } else if (VERILOG_LANGS.includes(document.languageId)) {
                 edits = formatter.provideDocumentFormattingEdits(document, options);
             } else if (document.languageId === 'anlogic-adc') {
@@ -338,8 +351,15 @@ export function activate(context: vscode.ExtensionContext): void {
             editor.revealRange(new vscode.Range(pos, pos), vscode.TextEditorRevealType.InCenter);
         }),
     );
+    try {
+        await activateMatlab(context);
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        void vscode.window.showErrorMessage('内置 MATLAB 功能启动失败：' + message);
+        console.error('内置 MATLAB 功能启动失败：', error);
+    }
 }
 
-export function deactivate(): void {
-    // 清理工作（当前无需处理）
+export async function deactivate(): Promise<void> {
+    await deactivateMatlab();
 }

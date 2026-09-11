@@ -1,0 +1,182 @@
+# MATLAB extension for Visual Studio Code
+This extension provides support for editing, running, and debugging MATLAB&reg; code in Visual Studio&reg; Code and includes features such as syntax highlighting, code analysis, navigation support, and more. 
+
+You can use this extension with or without MATLAB installed on your system. However, to make use of the advanced features of the extension or run MATLAB code, you must have MATLAB R2021b or later installed. For more information, see the [Get Started](#get-started) section.
+
+**Note:** This extension no longer supports MATLAB R2021a. To use advanced features or run MATLAB code, you must have MATLAB R2021b or later installed.
+
+## Table of Contents
+1. [Installation](#installation)
+2. [Get Started](#get-started)
+3. [Run and Debug MATLAB Code](#run-and-debug-matlab-code)
+4. [View MATLAB Workspace Contents](#view-matlab-workspace-content)
+5. [Work with MATLAB Projects](#work-with-matlab-projects)
+6. [Run MATLAB In Jupyter Notebooks](#run-matlab-in-jupyter-notebooks)
+7. [Configuration](#configuration)
+8. [Troubleshooting](#troubleshooting)
+9. [Contact Us](#contact-us)
+10. [Release Notes](#release-notes)
+
+## Installation
+You can install the extension from within Visual Studio Code or download it from [Visual Studio Code Marketplace](https://marketplace.visualstudio.com/items?itemName=MathWorks.language-matlab). After installing the extension, you might need to configure it to make full use of all the features. For more information, see the [Configuration](#configuration) section.
+
+## Get Started
+To get started using the extension, open any MATLAB code file (.m), or create a new file and set the language to MATLAB.
+
+### Basic Features (MATLAB not required)
+The extension provides several basic features, regardless of whether you have MATLAB installed on your system. These features include:
+* Syntax highlighting
+* Code snippets
+* Commenting
+* Code folding
+
+![MATLAB Extension Demo](public/BasicFeatures.gif)
+
+### Advanced Features (requires MATLAB installed on your system)
+If you have MATLAB R2021b or later installed on your system, you have access to an additional set of advanced features. These features include:
+* Code execution and debugging
+* Automatic code completion
+* Source code formatting (document formatting)
+* Code navigation
+* Code analysis, such as continuous code checking and automatic fixes
+* Code outline
+* Symbol renaming
+* Test discovery and execution
+
+![MATLAB Extension Demo](public/AdvancedFeatures.gif)
+
+## Run and Debug MATLAB Code
+To run a MATLAB code file in Visual Studio Code, click the Run button at the top of the file. You also can use the `Run File` or `Run Current Selection` commands. When you run the file, output displays in the "Terminal" pane of Visual Studio Code. You also can enter MATLAB code directly in the MATLAB terminal. To stop execution of MATLAB code, press **Ctrl+C**.
+
+To debug a MATLAB code file, add breakpoints to the file by clicking the area to the left of an executable line. Then run the file. Visual Studio Code stops at the first breakpoint. 
+When Visual Studio Code is paused, you can use the **Debug toolbar** to peform debugging actions such as **Continue**, **Step into**, and **Stop**. You also can enter commands in the MATLAB terminal to perform debug actions or change variable values. Use the **Run and Debug** view to see your workspace variables, watch points, and call stack.
+
+![MATLAB Execution Demo](public/RunDebugCode.gif)
+
+### Limitations
+There are some limitations to running and debugging MATLAB code in Visual Studio Code:
+* Output from timers, callbacks, and DataQueue objects is not shown in the Command Window.
+* Creating a custom run configuration for a file is not supported.
+* When using the **dbstop** and **dbclear** functions to set and clear breakpoints, the breakpoints are added to file but are not shown in Visual Studio Code.
+* Variable values changed in the MATLAB terminal when Visual Studio Code is paused do not update in the **Run and Debug** view until the next time Visual Studio Code pauses.
+
+## View MATLAB Workspace Content
+If you have MATLAB R2023a or later installed on your system, you can interactively inspect the MATLAB workspace by opening the MATLAB view in Visual Studio Code. In the Workspace section of the MATLAB view, you can interactively manage variables in the MATLAB workspace while you run and debug MATLAB code. To access the MATLAB view, select the MATLAB icon in the Activity Bar on the left side of the Visual Studio Code window, which opens the view in the Side Bar.
+
+In the Workspace section of the MATLAB view, you can:
+* View the name, value, size, and class of each variable in the MATLAB workspace.
+* Interactively rename, delete, and sort variables in the MATLAB workspace.
+
+**Tip:** To access the MATLAB Workspace while debugging, drag the MATLAB icon from the Activity bar into the Run and Debug view. This adds the Workspace section of the MATLAB view to the Run and Debug view.
+
+![MATLAB Workspace Screenshot](public/Workspace.png)
+
+### Limitations
+* Interactively editing workspace variables in the Workspace section of the MATLAB view is limited to inline edits. Editing complex data types such as matrices, cells, and structs is not supported.
+* Multi-row selection is not supported.
+* Refreshing the workspace is not supported.
+
+## Work with MATLAB Projects
+If you have MATLAB R2021b or later installed on your system, you can work with MATLAB Projects directly in Visual Studio Code. You can create new projects, open existing projects, and close the current project.
+
+To create a new project, right-click a folder in the Explorer and select **MATLAB: Project > MATLAB: New Project**. To open an existing project, right-click a project file or a folder that contains a project and select **MATLAB: Project > MATLAB: Open Project**. 
+
+When a project is open, Visual Studio Code shows the project name in the status bar.
+
+![MATLAB Projects Screenshot](public/Projects.png)
+
+## Run MATLAB Tests
+If you have MATLAB R2021b or later installed on your system, you can run MATLAB unit tests using the Test Explorer in Visual Studio Code. To add tests to the Test Explorer, open the Testing view by selecting the Testing icon in the Activity Bar on the left side of the Visual Studio Code window, and then click **Add Test Folder** or **Add Test File** in the Test Explorer. You also can add tests using the `MATLAB: Add Test Folder` and `MATLAB: Add Test File` commands in the Command Palette.
+
+When you add a test folder, the extension adds all tests in that folder and its subfolders. Tests appear in a hierarchical tree organized by file, test procedure, and parameterization. The test tree updates automatically when test files are modified or when files are added to or removed from your test folders. The extension supports class-based tests (including parameterized tests), function-based tests, and script-based tests.
+
+To run tests, click **Run Test** to the right of a test or test file in the Test Explorer, or click **Run Tests** in the toolbar. Results appear in real time as each test completes, with icons indicating whether the test passed, failed, or remained incomplete. Additionally, as the tests run, test output appears in real time in the Test Results panel.
+
+If a test fails, click the failed test in the Test Explorer to navigate directly to the failing line in your test code and view test diagnostics. Alternatively, click the failed test in the Test Results panel to view diagnostic messages.
+
+![Test Explorer showing test results with passed and failed tests, and diagnostic output in the Test Results panel](public/RunTests.png)
+
+## Run MATLAB in Jupyter Notebooks
+You also can use this extension along with the Jupyter Extension for Visual Studio Code to run MATLAB in Jupyter notebooks using Visual Studio Code. For instructions, see [Run MATLAB in Jupyter Notebooks Using VS Code](https://github.com/mathworks/jupyter-matlab-proxy/blob/main/install_guides/vscode/README.md).
+
+## Configuration
+To configure the extension, go to the extension settings and select from the available options.
+
+### MATLAB Settings
+#### MATLAB Default Editor Setting
+By default, the extension uses the editor specified in the MATLAB Editor/Debugger settings to open files with the MATLAB `edit` and `open` commands. To make Visual Studio Code the default editor for these commands, set the `MATLAB.defaultEditor` setting to `true`. To revert to using the editor specified in the MATLAB Editor/Debugger settings, set `MATLAB.defaultEditor` to `false`.
+**Note:** Certain file types always open in MATLAB by default — for example, live scripts saved in the binary Live Code file format (.mlx) and MATLAB app files (.mlapp).
+
+#### MATLAB Index Workspace Setting
+By default, the extension indexes all the MATLAB code files (`.m`) in your current Visual Studio Code workspace. Indexing allows the extension to find and navigate between your MATLAB code files. 
+You can disable indexing to improve the performance of the extension. To disable indexing, set the `MATLAB.indexWorkspace` setting to `false`. Disabling indexing can cause features such as code navigation not to function as expected.
+
+#### MATLAB Install Path Setting
+If you have MATLAB installed on your system, the extension automatically checks the system path for the location of the MATLAB executable. If the MATLAB executable is not on the system path, you may need to manually set the `MATLAB.installPath` setting to the full path of your MATLAB installation. For example, `C:\Program Files\MATLAB\R2022b` (Windows&reg;), `/Applications/MATLAB_R2022b.app` (macOS), or `/usr/local/MATLAB/R2022b` (Linux&reg;).
+
+You can determine the full path of your MATLAB installation by using the `matlabroot` command in MATLAB. 
+
+For example, run the `matlabroot` command in the MATLAB Command Window.
+```
+matlabroot
+ans =
+    'C:\Program Files\MATLAB\R2022b'
+```
+In the extension settings, set the `MATLAB.installPath` setting to the value returned by the `matlabroot` command.
+
+![MATLAB Install Path Setting](public/InstallPathSetting.png)
+
+#### MATLAB Connection Timing Setting
+By default, the extension starts MATLAB in the background when you open a MATLAB code file in Visual Studio Code. To control when the extension starts MATLAB, set the `MATLAB.matlabConnectionTiming` setting to one of these values: 
+* `onStart` (default) — Start MATLAB as soon as a MATLAB code file is opened.
+* `onDemand` — Start MATLAB only when needed for a given action.
+* `never` — Never start MATLAB.
+Note: Some functionality is available only with MATLAB running in the background.
+
+#### MATLAB Max File Size for Analysis Setting
+By default, the extension analyzes all files, regardless of their size, for features such as linting, code navigation, and symbol renaming. To limit the maximum number of characters a file can contain, set the `MATLAB.maxFileSizeForAnalysis` setting. For example, to limit the number of characters to 50,000, set the `MATLAB.maxFileSizeForAnalysis` setting to `50000`. If a file contains more than the maximum number of characters, features such as linting, code navigation, and symbol renaming are disabled for that file. To remove the limit and analyze all files regardless of their size, set the `MATLAB.maxFileSizeForAnalysis` setting to `0`.
+
+#### MATLAB Prewarm Graphics Setting
+By default, MATLAB services are started early to improve the first-time performance of MATLAB figure rendering. To disable this behavior, set the `MATLAB.prewarmGraphics` setting to `false`.
+This setting is supported with MATLAB R2025a and later. For earlier releases, this setting is ignored.
+
+#### MATLAB Show Feature Not Available Error Setting
+By default, the extension displays an error when a feature requires MATLAB and MATLAB is unable to start. To not display an error, set the `MATLAB.showFeatureNotAvailableError` setting to `false`.
+
+#### MATLAB Sign In Setting
+By default, the extension assumes that the MATLAB installation specified in the Install Path setting is activated.
+
+To enable browser-based sign in to your MathWorks account using the Online License Manager or a Network License Manager, set the `MATLAB.signIn` setting to true. When this setting is enabled, the extension prompts you to sign in when it starts MATLAB.
+
+#### MATLAB Start Debugger Automatically Setting
+By default, the extension does not automatically start the Visual Studio Code debugger when MATLAB reaches a breakpoint. To enable automatically starting the Visual Studio Code debugger, set the `MATLAB.startDebuggerAutomatically` setting to `true`. When starting the Visual Studio Debugger is disabled, MATLAB still stops at breakpoints, and you can debug your code in the MATLAB terminal using the MATLAB debugging functions.
+
+#### MATLAB Telemetry Setting
+You can help improve the extension by sending user experience information to MathWorks&reg;. By default, the extension sends user experience information to MathWorks. To disable sending information, set the `MATLAB.telemetry` setting to `false`.
+
+For more information, see the [MathWorks Privacy Policy](https://www.mathworks.com/company/aboutus/policies_statements.html).
+
+### MATLAB Workspace Settings
+#### MATLAB Maximum Workspace Variables Setting
+By default, the extension displays up to 500 variables in the Workspace section of the MATLAB view. Limiting the number of displayed variables can improve performance, especially when working with large workspaces. If the MATLAB workspace contains more variables than the specified limit, the extension displays the first variables in the sorted list, up to the configured maximum.
+
+To control how many variables to display, set the `MATLAB.maximumWorkspaceVariables` setting. For example, set the `MATLAB.maximumWorkspaceVariables` setting to `100` to display up to 100 variables.
+
+#### MATLAB Workspace Sort Method Setting
+By default, variables in the Workspace section of the MATLAB view are sorted alphanumerically.
+To change the sort method, set the `MATLAB.workspaceSortMethod` setting to one of these values:
+
+* `Natural (default)` — Compare numbers within names by numeric value. **Example**: [var1, var2, var10]
+* `Lexicographic` — Compare names character by character. **Example**: [var1, var10, var2].
+
+## Troubleshooting
+If the MATLAB install path is not properly configured, you get an error when you try to use certain advanced features, such as document formatting and code navigation.
+
+To resolve the error, set the MATLAB install path to the location of the MATLAB executable. For more information, see the [Configuration > MATLAB Install Path Setting](#matlab-install-path-setting) section.
+
+## Contact Us
+We encourage all feedback. If you encounter a technical issue or have an enhancement request, create an issue here or contact MathWorks at support@mathworks.com.
+
+## Release Notes
+
+For a complete list of changes, see the [Change Log](CHANGELOG.md).

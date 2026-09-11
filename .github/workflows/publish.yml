@@ -21,6 +21,7 @@ concurrency:
 jobs:
   build:
     name: 测试并生成 Windows x64 安装包
+    if: github.event_name != 'workflow_dispatch' || !inputs.verify_identity
     runs-on: windows-latest
     timeout-minutes: 30
     outputs:
@@ -59,6 +60,8 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: 安装 MATLAB 集成构建依赖
         run: npm run setup:matlab --if-present
+      - name: 编译运行资源
+        run: npm run compile
       - name: 运行测试
         run: npm test -- --runInBand
       - name: 安装发布工具
@@ -79,8 +82,9 @@ jobs:
     name: 验证身份或发布到 Marketplace
     needs: build
     if: >-
-      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
-      (github.event_name == 'workflow_dispatch' && inputs.verify_identity)
+      !cancelled() &&
+      ((github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && needs.build.result == 'success') ||
+      (github.event_name == 'workflow_dispatch' && inputs.verify_identity))
     runs-on: windows-latest
     timeout-minutes: 10
     environment: marketplace
@@ -102,6 +106,7 @@ jobs:
         with:
           node-version: '22'
       - name: 下载本次构建的安装包
+        if: github.event_name == 'push'
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: marketplace-vsix
@@ -119,6 +124,8 @@ jobs:
           $identityId = az rest --method GET --uri 'https://app.vssps.visualstudio.com/_apis/profile/profiles/me' --resource '499b84ac-1321-427f-aa17-267ca6975798' --query id --output tsv
           if ($LASTEXITCODE -ne 0 -or -not $identityId) { throw '无法获取 Azure DevOps 身份 ID' }
           "Marketplace 成员 ID：$identityId" >> $env:GITHUB_STEP_SUMMARY
+      - name: 校验 Marketplace 发布权限
+        run: vsce verify-pat --azure-credential hanxuyao
       - name: 发布已验证的安装包
         if: github.event_name == 'push'
         env:
