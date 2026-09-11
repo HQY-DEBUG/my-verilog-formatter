@@ -4,9 +4,9 @@
 
 | 组件 | 版本 / 固定提交 | 许可证 |
 | --- | --- | --- |
-| [MATLAB extension for VS Code](https://github.com/mathworks/MATLAB-extension-for-vscode) | v1.3.13 / `91d25e45277983d9366bd2044f8f4bedb4107bfc` | [MIT](vendor/matlab/LICENSE) |
-| [MATLAB language server](https://github.com/mathworks/MATLAB-language-server) | v1.3.13 / `5f4691951d4ccac77f5cb72376b80cc77c54e2cc` | [MIT](vendor/matlab/server/LICENSE) |
-| [MATLAB language grammar](https://github.com/mathworks/MATLAB-Language-grammar) | `fd473ebfa18cb31a5da7aa1c5d20deee4e122ba9` | [BSD 2-Clause](vendor/matlab/syntaxes/license.txt) |
+| [MATLAB extension for VS Code](https://github.com/mathworks/MATLAB-extension-for-vscode) | v1.3.13 / `91d25e45277983d9366bd2044f8f4bedb4107bfc` | [MIT](https://github.com/mathworks/MATLAB-extension-for-vscode/blob/91d25e45277983d9366bd2044f8f4bedb4107bfc/LICENSE) |
+| [MATLAB language server](https://github.com/mathworks/MATLAB-language-server) | v1.3.13 / `5f4691951d4ccac77f5cb72376b80cc77c54e2cc` | [MIT](https://github.com/mathworks/MATLAB-language-server/blob/5f4691951d4ccac77f5cb72376b80cc77c54e2cc/LICENSE) |
+| [MATLAB language grammar](https://github.com/mathworks/MATLAB-Language-grammar) | `fd473ebfa18cb31a5da7aa1c5d20deee4e122ba9` | [BSD 2-Clause](https://github.com/mathworks/MATLAB-Language-grammar/blob/fd473ebfa18cb31a5da7aa1c5d20deee4e122ba9/license.txt) |
 
 ## 集成范围
 

@@ -7,8 +7,9 @@
 3. 代码生成：支持模块一键例化、Testbench 生成和 Snippet 代码片段。
 4. 代码阅读：提供语法高亮、符号跳转、悬停定义和代码补全。
 5. 代码检查：支持 Verilog 语法检查以及 TODO 标签扫描与管理。
+6. MATLAB 开发：内置智能编辑、运行调试、交互终端、变量工作区、工程管理和测试支持。
 
-> 版本：v1.4.4　日期：2026/09/11
+> 版本：v1.4.5　日期：2026/09/11
 
 ---
 
@@ -322,6 +323,7 @@ Anlogic ADC 文件支持整文档或选区格式化，可自动对齐信号名�
 
 ```bash
 npm install
+npm run setup:matlab
 npm run compile
 ```
 
@@ -331,9 +333,11 @@ npm run compile
 
 ### 打包安装
 
+当前安装包面向 Windows x64，包含 MATLAB 运行组件和 Windows ripgrep。发布时上传生成的 `.vsix` 文件；修改记录见 [CHANGELOG.md](CHANGELOG.md)。
+
 ```bash
-npm run package
-code --install-extension hanxuyao-plugin-1.4.4.vsix --force
+npm run package -- --target win32-x64 --out hanxuyao-plugin-1.4.5-win32-x64.vsix
+code --install-extension hanxuyao-plugin-1.4.5-win32-x64.vsix --force
 ```
 
 ---
@@ -376,6 +380,7 @@ hanxuyao-plugin/
 
 | 版本 | 日期 | 修改内容 |
 |------|------|---------|
+| v1.4.5 | 2026/09/11 | 整理 MATLAB 集成发布说明与使用要求，补齐构建步骤，生成 Windows x64 安装包 |
 | v1.4.4 | 2026/09/11 | 内置 MathWorks MATLAB 编辑、运行调试、工作区、工程和测试功能，保留定制格式化并增加实现切换 |
 | v1.4.3 | 2026/09/11 | 新增 Codex 仓库规则，要求每次更新同步版本号和修改记录，并从安装包排除开发规则 |
 | v1.4.2 | 2026/08/21 | 将跨行的 C/C++ 控制条件整理为单行 |

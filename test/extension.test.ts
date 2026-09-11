@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : extension.test.ts
 // 描述    : 扩展入口配置测试
-// 版本    : v1.4.4
+// 版本    : v1.4.5
 // 日期    : 2026/09/11
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.4.5  2026/09/11  同步 Windows x64 发布准备版本
 //  v1.4.4  2026/09/11  同步 MATLAB 内置集成版本
 //  v1.4.2  2026/08/21  同步跨行控制条件单行化功能版本
 //  v1.4.1  2026/08/21  校验 C/C++ 自动建议及参数提示触发器
@@ -45,7 +46,7 @@ describe('extension formatter languages', () => {
         const readme = fs.readFileSync(readmePath, 'utf8');
         expect(pkg.name).toBe('hanxuyao-plugin');
         expect(pkg.displayName).toBe('hanxuyao-plugin');
-        expect(pkg.version).toBe('1.4.4');
+        expect(pkg.version).toBe('1.4.5');
         expect(readme).toContain(`> 版本：v${pkg.version}　日期：2026/09/11`);
         expect(readme).toMatch(/1\. 代码格式化：[\s\S]*2\. 工程浏览：[\s\S]*3\. 代码生成：/);
         expect(pkg.activationEvents).toContain('onCommand:verilogFormatter.formatDocument');
