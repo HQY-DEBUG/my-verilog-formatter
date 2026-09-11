@@ -1,6 +1,8 @@
 .history/**
 .vscode/**
 .qoder/**
+.codex/**
+AGENTS.md
 docs/**
 src/**
 test/**
