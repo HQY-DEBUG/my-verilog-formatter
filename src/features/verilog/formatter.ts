@@ -350,6 +350,14 @@ export class VerilogFormatter
             for (const group of groups.values()) {
                 if (group.length < 2) { continue; }
                 const labelWidth = Math.max(...group.map(item => item.label.length));
+                const assignments = group.map(item => item.code.match(/^([A-Za-z_][\w$]*(?:\s*\[[^\]]+\])?)\s*(<=|=(?!=))\s*(.+)$/));
+                const lhsWidth = Math.max(0, ...assignments.map(match => match ? match[1].trimEnd().length : 0));
+                group.forEach((item, index) => {
+                    const match = assignments[index];
+                    if (match) {
+                        item.code = `${match[1].trimEnd().padEnd(lhsWidth)} ${match[2]} ${match[3]}`;
+                    }
+                });
                 const commentItems = group.filter(item => item.comment.length > 0);
                 const codeWidth = commentItems.length > 1
                     ? Math.max(...commentItems.map(item => item.code.length))
@@ -497,9 +505,15 @@ export class VerilogFormatter
             }
 
             const lhsWidth = Math.max(...group.map(item => item.lhs.length));
-            for (const item of group) {
-                result.push(`${item.indent}${item.lhs.padEnd(lhsWidth)} ${item.op} ${item.rhs}`);
-            }
+            const expressions = group.map(item => item.rhs.match(/^((?:"(?:\\.|[^"\\])*"|[^";])+?)\s*;(\s*(?:\/\/.*|\/\*.*\*\/\s*)?)$/));
+            const rhsWidth = Math.max(0, ...expressions.map(match => match ? match[1].trimEnd().length : 0));
+            group.forEach((item, index) => {
+                const expression = expressions[index];
+                const rhs = expression
+                    ? `${expression[1].trimEnd().padEnd(rhsWidth)};${expression[2]}`
+                    : item.rhs;
+                result.push(`${item.indent}${item.lhs.padEnd(lhsWidth)} ${item.op} ${rhs}`);
+            });
         }
 
         return result.join('\n');
@@ -827,6 +841,8 @@ export class VerilogFormatter
         const maxSign      = Math.max(...ports.map(p => p.sign.length));
         const maxWidth     = Math.max(...ports.map(p => p.width.length));
         const maxName      = Math.max(...ports.map(p => p.name.length));
+        const numericWidths = ports.map(p => p.width.match(/^\[(\d+)\s*:\s*(\d+)\]$/)).filter(m => m !== null);
+        const maxNumericMsb = Math.max(0, ...numericWidths.map(m => m![1].length));
 
         return parsed.map(p => {
             if (!p.dir) { return p.name; }
@@ -834,7 +850,11 @@ export class VerilogFormatter
             const typePad  = p.ptype.padEnd(maxType + 2);
             // signed/unsigned 与位宽分别成列，确保无符号位宽也与有符号位宽左对齐。
             const signPad  = maxSign > 0 ? p.sign.padEnd(maxSign + 1) : '';
-            const widthPad = maxWidth > 0 ? p.width.padEnd(maxWidth + 1) : '';
+            const widthMatch = p.width.match(/^\[(\d+)\s*:\s*(\d+)\]$/);
+            const widthText = widthMatch
+                ? `[${widthMatch[1].padEnd(maxNumericMsb)}:${widthMatch[2]}]`.padEnd(maxWidth)
+                : p.width.padEnd(maxWidth);
+            const widthPad = maxWidth > 0 ? widthText + ' ' : '';
             const namePad  = p.name.padEnd(maxName);
             const cmt      = p.comment
                 ? `  ${p.comment.startsWith('//') ? p.comment : '// ' + p.comment}`

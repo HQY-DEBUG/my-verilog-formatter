@@ -52,6 +52,7 @@ export function formatC(code: string): string {
     normalized = placeFunctionOpeningBraces(normalized);
     normalized = placeTypeOpeningBraces(normalized);
     normalized = reindentCBlocks(normalized);
+    normalized = alignMacroDefines(normalized);
     normalized = alignVariableDeclarations(normalized);
     normalized = alignEnumDeclarations(normalized);
     normalized = ensureBlankLineAfterTypeDeclarations(normalized);
@@ -447,6 +448,54 @@ function alignVariableDeclarations(code: string): string {
     }
 
     return result.join('\n');
+}
+
+function alignMacroDefines(code: string): string {
+    const lines = code.split('\n');
+    const result: string[] = [];
+
+    for (let i = 0; i < lines.length;) {
+        const first = parseMacroDefine(lines[i]);
+        if (!first) {
+            result.push(lines[i++]);
+            continue;
+        }
+
+        const block: MacroDefineLine[] = [first];
+        let end = i + 1;
+        while (end < lines.length) {
+            const parsed = parseMacroDefine(lines[end]);
+            if (!parsed) { break; }
+            block.push(parsed);
+            end++;
+        }
+
+        if (block.length === 1) {
+            result.push(lines[i]);
+        } else {
+            const maxSignature = Math.max(...block.map(item => item.signature.length));
+            result.push(...block.map(item => `${item.prefix}${item.signature.padEnd(maxSignature + 1)}${item.body}`));
+        }
+        i = end;
+    }
+
+    return result.join('\n');
+}
+
+interface MacroDefineLine {
+    prefix: string;
+    signature: string;
+    body: string;
+}
+
+function parseMacroDefine(line: string): MacroDefineLine | undefined {
+    const match = line.match(/^(\s*#define\s+)([A-Za-z_]\w*(?:\([^)]*\))?)\s+(.+)$/);
+    if (!match || hasComment(line)) { return undefined; }
+    return {
+        prefix: match[1],
+        signature: match[2],
+        body: match[3].trim(),
+    };
 }
 
 function ensureBlankLineAfterTypeDeclarations(code: string): string {

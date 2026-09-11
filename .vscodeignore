@@ -1,6 +1,9 @@
 .history/**
 .vscode/**
 .qoder/**
+.codex/**
+.github/**
+AGENTS.md
 docs/**
 src/**
 test/**
@@ -8,3 +11,8 @@ test/**
 node_modules/@vscode/ripgrep/**
 tsconfig.json
 .gitignore
+.gitattributes
+
+vendor/**
+scripts/**
+**/*.map

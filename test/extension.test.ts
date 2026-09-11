@@ -1,12 +1,14 @@
 // =========================================================================
 // 文件    : extension.test.ts
 // 描述    : 扩展入口配置测试
-// 版本    : v1.4.2
-// 日期    : 2026/08/21
+// 版本    : v1.4.5
+// 日期    : 2026/09/11
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.4.5  2026/09/11  校验版本清单与说明一致，支持后续自动发布升版
+//  v1.4.4  2026/09/11  同步 MATLAB 内置集成版本
 //  v1.4.2  2026/08/21  同步跨行控制条件单行化功能版本
 //  v1.4.1  2026/08/21  校验 C/C++ 自动建议及参数提示触发器
 //  v1.4.0  2026/08/21  同步 C/C++ 缩进重算功能版本
@@ -44,8 +46,12 @@ describe('extension formatter languages', () => {
         const readme = fs.readFileSync(readmePath, 'utf8');
         expect(pkg.name).toBe('hanxuyao-plugin');
         expect(pkg.displayName).toBe('hanxuyao-plugin');
-        expect(pkg.version).toBe('1.4.2');
-        expect(readme).toContain(`> 版本：v${pkg.version}　日期：2026/08/21`);
+        const lock = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package-lock.json'), 'utf8'));
+        expect(pkg.version).toMatch(/^\d+\.\d+\.\d+$/);
+        expect(lock.version).toBe(pkg.version);
+        expect(lock.packages[''].version).toBe(pkg.version);
+        const readmeVersion = readme.match(/^> 版本：v(\d+\.\d+\.\d+)　日期：\d{4}\/\d{2}\/\d{2}$/m);
+        expect(readmeVersion?.[1]).toBe(pkg.version);
         expect(readme).toMatch(/1\. 代码格式化：[\s\S]*2\. 工程浏览：[\s\S]*3\. 代码生成：/);
         expect(pkg.activationEvents).toContain('onCommand:verilogFormatter.formatDocument');
         expect(pkg.contributes.commands).toContainEqual(expect.objectContaining({

@@ -120,6 +120,69 @@ describe('VerilogFormatter', () => {
         expect(fmt['format'](input, defaultCfg)).toBe(expected);
     });
 
+    test('端口声明的数字位宽右边界应对齐', () => {
+        const input = [
+            'module adc_capture (',
+            'input wire [19:0] ch0_data,',
+            'input wire [0:0] ch0_valid,',
+            'input wire [19:0] ch1_data,',
+            'input wire [0:0] ch1_valid',
+            ');',
+        ].join('\n');
+        const expected = [
+            'module adc_capture (',
+            '  input  wire  [19:0] ch0_data ,',
+            '  input  wire  [0 :0] ch0_valid,',
+            '  input  wire  [19:0] ch1_data ,',
+            '  input  wire  [0 :0] ch1_valid',
+            ');',
+        ].join('\n');
+
+        expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
+    test('带注释分组的端口数字位宽冒号前补齐', () => {
+        const input = [
+            'module cfg_ports (',
+            'input wire [19:0] cfg_interp_para_v,',
+            'input wire [0:0] cfg_interp_para_update_en,',
+            '// 输出数据（由PS配置，送给外部模块）',
+            'output reg [19:0] re_interp_para_v,',
+            'output reg [0:0] re_interp_para_update_en',
+            ');',
+        ].join('\n');
+        const expected = [
+            'module cfg_ports (',
+            '  input   wire  [19:0] cfg_interp_para_v        ,',
+            '  input   wire  [0 :0] cfg_interp_para_update_en,',
+            '  // 输出数据（由PS配置，送给外部模块）',
+            '  output  reg   [19:0] re_interp_para_v         ,',
+            '  output  reg   [0 :0] re_interp_para_update_en',
+            ');',
+        ].join('\n');
+
+        expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
+    test('混合参数化位宽时数字位宽仍应冒号前补齐', () => {
+        const input = [
+            'module mixed_width_ports (',
+            'input wire [DATA_WIDTH-1:0] cfg_data,',
+            'input wire [19:0] cfg_interp_para_v,',
+            'input wire [0:0] cfg_interp_para_update_en',
+            ');',
+        ].join('\n');
+        const expected = [
+            'module mixed_width_ports (',
+            '  input  wire  [DATA_WIDTH-1:0] cfg_data                 ,',
+            '  input  wire  [19:0]           cfg_interp_para_v        ,',
+            '  input  wire  [0 :0]           cfg_interp_para_update_en',
+            ');',
+        ].join('\n');
+
+        expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
     // ---- case 标签下 begin/end 缩进 ----//
     test('case 标签下 begin/end 和 default 语句缩进', () => {
         const input = [
@@ -171,7 +234,7 @@ describe('VerilogFormatter', () => {
             '  4\'d0 :',
             '    begin',
             '      checksum    <= 8\'h00;',
-            '      checksum_ok <= 1\'b0;',
+            '      checksum_ok <= 1\'b0 ;',
             '    end',
             '  4\'d1 :',
             '    begin',
@@ -234,6 +297,27 @@ describe('VerilogFormatter', () => {
         ].join('\n');
 
         expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
+    test.each(['<=', '='])('case 分支长短左值与旧空格应统一对齐 %s 并保持幂等', op => {
+        const input = [
+            'case (awaddr_r)',
+            `WR_ADDR_RE_ACCEL_ACCEL : re_accel_accel       ${op} s_axi_wdata[19:0]; // 加速度`,
+            `WR_ADDR_RE_DATA_MERGE_MERGE_THRED: re_data_merge_merge_thred ${op} s_axi_wdata[19:0]; // 阈值`,
+            '// 配置',
+            `WR_ADDR_RE_INTERP_PARA_UPDATE_EN : re_interp_para_update_en    ${op} s_axi_wdata[0];`,
+            `WR_ADDR_RE_DATA_PROC_MODE : re_data_proc_mode ${op} s_axi_wdata[1:0];`,
+            'default : ; // 保持',
+            'endcase',
+        ].join('\n');
+        const result = fmt.format(input, defaultCfg);
+        const assignments = result.split('\n').filter(line => line.includes(op));
+        expect(assignments).toHaveLength(4);
+        expect(new Set(assignments.map(line => line.indexOf(':'))).size).toBe(1);
+        expect(new Set(assignments.map(line => line.indexOf(op))).size).toBe(1);
+        expect(new Set(assignments.map(line => line.indexOf('s_axi_wdata'))).size).toBe(1);
+        expect(result.replace(/\s/g, '')).toBe(input.replace(/\s/g, ''));
+        expect(fmt.format(result, defaultCfg)).toBe(result);
     });
 
     test('case item 单行赋值应按冒号列对齐', () => {
@@ -657,17 +741,31 @@ describe('VerilogFormatter', () => {
             '  begin',
             '    if (!rstn)',
             '      begin',
-            '        x_data       <= \'d0;',
+            '        x_data       <= \'d0 ;',
             '        x_data_valid <= 1\'b0;',
-            '        y_data       <= \'d0;',
+            '        y_data       <= \'d0 ;',
             '        y_data_valid <= 1\'b0;',
-            '        z_data       <= \'d0;',
+            '        z_data       <= \'d0 ;',
             '        z_data_valid <= 1\'b0;',
             '      end',
             '  end',
         ].join('\n');
 
         expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
+    test.each(['<=', '='])('连续复位赋值应对齐分号并保留注释 %s', op => {
+        const input = [
+            `cfg_accel_accel_r ${op} 20'b0; // 加速度;`,
+            `cfg_interp_para_update_en_r ${op} 1'b0; // 更新`,
+            `cfg_data_proc_mode_r ${op} 2'b1; /* 模式; */`,
+        ].join('\n');
+        const result = fmt.format(input, defaultCfg);
+        const lines = result.split('\n');
+        expect(new Set(lines.map(line => line.indexOf(';'))).size).toBe(1);
+        expect(new Set(lines.map(line => line.indexOf(op))).size).toBe(1);
+        expect(result.replace(/\s/g, '')).toBe(input.replace(/\s/g, ''));
+        expect(fmt.format(result, defaultCfg)).toBe(result);
     });
 
     test('无 begin 的 if else 链保持单语句缩进', () => {

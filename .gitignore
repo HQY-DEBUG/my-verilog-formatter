@@ -6,3 +6,5 @@ node_modules/
 test/
 .qoder/
 # icon.png
+vendor/matlab/server/src/licensing/gui/build/
+**/*.tsbuildinfo
