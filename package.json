@@ -3,6 +3,18 @@
     "displayName": "hanxuyao-plugin",
     "description": "Verilog / SystemVerilog / C / C++ / MATLAB 代码格式化、模块例化、大纲识别、文件树、语法高亮与跳转工具",
     "version": "1.4.2",
+    "publisher": "hanxuyao",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/HQY-DEBUG/my-verilog-formatter.git"
+    },
+    "keywords": [
+        "verilog",
+        "systemverilog",
+        "formatter",
+        "fpga",
+        "matlab"
+    ],
     "icon": "icon.png",
     "engines": {
         "vscode": "^1.80.0"
