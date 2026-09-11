@@ -2,7 +2,7 @@
     "name": "hanxuyao-plugin",
     "displayName": "hanxuyao-plugin",
     "description": "Verilog / SystemVerilog / C / C++ 开发工具，内置 MATLAB 编辑、运行调试、工作区、工程与测试支持",
-    "version": "1.4.6",
+    "version": "1.4.7",
     "publisher": "hanxuyao",
     "repository": {
         "type": "git",
@@ -920,41 +920,46 @@
                 "properties": {
                     "MATLAB.installPath": {
                         "type": "string",
-                        "markdownDescription": "The full path to the top-level directory of the MATLAB installation you want to use with this extension. You can determine the full path to your MATLAB installation using the `matlabroot` command in MATLAB. For more information, refer to the [README](https://github.com/mathworks/MATLAB-extension-for-vscode/blob/main/README.md). This setting can be specified for both the user and workspace setting scopes using the User and Workspace tabs above.",
+                        "markdownDescription": "安装路径：填写 MATLAB 安装根目录。可在 MATLAB 中运行 `matlabroot` 查看路径，例如 `D:\\tools\\matlab\\R2025b`。可分别在用户或工作区设置中指定。",
                         "scope": "machine-overridable"
                     },
                     "MATLAB.matlabConnectionTiming": {
                         "type": "string",
                         "default": "onDemand",
-                        "description": "Choose when this extension starts MATLAB in the background. Some functionality will be unavailable without MATLAB running in the background.",
+                        "description": "启动时机：选择何时在后台启动 MATLAB。未启动 MATLAB 时，部分高级功能不可用。",
                         "enum": [
                             "onStart",
                             "onDemand",
                             "never"
                         ],
                         "enumDescriptions": [
-                            "Start MATLAB as soon as a MATLAB code file is opened",
-                            "Start MATLAB when needed for a given action",
-                            "Never start MATLAB"
+                            "打开 MATLAB 代码文件后启动后台 MATLAB",
+                            "使用需要 MATLAB 的功能时再启动",
+                            "不自动启动后台 MATLAB"
                         ],
-                        "scope": "window"
+                        "scope": "window",
+                        "enumItemLabels": [
+                            "打开 MATLAB 文件时启动",
+                            "按需启动",
+                            "不自动启动"
+                        ]
                     },
                     "MATLAB.indexWorkspace": {
                         "type": "boolean",
                         "default": true,
-                        "description": "Automatically index all MATLAB code files (.m) in the current workspace.",
+                        "description": "工作区索引：自动索引当前工作区内的所有 MATLAB 代码文件（.m）。",
                         "scope": "window"
                     },
                     "MATLAB.startDebuggerAutomatically": {
                         "type": "boolean",
                         "default": false,
-                        "markdownDescription": "Automatically start the Visual Studio Code debugger when MATLAB reaches a breakpoint.",
+                        "markdownDescription": "自动启动调试器：MATLAB 执行到断点时，自动启动 VS Code 调试器。",
                         "scope": "window"
                     },
                     "MATLAB.telemetry": {
                         "type": "boolean",
                         "default": false,
-                        "markdownDescription": "此内置版本不向 MathWorks 发送扩展遥测；保留此键用于兼容官方设置。",
+                        "markdownDescription": "使用情况统计：此内置版本不向 MathWorks 发送扩展遥测；保留此配置项用于兼容官方设置。",
                         "scope": "window",
                         "tags": [
                             "telemetry",
@@ -964,31 +969,31 @@
                     "MATLAB.signIn": {
                         "type": "boolean",
                         "default": false,
-                        "markdownDescription": "Enable this option to present Sign In Options for unactivated MATLAB installations.",
+                        "markdownDescription": "登录选项：为尚未激活的 MATLAB 安装提供登录和授权选项。",
                         "scope": "machine"
                     },
                     "MATLAB.showFeatureNotAvailableError": {
                         "type": "boolean",
                         "default": true,
-                        "description": "Display an error when a feature requires MATLAB and MATLAB is unable to start.",
+                        "description": "功能不可用提示：某项功能需要 MATLAB，但 MATLAB 无法启动时显示错误消息。",
                         "scope": "window"
                     },
                     "MATLAB.maxFileSizeForAnalysis": {
                         "type": "number",
                         "default": 0,
-                        "markdownDescription": "The maximum number of characters a file can contain for features such as linting, code navigation, and symbol renaming to be enabled. Use `0` for no limit.",
+                        "markdownDescription": "代码分析大小限制：允许进行代码检查、跳转和符号重命名的文件最大字符数。设为 `0` 表示不限制。",
                         "scope": "window"
                     },
                     "MATLAB.prewarmGraphics": {
                         "type": "boolean",
                         "default": true,
-                        "description": "Prewarm graphics at MATLAB startup to improve performance of first-time graphics rendering.",
+                        "description": "图形预热：启动 MATLAB 时预先初始化图形功能，缩短首次绘图的等待时间。",
                         "scope": "window"
                     },
                     "MATLAB.defaultEditor": {
                         "type": "boolean",
                         "default": true,
-                        "markdownDescription": "Use Visual Studio Code instead of the MATLAB Editor to open and edit files using the `open` and `edit` commands. Certain file types always open in MATLAB by default — for example, live scripts saved in the binary Live Code file format (.mlx) and MATLAB app files (.mlapp).",
+                        "markdownDescription": "默认编辑器：使用 VS Code 打开 MATLAB 的 `open` 和 `edit` 命令请求编辑的文件。部分文件仍由 MATLAB 打开，例如二进制实时脚本（.mlx）和 MATLAB 应用（.mlapp）。",
                         "scope": "window"
                     },
                     "MATLAB.formatter": {
@@ -1002,18 +1007,22 @@
                             "使用本插件的配置变量对齐与四空格缩进",
                             "使用 MathWorks 语言服务器格式化（需要 MATLAB）"
                         ],
-                        "description": "选择 MATLAB 文档和选区的格式化实现。",
-                        "scope": "window"
+                        "description": "格式化器：选择 MATLAB 文档和选区使用的格式化实现。",
+                        "scope": "window",
+                        "enumItemLabels": [
+                            "本插件格式化（配置变量对齐）",
+                            "MathWorks 格式化"
+                        ]
                     }
                 }
             },
             {
-                "title": "Workspace",
+                "title": "MATLAB 工作区",
                 "properties": {
                     "MATLAB.maximumWorkspaceVariables": {
                         "type": "integer",
                         "default": 500,
-                        "markdownDescription": "Maximum number of variables to display in the Workspace panel.\n\n_Limiting this value helps ensure panel performance._",
+                        "markdownDescription": "变量显示上限：工作区面板最多显示的变量数量。适当限制数量有助于保持面板响应速度。",
                         "scope": "window"
                     },
                     "MATLAB.workspaceSortMethod": {
@@ -1024,11 +1033,15 @@
                             "lexicographic"
                         ],
                         "enumDescriptions": [
-                            "Compare numbers within names by numeric value",
-                            "Compare names character by character"
+                            "按名称中数字的数值排序，例如 x2 排在 x10 前",
+                            "按名称中的字符逐一比较排序"
                         ],
-                        "markdownDescription": "Choose how variables are sorted in the Workspace panel.\n\n_Sorting is natural by default._",
-                        "scope": "window"
+                        "markdownDescription": "变量排序方式：选择工作区面板中的变量排列方式，默认为自然排序。",
+                        "scope": "window",
+                        "enumItemLabels": [
+                            "自然排序",
+                            "按字符排序"
+                        ]
                     }
                 }
             }

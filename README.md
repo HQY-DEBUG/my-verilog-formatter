@@ -9,7 +9,7 @@
 5. 代码检查：支持 Verilog 语法检查以及 TODO 标签扫描与管理。
 6. MATLAB 开发：内置智能编辑、运行调试、交互终端、变量工作区、工程管理和测试支持。
 
-> 版本：v1.4.6　日期：2026/09/11
+> 版本：v1.4.7　日期：2026/09/11
 
 ---
 
@@ -49,6 +49,8 @@
 如果同时启用官方 `MathWorks.language-matlab` 扩展，将复用官方运行服务以避免重复注册。禁用官方扩展并重新加载窗口即可使用内置实现。内置版本不向 MathWorks 发送扩展遥测。
 
 `MATLAB.formatter` 可选择 `hanxuyao`（默认，保留下述定制规则）或 `mathworks`（使用 MATLAB 语言服务器格式化）。文档、选区以及插件快捷键会跟随此设置切换。
+
+MATLAB 设置说明、下拉选项和工作区设置分组使用中文。设置项标题由 VS Code 根据英文配置键生成，因此在说明开头补充对应中文名称；原有配置键、选项值和默认行为保持不变。
 
 原有格式化支持语言 ID 为 `matlab` 的文件，使用 `Ctrl+Alt+F` 或 `Shift+Alt+F` 格式化：
 
@@ -336,8 +338,8 @@ npm run compile
 当前安装包面向 Windows x64，包含 MATLAB 运行组件和 Windows ripgrep。发布时上传生成的 `.vsix` 文件；修改记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ```bash
-npm run package -- --target win32-x64 --out hanxuyao-plugin-1.4.6-win32-x64.vsix
-code --install-extension hanxuyao-plugin-1.4.6-win32-x64.vsix --force
+npm run package -- --target win32-x64 --out hanxuyao-plugin-1.4.7-win32-x64.vsix
+code --install-extension hanxuyao-plugin-1.4.7-win32-x64.vsix --force
 ```
 
 ---
@@ -382,6 +384,7 @@ GitHub 自动测试、打包和发布的配置及使用方法见 [自动发布](
 
 | 版本 | 日期 | 修改内容 |
 |------|------|---------|
+| v1.4.7 | 2026/09/11 | 将 MATLAB 设置说明、下拉选项和工作区分组中文化，保留原有配置键及选项值 |
 | v1.4.6 | 2026/09/11 | 固定验证后的自动发布流程，要求本地只保留最新验证通过的插件安装包 |
 | v1.4.5 | 2026/09/11 | 整理 MATLAB 集成发布说明与使用要求，补齐构建步骤，生成 Windows x64 安装包；新增 GitHub Actions 标签自动发布 |
 | v1.4.4 | 2026/09/11 | 内置 MathWorks MATLAB 编辑、运行调试、工作区、工程和测试功能，保留定制格式化并增加实现切换 |
