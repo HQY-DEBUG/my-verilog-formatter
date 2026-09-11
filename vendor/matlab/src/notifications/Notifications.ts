@@ -1,0 +1,75 @@
+// Copyright 2023-2026 The MathWorks, Inc.
+
+enum Notification {
+    // Connection Status Updates
+    MatlabConnectionClientUpdate = 'matlab/connection/update/client',
+    MatlabConnectionServerUpdate = 'matlab/connection/update/server',
+
+    // Errors
+    MatlabLaunchFailed = 'matlab/launchfailed',
+    MatlabFeatureUnavailable = 'feature/needsmatlab',
+    MatlabFeatureUnavailableNoMatlab = 'feature/needsmatlab/nomatlab',
+
+    // MATLAB Version Deprecation
+    MatlabVersionDeprecation = 'matlab/version/deprecation',
+
+    // Execution
+    MatlabRequestInstance = 'matlab/request',
+    TerminalCompletionRequest = 'TerminalCompletionRequest',
+    TerminalCompletionResponse = 'TerminalCompletionResponse',
+
+    MVMEvalRequest = 'evalRequest',
+    MVMEvalComplete = 'evalResponse',
+    MVMFevalRequest = 'fevalRequest',
+    MVMFevalComplete = 'fevalResponse',
+    MVMSetBreakpointRequest = 'setBreakpointRequest',
+    MVMSetBreakpointComplete = 'setBreakpointResponse',
+    MVMClearBreakpointRequest = 'clearBreakpointRequest',
+    MVMClearBreakpointComplete = 'clearBreakpointResponse',
+
+    MVMText = 'text',
+    MVMClc = 'clc',
+    MVMInputPrompt = 'mvmInputPrompt',
+    MVMPromptChange = 'mvmPromptChange',
+
+    MVMInterruptRequest = 'interruptRequest',
+    MVMUnpauseRequest = 'unpauseRequest',
+
+    MVMStateChange = 'mvmStateChange',
+
+    DebuggingStateChange = 'DebuggingStateChange',
+    DebugAdaptorRequest = 'DebugAdaptorRequest',
+    DebugAdaptorResponse = 'DebugAdaptorResponse',
+    DebugAdaptorEvent = 'DebugAdaptorEvent',
+
+    // Telemetry
+    LogTelemetryData = 'telemetry/logdata',
+
+    // Sections generated for Section Styling
+    MatlabSections = 'matlab/sections',
+
+    // Licensing
+    LicensingServerUrl = 'licensing/server/url',
+    LicensingData = 'licensing/data',
+    LicensingDelete = 'licensing/delete',
+    LicensingError = 'licensing/error',
+
+    // Default Editor
+    EditorExecutablePath = 'matlab/otherEditor',
+
+    // Workspace Browser
+    WSBServerMessage = 'WSBServerMessage',
+    WSBClientMessage = 'WSBClientMessage',
+
+    // MATLAB projects
+    ProjectOpened = 'matlab/project/opened',
+    ProjectClosed = 'matlab/project/closed',
+
+    // Testing
+    TestRunRequest = 'matlab/testing/run/request',
+    TestRunEvent = 'matlab/testing/run/event',
+    TestRunOutput = 'matlab/testing/run/output',
+    TestRunComplete = 'matlab/testing/run/complete'
+}
+
+export default Notification

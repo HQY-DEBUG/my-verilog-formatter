@@ -1,8 +1,8 @@
 {
     "name": "hanxuyao-plugin",
     "displayName": "hanxuyao-plugin",
-    "description": "Verilog / SystemVerilog / C / C++ / MATLAB 代码格式化、模块例化、大纲识别、文件树、语法高亮与跳转工具",
-    "version": "1.4.3",
+    "description": "Verilog / SystemVerilog / C / C++ 开发工具，内置 MATLAB 编辑、运行调试、工作区、工程与测试支持",
+    "version": "1.4.4",
     "publisher": "hanxuyao",
     "repository": {
         "type": "git",
@@ -45,7 +45,10 @@
         "workspaceContains:**/*.v",
         "workspaceContains:**/*.sv",
         "onView:verilogTodoTree",
-        "onStartupFinished"
+        "onStartupFinished",
+        "onDebugResolve:matlab",
+        "onDebugDynamicConfigurations:matlab",
+        "onTerminalProfile:matlab.terminal-profile"
     ],
     "main": "./out/extension.js",
     "contributes": {
@@ -162,6 +165,21 @@
                     ".cst"
                 ],
                 "configuration": "./resources/verilog/language-configurations/language-configuration.json"
+            },
+            {
+                "id": "matlab",
+                "aliases": [
+                    "MATLAB",
+                    "matlab"
+                ],
+                "extensions": [
+                    ".m"
+                ],
+                "configuration": "./out/matlab/language-configuration.json",
+                "icon": {
+                    "light": "./out/matlab/public/fileIcon_24x24.png",
+                    "dark": "./out/matlab/public/fileIcon_24x24.png"
+                }
             }
         ],
         "snippets": [
@@ -172,6 +190,10 @@
             {
                 "language": "systemverilog",
                 "path": "./resources/verilog/snippets/verilog.code-snippets"
+            },
+            {
+                "language": "matlab",
+                "path": "./out/matlab/snippets/matlab.json"
             }
         ],
         "grammars": [
@@ -240,6 +262,11 @@
                 "language": "gowin-cst",
                 "scopeName": "source.cst",
                 "path": "./resources/verilog/syntaxes/cst.tmLanguage.json"
+            },
+            {
+                "language": "matlab",
+                "scopeName": "source.matlab",
+                "path": "./out/matlab/syntaxes/Matlab.tmbundle/Syntaxes/MATLAB.tmLanguage"
             }
         ],
         "views": {
@@ -253,6 +280,14 @@
                     "id": "verilogTodoTree",
                     "name": "TODO",
                     "when": "workbenchState != empty"
+                }
+            ],
+            "matlabSidebar": [
+                {
+                    "id": "workspaceBrowserSidebarView",
+                    "name": "Workspace",
+                    "type": "webview",
+                    "icon": "./out/matlab/public/logo_outline.svg"
                 }
             ]
         },
@@ -297,6 +332,16 @@
                     "command": "verilogFormatter.todo.filterClear",
                     "when": "view == verilogTodoTree",
                     "group": "navigation@6"
+                },
+                {
+                    "command": "matlab.testing.addTestFolder",
+                    "when": "view == workbench.view.testing && matlab.testing.isActive",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "matlab.testing.addTestFile",
+                    "when": "view == workbench.view.testing && matlab.testing.isActive",
+                    "group": "navigation@2"
                 }
             ],
             "view/item/context": [
@@ -331,6 +376,157 @@
                     "command": "verilogFormatter.ucfToXdc",
                     "when": "editorLangId == ucf",
                     "group": "verilog@3"
+                },
+                {
+                    "command": "matlab.runFile",
+                    "when": "editorLangId == matlab && resourceScheme != 'untitled' && !matlab.isDebugging",
+                    "group": "1_run"
+                },
+                {
+                    "command": "matlab.runSection",
+                    "when": "editorLangId == matlab && !matlab.isDebugging",
+                    "group": "2_run"
+                },
+                {
+                    "command": "matlab.runSelection",
+                    "when": "editorLangId == matlab && editorHasSelection && !editorHasMultipleSelections && !matlab.isDebugging",
+                    "group": "3_run"
+                }
+            ],
+            "commandPalette": [
+                {
+                    "command": "matlab.addFolderToPath",
+                    "when": "false"
+                },
+                {
+                    "command": "matlab.addFolderAndSubfoldersToPath",
+                    "when": "false"
+                },
+                {
+                    "command": "matlab.changeDirectory",
+                    "when": "false"
+                },
+                {
+                    "command": "matlab.testing.removeTestItem",
+                    "when": "false"
+                },
+                {
+                    "command": "matlab.wsb.editValue",
+                    "when": "false"
+                },
+                {
+                    "command": "matlab.wsb.deleteVariable",
+                    "when": "false"
+                },
+                {
+                    "command": "matlab.wsb.renameVariable",
+                    "when": "false"
+                },
+                {
+                    "command": "matlab.wsb.sortAscending",
+                    "when": "false"
+                },
+                {
+                    "command": "matlab.wsb.sortDescending",
+                    "when": "false"
+                }
+            ],
+            "testing/item/context": [
+                {
+                    "command": "matlab.testing.removeTestItem",
+                    "group": "matlab@1",
+                    "when": "controllerId == matlab-tests"
+                }
+            ],
+            "editor/title/run": [
+                {
+                    "command": "matlab.runFile",
+                    "when": "editorLangId == matlab && resourceScheme != 'untitled' && !matlab.isDebugging",
+                    "group": "1_run"
+                },
+                {
+                    "command": "matlab.runSection",
+                    "when": "editorLangId == matlab && !matlab.isDebugging",
+                    "group": "2_run"
+                },
+                {
+                    "command": "matlab.runSelection",
+                    "when": "editorLangId == matlab && editorHasSelection && !editorHasMultipleSelections && !matlab.isDebugging",
+                    "group": "3_run"
+                }
+            ],
+            "explorer/context": [
+                {
+                    "submenu": "matlab.addPath",
+                    "when": "explorerResourceIsFolder",
+                    "group": "matlab"
+                },
+                {
+                    "submenu": "matlab.project",
+                    "when": "explorerResourceIsFolder || resourceExtname == .prj || resourceFilename == matlab.toml",
+                    "group": "matlab"
+                },
+                {
+                    "command": "matlab.changeDirectory",
+                    "when": "explorerResourceIsFolder",
+                    "group": "matlab"
+                },
+                {
+                    "command": "matlab.openFile",
+                    "when": "!explorerResourceIsFolder",
+                    "group": "files"
+                }
+            ],
+            "matlab.addPath": [
+                {
+                    "command": "matlab.addFolderToPath",
+                    "when": "explorerResourceIsFolder"
+                },
+                {
+                    "command": "matlab.addFolderAndSubfoldersToPath",
+                    "when": "explorerResourceIsFolder"
+                }
+            ],
+            "webview/context": [
+                {
+                    "command": "matlab.wsb.deleteVariable",
+                    "when": "webviewId == 'workspaceBrowserSidebarView' && webviewSection == 'row'",
+                    "group": "wsb_row@2"
+                },
+                {
+                    "command": "matlab.wsb.renameVariable",
+                    "when": "webviewId == 'workspaceBrowserSidebarView' && webviewSection == 'row'",
+                    "group": "wsb_row@3"
+                },
+                {
+                    "command": "matlab.wsb.editValue",
+                    "when": "webviewId == 'workspaceBrowserSidebarView' && webviewSection == 'row'",
+                    "group": "wsb_row@4"
+                },
+                {
+                    "command": "matlab.wsb.sortAscending",
+                    "when": "webviewId == 'workspaceBrowserSidebarView' && webviewSection == 'header'"
+                },
+                {
+                    "command": "matlab.wsb.sortDescending",
+                    "when": "webviewId == 'workspaceBrowserSidebarView' && webviewSection == 'header'"
+                }
+            ],
+            "matlab.project": [
+                {
+                    "command": "matlab.project.new",
+                    "when": "explorerResourceIsFolder",
+                    "group": "matlab_project@0"
+                },
+                {
+                    "command": "matlab.project.open",
+                    "when": "explorerResourceIsFolder || resourceExtname == .prj || resourceFilename == matlab.toml",
+                    "group": "matlab_project@1"
+                },
+                {
+                    "command": "matlab.project.close",
+                    "when": "explorerResourceIsFolder || resourceExtname == .prj || resourceFilename == matlab.toml",
+                    "group": "matlab_project@2"
                 }
             ]
         },
@@ -430,6 +626,127 @@
             {
                 "command": "verilogFormatter.todo.resetPathFilter",
                 "title": "TODO: 重置路径过滤"
+            },
+            {
+                "command": "matlab.changeMatlabConnection",
+                "title": "MATLAB: Change MATLAB Connection"
+            },
+            {
+                "command": "matlab.runFile",
+                "title": "MATLAB: Run File",
+                "icon": "$(play)",
+                "when": "!matlab.isDebugging"
+            },
+            {
+                "command": "matlab.runSection",
+                "title": "MATLAB: Run Current Section",
+                "icon": "$(play)",
+                "when": "!matlab.isDebugging"
+            },
+            {
+                "command": "matlab.runSelection",
+                "title": "MATLAB: Run Current Selection",
+                "icon": "$(play)",
+                "when": "!matlab.isDebugging"
+            },
+            {
+                "command": "matlab.openCommandWindow",
+                "title": "MATLAB: Open Command Window",
+                "icon": "$(output)"
+            },
+            {
+                "command": "matlab.interrupt",
+                "title": "MATLAB: Interrupt"
+            },
+            {
+                "command": "matlab.addFolderToPath",
+                "title": "Selected Folder"
+            },
+            {
+                "command": "matlab.addFolderAndSubfoldersToPath",
+                "title": "Selected Folder and Subfolders"
+            },
+            {
+                "command": "matlab.changeDirectory",
+                "title": "MATLAB: Change current directory"
+            },
+            {
+                "command": "matlab.enableSignIn",
+                "title": "MATLAB: Manage Sign In Options"
+            },
+            {
+                "command": "matlab.openFile",
+                "title": "MATLAB: Open File"
+            },
+            {
+                "command": "matlab.resetDeprecationPopups",
+                "title": "MATLAB: Reset Deprecation Warning Popups"
+            },
+            {
+                "command": "matlab.showLanguageServerOutput",
+                "title": "MATLAB: Show Language Server Output"
+            },
+            {
+                "command": "matlab.wsb.editValue",
+                "title": "Edit Value"
+            },
+            {
+                "command": "matlab.wsb.deleteVariable",
+                "title": "Delete"
+            },
+            {
+                "command": "matlab.wsb.renameVariable",
+                "title": "Rename"
+            },
+            {
+                "command": "matlab.wsb.sortAscending",
+                "title": "Sort Ascending"
+            },
+            {
+                "command": "matlab.wsb.sortDescending",
+                "title": "Sort Descending"
+            },
+            {
+                "command": "matlab.project.open",
+                "title": "MATLAB: Open Project..."
+            },
+            {
+                "command": "matlab.project.close",
+                "title": "MATLAB: Close Project",
+                "enablement": "matlab.project.isOpen"
+            },
+            {
+                "command": "matlab.project.new",
+                "title": "MATLAB: New Project..."
+            },
+            {
+                "command": "matlab.project.actions",
+                "title": "MATLAB: Project Actions..."
+            },
+            {
+                "command": "matlab.testing.runAllTests",
+                "title": "MATLAB: Run All Tests"
+            },
+            {
+                "command": "matlab.testing.discoverTests",
+                "title": "MATLAB: Discover Tests"
+            },
+            {
+                "command": "matlab.testing.addTestFolder",
+                "title": "Add Test Folder",
+                "category": "MATLAB",
+                "icon": "$(new-folder)"
+            },
+            {
+                "command": "matlab.testing.addTestFile",
+                "title": "Add Test File",
+                "category": "MATLAB",
+                "icon": "$(new-file)"
+            },
+            {
+                "command": "matlab.testing.removeTestItem",
+                "title": "Remove Test",
+                "icon": "$(trash)"
             }
         ],
         "keybindings": [
@@ -452,129 +769,349 @@
                 "command": "verilogFormatter.decrementNumbers",
                 "key": "ctrl+alt+down",
                 "when": "editorTextFocus"
+            },
+            {
+                "command": "matlab.runFile",
+                "key": "f5",
+                "when": "editorTextFocus && editorLangId == matlab && !findInputFocussed && !replaceInputFocussed && resourceScheme != 'untitled' && !matlab.isDebugging"
+            },
+            {
+                "command": "matlab.runSection",
+                "key": "Ctrl+enter",
+                "when": "editorTextFocus && editorLangId == matlab && !findInputFocussed && !replaceInputFocussed && !matlab.isDebugging"
+            },
+            {
+                "command": "matlab.runSelection",
+                "key": "shift+enter",
+                "when": "editorTextFocus && editorHasSelection && !editorHasMultipleSelections && editorLangId == matlab && !findInputFocussed && !replaceInputFocussed && !matlab.isDebugging"
+            },
+            {
+                "command": "matlab.interrupt",
+                "key": "Ctrl+C",
+                "when": "((editorTextFocus && !editorHasSelection && editorLangId == matlab) || (terminalFocus && matlab.isActiveTerminal && !matlab.terminalHasSelection && !terminalTextSelectedInFocused))"
+            },
+            {
+                "command": "matlab.wsb.deleteVariable",
+                "key": "delete",
+                "when": "focusedView == 'workspaceBrowserSidebarView'"
+            },
+            {
+                "command": "matlab.wsb.renameVariable",
+                "key": "f2",
+                "when": "focusedView == 'workspaceBrowserSidebarView'"
+            },
+            {
+                "command": "matlab.wsb.editValue",
+                "key": "enter",
+                "when": "focusedView == 'workspaceBrowserSidebarView'"
             }
         ],
-        "configuration": {
-            "title": "hanxuyao-plugin",
-            "properties": {
-                "verilogFormatter.indentSize": {
-                    "type": "number",
-                    "default": 2,
-                    "description": "缩进空格数（Verilog 风格规范：2 空格）"
-                },
-                "verilogFormatter.alignPortComment": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "是否对齐端口行尾注释"
-                },
-                "verilogFormatter.newlineBeforeBegin": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "begin 是否另起一行"
-                },
-                "verilogFormatter.hoverEnabled": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "是否启用悬停查看定义"
-                },
-                "verilogFormatter.lintEnabled": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "是否启用 xvlog 语法检查（需要配置 xvlog 环境变量）"
-                },
-                "verilogFormatter.lintSeverity": {
-                    "type": "string",
-                    "enum": [
-                        "error",
-                        "warning",
-                        "info"
-                    ],
-                    "default": "warning",
-                    "description": "语法检查最低报告级别"
-                },
-                "verilogFormatter.excludeFolders": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
+        "configuration": [
+            {
+                "title": "hanxuyao-plugin",
+                "properties": {
+                    "verilogFormatter.indentSize": {
+                        "type": "number",
+                        "default": 2,
+                        "description": "缩进空格数（Verilog 风格规范：2 空格）"
                     },
-                    "default": [
-                        "ip",
-                        "core",
-                        "ipshared",
-                        ".git"
-                    ],
-                    "description": "文件树和符号索引排除的文件夹名称"
-                },
-                "verilogFormatter.incrementStep": {
-                    "type": "number",
-                    "default": 1,
-                    "description": "数字递增/递减的步长"
-                },
-                "verilogFormatter.formatOnSave": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "保存时自动格式化 Verilog/SystemVerilog/C/C++/MATLAB 文件"
-                },
-                "verilogFormatter.todo.tags": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
+                    "verilogFormatter.alignPortComment": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "是否对齐端口行尾注释"
                     },
-                    "default": [
-                        "TODO",
-                        "FIXME",
-                        "NOTE",
-                        "HACK"
-                    ],
-                    "description": "TODO 扫描的标签关键字列表"
-                },
-                "verilogFormatter.todo.excludePatterns": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
+                    "verilogFormatter.newlineBeforeBegin": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "begin 是否另起一行"
                     },
-                    "default": [
-                        "**/node_modules/**",
-                        "**/.git/**",
-                        "**/out/**"
-                    ],
-                    "description": "TODO 扫描排除的 glob 模式"
-                },
-                "verilogFormatter.todo.showInStatusBar": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "状态栏显示 TODO 总计数"
-                },
-                "verilogFormatter.todo.highlightEnabled": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "是否在编辑器中启用 TODO 行内高亮"
-                },
-                "verilogFormatter.todo.defaultHighlight": {
-                    "type": "object",
-                    "default": {},
-                    "description": "所有标签的默认高亮配置（foreground/background/gutterIcon/highlightType）"
-                },
-                "verilogFormatter.todo.customHighlight": {
-                    "type": "object",
-                    "default": {},
-                    "description": "各标签的个性化高亮配置，键为标签名"
+                    "verilogFormatter.hoverEnabled": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "是否启用悬停查看定义"
+                    },
+                    "verilogFormatter.lintEnabled": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "是否启用 xvlog 语法检查（需要配置 xvlog 环境变量）"
+                    },
+                    "verilogFormatter.lintSeverity": {
+                        "type": "string",
+                        "enum": [
+                            "error",
+                            "warning",
+                            "info"
+                        ],
+                        "default": "warning",
+                        "description": "语法检查最低报告级别"
+                    },
+                    "verilogFormatter.excludeFolders": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "default": [
+                            "ip",
+                            "core",
+                            "ipshared",
+                            ".git"
+                        ],
+                        "description": "文件树和符号索引排除的文件夹名称"
+                    },
+                    "verilogFormatter.incrementStep": {
+                        "type": "number",
+                        "default": 1,
+                        "description": "数字递增/递减的步长"
+                    },
+                    "verilogFormatter.formatOnSave": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "保存时自动格式化 Verilog/SystemVerilog/C/C++/MATLAB 文件"
+                    },
+                    "verilogFormatter.todo.tags": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "default": [
+                            "TODO",
+                            "FIXME",
+                            "NOTE",
+                            "HACK"
+                        ],
+                        "description": "TODO 扫描的标签关键字列表"
+                    },
+                    "verilogFormatter.todo.excludePatterns": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "default": [
+                            "**/node_modules/**",
+                            "**/.git/**",
+                            "**/out/**"
+                        ],
+                        "description": "TODO 扫描排除的 glob 模式"
+                    },
+                    "verilogFormatter.todo.showInStatusBar": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "状态栏显示 TODO 总计数"
+                    },
+                    "verilogFormatter.todo.highlightEnabled": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "是否在编辑器中启用 TODO 行内高亮"
+                    },
+                    "verilogFormatter.todo.defaultHighlight": {
+                        "type": "object",
+                        "default": {},
+                        "description": "所有标签的默认高亮配置（foreground/background/gutterIcon/highlightType）"
+                    },
+                    "verilogFormatter.todo.customHighlight": {
+                        "type": "object",
+                        "default": {},
+                        "description": "各标签的个性化高亮配置，键为标签名"
+                    }
+                }
+            },
+            {
+                "title": "MATLAB",
+                "properties": {
+                    "MATLAB.installPath": {
+                        "type": "string",
+                        "markdownDescription": "The full path to the top-level directory of the MATLAB installation you want to use with this extension. You can determine the full path to your MATLAB installation using the `matlabroot` command in MATLAB. For more information, refer to the [README](https://github.com/mathworks/MATLAB-extension-for-vscode/blob/main/README.md). This setting can be specified for both the user and workspace setting scopes using the User and Workspace tabs above.",
+                        "scope": "machine-overridable"
+                    },
+                    "MATLAB.matlabConnectionTiming": {
+                        "type": "string",
+                        "default": "onDemand",
+                        "description": "Choose when this extension starts MATLAB in the background. Some functionality will be unavailable without MATLAB running in the background.",
+                        "enum": [
+                            "onStart",
+                            "onDemand",
+                            "never"
+                        ],
+                        "enumDescriptions": [
+                            "Start MATLAB as soon as a MATLAB code file is opened",
+                            "Start MATLAB when needed for a given action",
+                            "Never start MATLAB"
+                        ],
+                        "scope": "window"
+                    },
+                    "MATLAB.indexWorkspace": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Automatically index all MATLAB code files (.m) in the current workspace.",
+                        "scope": "window"
+                    },
+                    "MATLAB.startDebuggerAutomatically": {
+                        "type": "boolean",
+                        "default": false,
+                        "markdownDescription": "Automatically start the Visual Studio Code debugger when MATLAB reaches a breakpoint.",
+                        "scope": "window"
+                    },
+                    "MATLAB.telemetry": {
+                        "type": "boolean",
+                        "default": false,
+                        "markdownDescription": "此内置版本不向 MathWorks 发送扩展遥测；保留此键用于兼容官方设置。",
+                        "scope": "window",
+                        "tags": [
+                            "telemetry",
+                            "usesOnlineServices"
+                        ]
+                    },
+                    "MATLAB.signIn": {
+                        "type": "boolean",
+                        "default": false,
+                        "markdownDescription": "Enable this option to present Sign In Options for unactivated MATLAB installations.",
+                        "scope": "machine"
+                    },
+                    "MATLAB.showFeatureNotAvailableError": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Display an error when a feature requires MATLAB and MATLAB is unable to start.",
+                        "scope": "window"
+                    },
+                    "MATLAB.maxFileSizeForAnalysis": {
+                        "type": "number",
+                        "default": 0,
+                        "markdownDescription": "The maximum number of characters a file can contain for features such as linting, code navigation, and symbol renaming to be enabled. Use `0` for no limit.",
+                        "scope": "window"
+                    },
+                    "MATLAB.prewarmGraphics": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Prewarm graphics at MATLAB startup to improve performance of first-time graphics rendering.",
+                        "scope": "window"
+                    },
+                    "MATLAB.defaultEditor": {
+                        "type": "boolean",
+                        "default": true,
+                        "markdownDescription": "Use Visual Studio Code instead of the MATLAB Editor to open and edit files using the `open` and `edit` commands. Certain file types always open in MATLAB by default — for example, live scripts saved in the binary Live Code file format (.mlx) and MATLAB app files (.mlapp).",
+                        "scope": "window"
+                    },
+                    "MATLAB.formatter": {
+                        "type": "string",
+                        "default": "hanxuyao",
+                        "enum": [
+                            "hanxuyao",
+                            "mathworks"
+                        ],
+                        "enumDescriptions": [
+                            "使用本插件的配置变量对齐与四空格缩进",
+                            "使用 MathWorks 语言服务器格式化（需要 MATLAB）"
+                        ],
+                        "description": "选择 MATLAB 文档和选区的格式化实现。",
+                        "scope": "window"
+                    }
+                }
+            },
+            {
+                "title": "Workspace",
+                "properties": {
+                    "MATLAB.maximumWorkspaceVariables": {
+                        "type": "integer",
+                        "default": 500,
+                        "markdownDescription": "Maximum number of variables to display in the Workspace panel.\n\n_Limiting this value helps ensure panel performance._",
+                        "scope": "window"
+                    },
+                    "MATLAB.workspaceSortMethod": {
+                        "type": "string",
+                        "default": "natural",
+                        "enum": [
+                            "natural",
+                            "lexicographic"
+                        ],
+                        "enumDescriptions": [
+                            "Compare numbers within names by numeric value",
+                            "Compare names character by character"
+                        ],
+                        "markdownDescription": "Choose how variables are sorted in the Workspace panel.\n\n_Sorting is natural by default._",
+                        "scope": "window"
+                    }
                 }
             }
+        ],
+        "breakpoints": [
+            {
+                "language": "matlab"
+            }
+        ],
+        "debuggers": [
+            {
+                "type": "matlab",
+                "languages": [
+                    "matlab"
+                ],
+                "label": "MATLAB",
+                "initialConfigurations": [
+                    {
+                        "type": "matlab",
+                        "name": "Debug MATLAB"
+                    }
+                ]
+            }
+        ],
+        "viewsWelcome": [
+            {
+                "view": "testing",
+                "contents": "[Add Test Folder](command:matlab.testing.addTestFolder)\n[Add Test File](command:matlab.testing.addTestFile)",
+                "when": "matlab.testing.isActive"
+            }
+        ],
+        "submenus": [
+            {
+                "id": "matlab.addPath",
+                "label": "MATLAB: Add to Path"
+            },
+            {
+                "id": "matlab.project",
+                "label": "MATLAB: Project"
+            }
+        ],
+        "semanticTokenTypes": [
+            {
+                "id": "function",
+                "description": "Function references"
+            },
+            {
+                "id": "variable",
+                "description": "Variable references"
+            }
+        ],
+        "semanticTokenModifiers": [],
+        "terminal": {
+            "profiles": [
+                {
+                    "title": "MATLAB",
+                    "id": "matlab.terminal-profile"
+                }
+            ]
+        },
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "matlabSidebar",
+                    "title": "MATLAB",
+                    "icon": "./out/matlab/public/logo_outline.svg"
+                }
+            ]
         }
     },
     "scripts": {
-        "compile": "tsc -p ./",
+        "compile": "tsc -p ./ && node scripts/build-matlab.js",
         "watch": "tsc -watch -p ./",
         "test": "jest",
         "package": "vsce package",
-        "vscode:prepublish": "npm run compile"
+        "vscode:prepublish": "npm run compile",
+        "setup:matlab": "node scripts/build-matlab.js --install"
     },
     "jest": {
         "preset": "ts-jest",
         "testEnvironment": "node",
         "testMatch": [
-            "**/test/**/*.test.ts"
+            "<rootDir>/test/**/*.test.ts"
         ],
         "moduleNameMapper": {
             "^vscode$": "<rootDir>/test/mocks/vscode.js"
@@ -587,11 +1124,22 @@
         "@types/vscode": "^1.80.0",
         "jest": "^29.0.0",
         "ts-jest": "^29.0.0",
-        "typescript": "^5.0.0"
+        "typescript": "^5.0.0",
+        "esbuild": "^0.25.0"
     },
     "dependencies": {
         "@vscode/ripgrep": "^1.18.0",
         "@vscode/ripgrep-win32-x64": "^1.18.0",
-        "glob": "^10.5.0"
+        "glob": "^10.5.0",
+        "chokidar": "^3.5.3"
+    },
+    "capabilities": {
+        "untrustedWorkspaces": {
+            "supported": "limited",
+            "description": "未受信任工作区仅提供基础编辑功能，MATLAB 语言服务器不会启动。",
+            "restrictedConfigurations": [
+                "MATLAB.installPath"
+            ]
+        }
     }
 }

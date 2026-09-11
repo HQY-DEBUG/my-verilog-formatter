@@ -8,7 +8,7 @@
 4. 代码阅读：提供语法高亮、符号跳转、悬停定义和代码补全。
 5. 代码检查：支持 Verilog 语法检查以及 TODO 标签扫描与管理。
 
-> 版本：v1.4.3　日期：2026/09/11
+> 版本：v1.4.4　日期：2026/09/11
 
 ---
 
@@ -29,7 +29,27 @@
 
 ### MATLAB
 
-支持语言 ID 为 `matlab` 的文件，使用 `Ctrl+Alt+F` 或 `Shift+Alt+F` 格式化：
+已内置 MathWorks MATLAB 扩展 v1.3.13 的客户端、语言服务器、语法资源及 MATLAB 侧支持代码，不需要另行安装官方扩展。
+
+- 基础编辑：识别 `.m` 文件、语法高亮、片段、注释、折叠和代码节显示。
+- 智能编辑：自动补全、参数提示、定义跳转、引用、重命名、大纲、代码分析及快速修复。
+- 执行与调试：运行文件/代码节/选区、交互终端、中断、断点、单步、调用栈及调试变量。
+- 工作区：查看变量名称、值、大小及类型，支持排序、重命名、删除和可支持类型的内联编辑。
+- 工程与路径：新建/打开/关闭 MATLAB Project、切换目录、加入搜索路径、在 MATLAB 中打开文件。
+- 测试：发现并运行类、函数和脚本测试，包含参数化测试、结果和输出。
+- 连接与授权：连接/断开 MATLAB、安装路径设置、可选登录界面及语言服务器日志。
+
+运行、调试和智能编辑需要已安装并可使用的 MATLAB R2021b 或更高版本；工作区面板需要 R2023a 或更高版本。Jupyter 工作流仍需要单独安装 Jupyter 扩展和 MATLAB Kernel，上游仓库本身不包含这两个组件。
+
+配置 `MATLAB.installPath` 为 MATLAB 安装根目录（例如 `D:\tools\matlab\R2025b`）。内置版本默认 `MATLAB.matlabConnectionTiming: "onDemand"`，避免编辑 Verilog/C 时自动启动 MATLAB；可改为 `onStart` 或 `never`。未受信任工作区不会启动 MATLAB 语言服务器。
+
+`F5` 运行文件，`Ctrl+Enter` 运行当前节，`Shift+Enter` 运行选区；从左侧 MATLAB 面板查看工作区，从“测试”面板添加测试文件/文件夹。
+
+如果同时启用官方 `MathWorks.language-matlab` 扩展，将复用官方运行服务以避免重复注册。禁用官方扩展并重新加载窗口即可使用内置实现。内置版本不向 MathWorks 发送扩展遥测。
+
+`MATLAB.formatter` 可选择 `hanxuyao`（默认，保留下述定制规则）或 `mathworks`（使用 MATLAB 语言服务器格式化）。文档、选区以及插件快捷键会跟随此设置切换。
+
+原有格式化支持语言 ID 为 `matlab` 的文件，使用 `Ctrl+Alt+F` 或 `Shift+Alt+F` 格式化：
 
 - 按 `function`、`if`、`for`、`switch` 等块结构统一为四空格缩进。
 - 对齐整个 `%%` 配置单元内的变量名、`=`、分号和行尾 `%` 注释列；单 `%` 小标题和空行不打断对齐，下一条 `%%` 单元节标题会开始新区域。
@@ -313,10 +333,12 @@ npm run compile
 
 ```bash
 npm run package
-code --install-extension hanxuyao-plugin-1.4.3.vsix --force
+code --install-extension hanxuyao-plugin-1.4.4.vsix --force
 ```
 
 ---
+
+MATLAB 上游源码、固定提交和本地适配说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 ## 代码结构
 
@@ -354,6 +376,7 @@ hanxuyao-plugin/
 
 | 版本 | 日期 | 修改内容 |
 |------|------|---------|
+| v1.4.4 | 2026/09/11 | 内置 MathWorks MATLAB 编辑、运行调试、工作区、工程和测试功能，保留定制格式化并增加实现切换 |
 | v1.4.3 | 2026/09/11 | 新增 Codex 仓库规则，要求每次更新同步版本号和修改记录，并从安装包排除开发规则 |
 | v1.4.2 | 2026/08/21 | 将跨行的 C/C++ 控制条件整理为单行 |
 | v1.4.1 | 2026/08/21 | 输入 C/C++ 标识符时主动显示语言服务器建议，输入 `(` 时显示函数参数提示 |
