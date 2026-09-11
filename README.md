@@ -9,7 +9,7 @@
 5. 代码检查：支持 Verilog 语法检查以及 TODO 标签扫描与管理。
 6. MATLAB 开发：内置智能编辑、运行调试、交互终端、变量工作区、工程管理和测试支持。
 
-> 版本：v1.4.5　日期：2026/09/11
+> 版本：v1.4.6　日期：2026/09/11
 
 ---
 
@@ -336,8 +336,8 @@ npm run compile
 当前安装包面向 Windows x64，包含 MATLAB 运行组件和 Windows ripgrep。发布时上传生成的 `.vsix` 文件；修改记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ```bash
-npm run package -- --target win32-x64 --out hanxuyao-plugin-1.4.5-win32-x64.vsix
-code --install-extension hanxuyao-plugin-1.4.5-win32-x64.vsix --force
+npm run package -- --target win32-x64 --out hanxuyao-plugin-1.4.6-win32-x64.vsix
+code --install-extension hanxuyao-plugin-1.4.6-win32-x64.vsix --force
 ```
 
 ---
@@ -382,6 +382,7 @@ GitHub 自动测试、打包和发布的配置及使用方法见 [自动发布](
 
 | 版本 | 日期 | 修改内容 |
 |------|------|---------|
+| v1.4.6 | 2026/09/11 | 固定验证后的自动发布流程，要求本地只保留最新验证通过的插件安装包 |
 | v1.4.5 | 2026/09/11 | 整理 MATLAB 集成发布说明与使用要求，补齐构建步骤，生成 Windows x64 安装包；新增 GitHub Actions 标签自动发布 |
 | v1.4.4 | 2026/09/11 | 内置 MathWorks MATLAB 编辑、运行调试、工作区、工程和测试功能，保留定制格式化并增加实现切换 |
 | v1.4.3 | 2026/09/11 | 新增 Codex 仓库规则，要求每次更新同步版本号和修改记录，并从安装包排除开发规则 |

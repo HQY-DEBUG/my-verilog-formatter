@@ -6,6 +6,10 @@
 
 修改仓库文件前，必须阅读并遵守 [.codex/rules/versioning.md](.codex/rules/versioning.md)。每次完成更新都必须同步版本号和修改记录。
 
+## 发布与安装包
+
+涉及发布、打包或清理安装包时，必须阅读并遵守 [.codex/rules/release.md](.codex/rules/release.md)。正式发布采用已验证的 GitHub Actions 流程，本地只保留最新验证通过的插件安装包。
+
 ## 验证
 
 - 修改功能代码时，运行 `npm test -- --runInBand` 和 `npm run compile`。
