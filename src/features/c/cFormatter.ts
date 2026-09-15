@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.ts
 // 描述    : C/C++ 变量定义、函数调用和函数花括号格式化
-// 版本    : v1.4.2
-// 日期    : 2026/08/21
+// 版本    : v1.4.8
+// 日期    : 2026/09/15
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.4.8  2026/09/15  补齐变量声明的等号、初始值、分号和注释列对齐
 //  v1.4.2  2026/08/21  将跨行控制条件合并为单行
 //  v1.4.0  2026/08/21  按代码块层级重算 C/C++ 缩进
 //  v1.3.3  2026/08/21  修正单行函数签名的左花括号位置识别
@@ -426,23 +427,16 @@ function alignVariableDeclarations(code: string): string {
             result.push(lines[i]);
         } else {
             const maxType = Math.max(...block.map(item => item.typePrefix.length));
-            const alignAsFields = block.every(item => !item.initializer);
-            if (alignAsFields) {
-                const declarations = block.map(item => `${item.pointer}${item.name}${item.arraySuffix}`);
-                const maxDeclaration = Math.max(...declarations.map(item => item.length));
-                result.push(...block.map((item, index) => {
-                    const declaration = declarations[index].padEnd(maxDeclaration + 1);
-                    const comment = item.comment ? `  ${item.comment}` : '';
-                    return `${item.typePrefix.padEnd(maxType + 1)}${declaration};${comment}`;
-                }));
-            } else {
-                result.push(...block.map(item => {
-                    const declaration = `${item.pointer}${item.name}${item.arraySuffix}`;
-                    const initializer = item.initializer ? ` ${item.initializer}` : '';
-                    const comment = item.comment ? ` ${item.comment}` : '';
-                    return `${item.typePrefix.padEnd(maxType + 1)}${declaration}${initializer};${comment}`;
-                }));
-            }
+            const declarations = block.map(item => `${item.pointer}${item.name}${item.arraySuffix}`);
+            const maxDeclaration = Math.max(...declarations.map(item => item.length));
+            const maxInitializer = Math.max(...block.map(item => item.initializer.length));
+            const initializerWidth = maxInitializer > 0 ? maxInitializer + 1 : 0;
+            result.push(...block.map((item, index) => {
+                const declaration = declarations[index].padEnd(maxDeclaration + 1);
+                const initializer = item.initializer.padEnd(initializerWidth);
+                const comment = item.comment ? `  ${item.comment}` : '';
+                return `${item.typePrefix.padEnd(maxType + 1)}${declaration}${initializer};${comment}`;
+            }));
         }
         i = end;
     }
@@ -631,7 +625,7 @@ function parseDeclaration(line: string): DeclarationLine | undefined {
     const body = statement.slice(0, semicolon);
     const equal = body.search(/(?<![=!<>])=(?!=)/);
     const declarator = (equal >= 0 ? body.slice(0, equal) : body).trimEnd();
-    const initializer = equal >= 0 ? body.slice(equal).trimStart() : '';
+    const initializer = equal >= 0 ? `= ${body.slice(equal + 1).trim()}` : '';
     const match = declarator.match(/^(\s*)(.*?)([A-Za-z_]\w*)(\s*(?:\[[^\]]*\]\s*)*)$/);
     if (!match) { return undefined; }
 

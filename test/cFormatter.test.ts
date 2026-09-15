@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.test.ts
 // 描述    : C/C++ 格式化器回归测试
-// 版本    : v1.4.2
-// 日期    : 2026/08/21
+// 版本    : v1.4.8
+// 日期    : 2026/09/15
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.4.8  2026/09/15  验证混合类型变量的赋值、分号和注释对齐及重复格式化
 //  v1.4.2  2026/08/21  增加跨行控制条件单行化测试
 //  v1.4.0  2026/08/21  增加函数体及嵌套代码块缩进测试
 //  v1.3.3  2026/08/21  增加 static bool 单行函数签名测试
@@ -29,10 +30,62 @@ describe('C/C++ formatter', () => {
         ].join('\n');
 
         expect(formatC(input)).toBe([
-            'uint8_t        a = 0;',
-            'const uint32_t *long_value = NULL;',
-            'char           name[16];',
+            'uint8_t        a           = 0    ;',
+            'const uint32_t *long_value = NULL ;',
+            'char           name[16]           ;',
         ].join('\n'));
+        expect(formatC(formatC(input))).toBe(formatC(input));
+    });
+
+    it('对齐混合类型全局变量的名称、等号、初始值、分号和注释', () => {
+        const input = [
+            'double      g_accel_accel =DEFAULT_ACCEL_ACCEL;',
+            'uint32_t    g_merge_weight =    DEFAULT_MERGE_WEIGHT  ;',
+            'uint32_t    g_data_proc_mode = DEFAULT_DATA_PROC_MODE;',
+            'static bool g_update_flash = false; // 是否需要更新参数组到 Flash 的标志，由 GPIO 触发',
+            'static bool g_update_flash_last =false; // 上一次更新状态',
+            'bool        g_data_through =  false;',
+        ].join('\n');
+        const expected = [
+            'double      g_accel_accel       = DEFAULT_ACCEL_ACCEL    ;',
+            'uint32_t    g_merge_weight      = DEFAULT_MERGE_WEIGHT   ;',
+            'uint32_t    g_data_proc_mode    = DEFAULT_DATA_PROC_MODE ;',
+            'static bool g_update_flash      = false                  ;  // 是否需要更新参数组到 Flash 的标志，由 GPIO 触发',
+            'static bool g_update_flash_last = false                  ;  // 上一次更新状态',
+            'bool        g_data_through      = false                  ;',
+        ].join('\n');
+
+        expect(formatC(input)).toBe(expected);
+        expect(formatC(expected)).toBe(expected);
+        expect(formatC(input.replace(/\n/g, '\r\n'))).toBe(expected.replace(/\n/g, '\r\n'));
+    });
+
+    it('保留初始值内部空格和比较表达式并分别对齐独立声明组', () => {
+        const input = [
+            'void run() {',
+            'const char *label =  "a  =  b"  ; // 文本',
+            'bool ready =count == limit;',
+            '',
+            'int x =1;',
+            'int total =  20;',
+            '// 独立声明',
+            'int single = 3;',
+            '}',
+        ].join('\n');
+        const expected = [
+            'void run() {',
+            '    const char *label = "a  =  b"      ;  // 文本',
+            '    bool       ready  = count == limit ;',
+            '',
+            '    int x     = 1  ;',
+            '    int total = 20 ;',
+            '    // 独立声明',
+            '    int single = 3;',
+            '}',
+        ].join('\n');
+
+        expect(formatC(input)).toBe(expected);
+        expect(formatC(expected)).toBe(expected);
     });
 
     it('按类型、名称、分号和注释对齐结构体成员', () => {
