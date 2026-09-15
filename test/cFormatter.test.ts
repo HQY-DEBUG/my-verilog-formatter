@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.test.ts
 // 描述    : C/C++ 格式化器回归测试
-// 版本    : v1.4.9
+// 版本    : v1.4.10
 // 日期    : 2026/09/15
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.4.10 2026/09/15  验证宏值注释和连续调用参数对齐，保留表达式及分组边界
 //  v1.4.9  2026/09/15  验证函数内数组赋值、调用表达式及对齐分组边界
 //  v1.4.8  2026/09/15  验证混合类型变量的赋值、分号和注释对齐及重复格式化
 //  v1.4.2  2026/08/21  增加跨行控制条件单行化测试
@@ -329,6 +330,105 @@ describe('C/C++ formatter', () => {
         expect(formatC(expected)).toBe(expected);
     });
 
+    it('对齐连续同名调用的参数、逗号、右括号和行尾注释', () => {
+        const input = [
+            'void write_feedback(void) {',
+            '    write_reg(A, x); // 短参数',
+            '    write_reg(LONG, value); // 长参数',
+            '}',
+        ].join('\n');
+        const expected = [
+            'void write_feedback(void) {',
+            '    write_reg(A    , x     );  // 短参数',
+            '    write_reg(LONG , value );  // 长参数',
+            '}',
+        ].join('\n');
+        expect(formatC(input)).toBe(expected);
+        expect(formatC(expected)).toBe(expected);
+        expect(formatC(input.replace(/\n/g, '\r\n'))).toBe(expected.replace(/\n/g, '\r\n'));
+    });
+
+    it('对齐寄存器回传调用并保留类型转换和计算表达式', () => {
+        const input = [
+            'static void write_interp_param_feedback(void) {',
+            '    write_reg(SYS_CTRL_BASE + SYS_CTRL_WR_ACCEL_ACCEL, (u32)g_accel_accel);',
+            '    write_reg(SYS_CTRL_BASE + SYS_CTRL_WR_DECEL_SCALE, (u32)(g_decel_scale * INTERP_RATIO_SCALE));',
+            '    write_reg(SYS_CTRL_BASE + SYS_CTRL_WR_INTERP_PARA_UPDATE_EN, (u32)g_interp_para_update);',
+            '    write_reg(SYS_CTRL_BASE + SYS_CTRL_WR_INTERP_PARA_V, 0U);',
+            '}',
+        ].join('\n');
+        const output = formatC(input);
+        const calls = output.split('\n').filter(line => line.trim().startsWith('write_reg('));
+        expect(calls).toHaveLength(4);
+        expect(new Set(calls.map(line => line.indexOf(','))).size).toBe(1);
+        expect(new Set(calls.map(line => line.indexOf(');'))).size).toBe(1);
+        expect(output).toContain('(u32)(g_decel_scale * INTERP_RATIO_SCALE)');
+        expect(formatC(output)).toBe(output);
+    });
+
+    it('拆分参数时保留嵌套调用、数组下标、初始化列表和字符串内的逗号', () => {
+        const input = [
+            'send(select(A, B), values[index(1, 2)], "a,b//c");',
+            'send(f(), Point{1, 2}, R"tag(x,y)tag");',
+        ].join('\n');
+        const output = formatC(input);
+        expect(output).toContain('select(A, B)');
+        expect(output).toContain('values[index(1, 2)]');
+        expect(output).toContain('Point{1, 2}');
+        expect(output).toContain('"a,b//c"');
+        expect(output).toContain('R"tag(x,y)tag"');
+        const lines = output.split('\n');
+        expect(lines[0].indexOf(');')).toBe(lines[1].indexOf(');'));
+        expect(formatC(output)).toBe(output);
+    });
+
+    it('连续调用按函数名、参数数量、缩进及空行分组', () => {
+        const input = [
+            'void run() {',
+            '    if (ready)',
+            '        write_reg(LONG, value);',
+            '    write_reg(A, x);',
+            '    other_reg(LONG, value);',
+            '    other_reg(x);',
+            '',
+            '    other_reg(LONG);',
+            '    // 下一组',
+            '    other_reg(x);',
+            '    write_reg(A) /* 分号前注释 */;',
+            '    write_reg(LONG) /* 保留注释 */;',
+            '    /*',
+            '    write_reg(A, x);',
+            '    write_reg(LONG, value);',
+            '    */',
+            '}',
+        ].join('\n');
+        expect(formatC(input)).toBe(input);
+    });
+
+    it('将跨行调用合并后对齐参数，并跳过模板实参和一行多条语句', () => {
+        const input = [
+            'write_reg(',
+            '    A, x);',
+            'write_reg(LONG, value);',
+            '',
+            'write_reg(A, pair<int, int>());',
+            'write_reg(LONG, pair<int, int>());',
+            'write_reg(A, x); next();',
+            'write_reg(LONG, value); next();',
+        ].join('\n');
+        const expected = [
+            'write_reg(A    , x     );',
+            'write_reg(LONG , value );',
+            '',
+            'write_reg(A, pair<int, int>());',
+            'write_reg(LONG, pair<int, int>());',
+            'write_reg(A, x); next();',
+            'write_reg(LONG, value); next();',
+        ].join('\n');
+        expect(formatC(input)).toBe(expected);
+        expect(formatC(expected)).toBe(expected);
+    });
+
     it('把多行函数调用整理为单行', () => {
         const input = [
             '    send_packet(',
@@ -382,6 +482,89 @@ describe('C/C++ formatter', () => {
             '#define reg_read32  AL_REG32_READ(reg_addr)',
             '#define reg_read64  AL_REG64_READ(reg_addr)',
         ].join('\n'));
+    });
+
+    it('将带注释和无注释的寄存器宏定义一起对齐', () => {
+        const input = [
+            '#define SYS_CTRL_RD_ACCEL_ACCEL            0x4000U       // data_in_1：加速加速度',
+            '#define SYS_CTRL_RD_INTERP_PARA_UPDATE_EN 0x4024U // data_in_10：参数更新',
+            '#define SYS_CTRL_RD_MAX_ACCEL    0x402CU    // data_in_12：最大加速度',
+            '#define SYS_CTRL_RD_MERGE_CMD_DELAY 0x4040U',
+            '#define SYS_CTRL_RD_MERGE_THRED 0x4044U',
+        ].join('\n');
+        const output = formatC(input);
+        const lines = output.split('\n');
+        expect(new Set(lines.map(line => line.indexOf('0x'))).size).toBe(1);
+        expect(new Set(lines.filter(line => line.includes('//')).map(line => line.indexOf('//'))).size).toBe(1);
+        expect(lines[1]).toBe('#define SYS_CTRL_RD_INTERP_PARA_UPDATE_EN 0x4024U  // data_in_10：参数更新');
+        expect(lines[3].endsWith('0x4040U')).toBe(true);
+        expect(formatC(output)).toBe(output);
+        expect(formatC(input.replace(/\n/g, '\r\n'))).toBe(output.replace(/\n/g, '\r\n'));
+    });
+
+    it('统一宏指令空格并按不同长度的宏值对齐两种行尾注释', () => {
+        const input = [
+            '#define    A 0x1U // 短值',
+            '#define LONG_NAME (BASE + 4U) /* 表达式 */',
+            '#define B 0x4000U',
+        ].join('\n');
+        const expected = [
+            '#define A         0x1U         // 短值',
+            '#define LONG_NAME (BASE + 4U)  /* 表达式 */',
+            '#define B         0x4000U',
+        ].join('\n');
+        expect(formatC(input)).toBe(expected);
+        expect(formatC(expected)).toBe(expected);
+    });
+
+    it('保留宏值字符串内的注释符号、空格和函数宏签名', () => {
+        const input = [
+            '#define URL "https://host/a  b" // 地址',
+            '#define RAW R"tag(a " // b)tag" // 原始文本',
+            '#define PICK(x) ((x) + 1) // 函数宏',
+        ].join('\n');
+        const output = formatC(input);
+        expect(output).toContain('"https://host/a  b"');
+        expect(output).toContain('R"tag(a " // b)tag"');
+        expect(output).toContain('#define PICK(x) ((x) + 1)');
+        const lines = output.split('\n');
+        expect(new Set(lines.map(line => line.lastIndexOf('//'))).size).toBe(1);
+        expect(formatC(output)).toBe(output);
+    });
+
+    it('在空行和条件编译处分组，跳过多行宏及注释中的宏定义', () => {
+        const input = [
+            '#define A 1 // 一',
+            '#define LONG_NAME 2 // 二',
+            '',
+            '#ifdef ENABLED',
+            '#define B 3 // 三',
+            '#define CC 4 // 四',
+            '#endif',
+            '#define MULTI(x) \\',
+            '((x) + 1)',
+            '/*',
+            '#define OLD 1 // 历史文本',
+            '#define OLD_LONG 2 // 历史文本',
+            '*/',
+        ].join('\n');
+        const expected = [
+            '#define A         1  // 一',
+            '#define LONG_NAME 2  // 二',
+            '',
+            '#ifdef ENABLED',
+            '#define B  3  // 三',
+            '#define CC 4  // 四',
+            '#endif',
+            '#define MULTI(x) \\',
+            '((x) + 1)',
+            '/*',
+            '#define OLD 1 // 历史文本',
+            '#define OLD_LONG 2 // 历史文本',
+            '*/',
+        ].join('\n');
+        expect(formatC(input)).toBe(expected);
+        expect(formatC(expected)).toBe(expected);
     });
 
     it('对齐连续函数式宏定义的宏体列', () => {

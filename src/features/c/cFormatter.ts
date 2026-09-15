@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.ts
 // 描述    : C/C++ 变量定义、函数调用和函数花括号格式化
-// 版本    : v1.4.9
+// 版本    : v1.4.10
 // 日期    : 2026/09/15
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.4.10 2026/09/15  对齐宏定义的宏值和注释，以及连续同名调用的参数列
 //  v1.4.9  2026/09/15  对齐函数内连续赋值的左值、等号、表达式、分号和注释
 //  v1.4.8  2026/09/15  补齐变量声明的等号、初始值、分号和注释列对齐
 //  v1.4.2  2026/08/21  将跨行控制条件合并为单行
@@ -46,10 +47,18 @@ interface AssignmentLine {
     comment: string;
 }
 
+interface CallLine {
+    indent: string;
+    callee: string;
+    args: string[];
+    comment: string;
+}
+
 const CONTROL_KEYWORDS = new Set(['if', 'for', 'while', 'switch', 'catch']);
 const NON_TYPE_KEYWORDS = new Set([
     'break', 'case', 'continue', 'delete', 'else', 'goto', 'new', 'return', 'throw', 'using',
 ]);
+const C_LITERALS_AND_COMMENTS = /R"([^ ()\\\t\r\n]{0,16})\([\s\S]*?\)\1"|"(?:\\[\s\S]|[^"\\])*"|'(?:\\[^\r\n]|[^'\\\r\n])+'|\/\*[\s\S]*?(?:\*\/|$)|\/\/[^\n]*/g;
 
 /** 格式化 C/C++ 源码中明确要求统一的布局，不改写表达式语义。 */
 export function formatC(code: string): string {
@@ -64,6 +73,7 @@ export function formatC(code: string): string {
     normalized = alignMacroDefines(normalized);
     normalized = alignVariableDeclarations(normalized);
     normalized = alignAssignments(normalized);
+    normalized = alignConsecutiveCalls(normalized);
     normalized = alignEnumDeclarations(normalized);
     normalized = ensureBlankLineAfterTypeDeclarations(normalized);
     normalized = normalized.split('\n').map(line => line.trimEnd()).join('\n');
@@ -453,13 +463,17 @@ function alignVariableDeclarations(code: string): string {
     return result.join('\n');
 }
 
+function maskCLiteralsAndComments(code: string): string {
+    // 遮蔽字面量和注释但保留字符位置，避免把其中的等号、分号和跨行内容当作语句。
+    return code.replace(
+        C_LITERALS_AND_COMMENTS,
+        literal => literal.replace(/[^\n]/g, ' '),
+    );
+}
+
 function alignAssignments(code: string): string {
     const lines = code.split('\n');
-    // 遮蔽字面量和注释但保留字符位置，避免把其中的等号、分号和跨行内容当作语句。
-    const maskedLines = code.replace(
-        /R"([^ ()\\\t\r\n]{0,16})\([\s\S]*?\)\1"|"(?:\\[\s\S]|[^"\\])*"|'(?:\\[^\r\n]|[^'\\\r\n])+'|\/\*[\s\S]*?(?:\*\/|$)|\/\/[^\n]*/g,
-        literal => literal.replace(/[^\n]/g, ' '),
-    ).split('\n');
+    const maskedLines = maskCLiteralsAndComments(code).split('\n');
     const assignments = lines.map((line, index) => parseAssignment(line, maskedLines[index]));
 
     for (let i = 0; i < lines.length;) {
@@ -514,12 +528,90 @@ function parseAssignment(line: string, maskedLine: string): AssignmentLine | und
     };
 }
 
+function alignConsecutiveCalls(code: string): string {
+    const lines = code.split('\n');
+    const maskedLines = maskCLiteralsAndComments(code).split('\n');
+    const calls = lines.map((line, index) => parseCall(line, maskedLines[index]));
+    for (let i = 0; i < lines.length;) {
+        const first = calls[i];
+        if (!first) { i++; continue; }
+        const block = [first];
+        let end = i + 1;
+        while (end < lines.length) {
+            const next = calls[end];
+            if (!next || next.indent !== first.indent || next.callee !== first.callee
+                || next.args.length !== first.args.length) { break; }
+            block.push(next);
+            end++;
+        }
+        if (block.length > 1) {
+            const widths = first.args.map((_, index) => Math.max(...block.map(item => item.args[index].length)));
+            block.forEach((item, offset) => {
+                const args = item.args.map((arg, index) => arg.padEnd(widths[index] + 1)).join(', ');
+                const comment = item.comment ? `  ${item.comment}` : '';
+                lines[i + offset] = `${item.indent}${item.callee}(${args});${comment}`;
+            });
+        }
+        i = end;
+    }
+    return lines.join('\n');
+}
+
+function parseCall(line: string, maskedLine: string): CallLine | undefined {
+    const prefix = maskedLine.match(/^(\s*)((?:[A-Za-z_]\w*\s*(?:::|\.|->)\s*)*[A-Za-z_]\w*)\s*\(/);
+    if (!prefix || CONTROL_KEYWORDS.has(prefix[2]) || NON_TYPE_KEYWORDS.has(prefix[2])
+        || line.slice(0, prefix[0].length) !== prefix[0]) {
+        return undefined;
+    }
+    const args: string[] = [];
+    const closings: string[] = [')'];
+    let start = prefix[0].length;
+    for (let i = start; i < maskedLine.length; i++) {
+        const char = maskedLine[i];
+        if ('([{'.includes(char)) {
+            closings.push(char === '(' ? ')' : char === '[' ? ']' : '}');
+        } else if (')]}'.includes(char)) {
+            if (closings.pop() !== char) { return undefined; }
+            if (closings.length === 0) {
+                const lastArg = line.slice(start, i).trim();
+                if (!lastArg || !/^\s*;\s*$/.test(maskedLine.slice(i + 1))) { return undefined; }
+                const semicolon = maskedLine.indexOf(';', i + 1);
+                if (line.slice(i + 1, semicolon).trim()) { return undefined; }
+                args.push(lastArg);
+                return {
+                    indent: prefix[1],
+                    callee: prefix[2],
+                    args,
+                    comment: line.slice(semicolon + 1).trim(),
+                };
+            }
+        } else if (closings.length === 1 && char === ',') {
+            const arg = line.slice(start, i).trim();
+            if (!arg) { return undefined; }
+            args.push(arg);
+            start = i + 1;
+        } else if (closings.length === 1 && (char === '<' || char === ';')) {
+            // 模板实参与比较运算的尖括号有歧义，不把其中的逗号猜作参数分隔符。
+            return undefined;
+        }
+    }
+    return undefined;
+}
+
 function alignMacroDefines(code: string): string {
     const lines = code.split('\n');
     const result: string[] = [];
+    const maskedLines = maskCLiteralsAndComments(code).split('\n');
+    const macros = lines.map((line, index) => {
+        if (!/^\s*#define\b/.test(maskedLines[index])
+            || (index > 0 && lines[index - 1].trimEnd().endsWith('\\'))) {
+            return undefined;
+        }
+        return parseMacroDefine(line);
+    });
 
     for (let i = 0; i < lines.length;) {
-        const first = parseMacroDefine(lines[i]);
+        const first = macros[i];
         if (!first) {
             result.push(lines[i++]);
             continue;
@@ -528,7 +620,7 @@ function alignMacroDefines(code: string): string {
         const block: MacroDefineLine[] = [first];
         let end = i + 1;
         while (end < lines.length) {
-            const parsed = parseMacroDefine(lines[end]);
+            const parsed = macros[end];
             if (!parsed) { break; }
             block.push(parsed);
             end++;
@@ -538,7 +630,11 @@ function alignMacroDefines(code: string): string {
             result.push(lines[i]);
         } else {
             const maxSignature = Math.max(...block.map(item => item.signature.length));
-            result.push(...block.map(item => `${item.prefix}${item.signature.padEnd(maxSignature + 1)}${item.body}`));
+            const maxBody = Math.max(...block.map(item => item.body.length));
+            result.push(...block.map(item => {
+                const body = item.comment ? `${item.body.padEnd(maxBody)}  ${item.comment}` : item.body;
+                return `${item.prefix}${item.signature.padEnd(maxSignature + 1)}${body}`;
+            }));
         }
         i = end;
     }
@@ -550,15 +646,27 @@ interface MacroDefineLine {
     prefix: string;
     signature: string;
     body: string;
+    comment: string;
 }
 
 function parseMacroDefine(line: string): MacroDefineLine | undefined {
     const match = line.match(/^(\s*#define\s+)([A-Za-z_]\w*(?:\([^)]*\))?)\s+(.+)$/);
-    if (!match || hasComment(line)) { return undefined; }
+    if (!match || line.trimEnd().endsWith('\\')) { return undefined; }
+    const replacement = match[3].trim();
+    const commentMatch = [...replacement.matchAll(C_LITERALS_AND_COMMENTS)]
+        .find(token => token[0].startsWith('//') || token[0].startsWith('/*'));
+    if (commentMatch?.[0].startsWith('/*')
+        && (!commentMatch[0].endsWith('*/')
+            || replacement.slice(commentMatch.index + commentMatch[0].length).trim())) {
+        return undefined;
+    }
+    const body = commentMatch ? replacement.slice(0, commentMatch.index).trimEnd() : replacement;
+    if (!body) { return undefined; }
     return {
-        prefix: match[1],
+        prefix: '#define ',
         signature: match[2],
-        body: match[3].trim(),
+        body,
+        comment: commentMatch ? replacement.slice(commentMatch.index) : '',
     };
 }
 

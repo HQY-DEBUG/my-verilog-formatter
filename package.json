@@ -2,7 +2,7 @@
     "name": "hanxuyao-plugin",
     "displayName": "hanxuyao-plugin",
     "description": "Verilog / SystemVerilog / C / C++ 开发工具，内置 MATLAB 编辑、运行调试、工作区、工程与测试支持",
-    "version": "1.4.9",
+    "version": "1.4.10",
     "publisher": "hanxuyao",
     "repository": {
         "type": "git",
