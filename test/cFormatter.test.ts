@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.test.ts
 // 描述    : C/C++ 格式化器回归测试
-// 版本    : v1.4.8
+// 版本    : v1.4.9
 // 日期    : 2026/09/15
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.4.9  2026/09/15  验证函数内数组赋值、调用表达式及对齐分组边界
 //  v1.4.8  2026/09/15  验证混合类型变量的赋值、分号和注释对齐及重复格式化
 //  v1.4.2  2026/08/21  增加跨行控制条件单行化测试
 //  v1.4.0  2026/08/21  增加函数体及嵌套代码块缩进测试
@@ -86,6 +87,137 @@ describe('C/C++ formatter', () => {
 
         expect(formatC(input)).toBe(expected);
         expect(formatC(expected)).toBe(expected);
+    });
+
+    it('对齐函数内数组元素的寄存器读取赋值', () => {
+        const input = [
+            'static int read_and_apply_parameters(void) {',
+            '    uint32_t values[INTERP_VALUE_COUNT];',
+            '',
+            '    values[INTERP_VALUE_ACCEL_ACCEL] = platform_read32(SYS_CTRL_BASE + SYS_CTRL_RD_ACCEL_ACCEL);',
+            '    values[INTERP_VALUE_SCALE_SPEED_LIMIT] =platform_read32(SYS_CTRL_BASE + SYS_CTRL_RD_SCALE_SPEED_LIMIT); // 限速',
+            '    values[INTERP_VALUE_MAX_ACCEL] =  platform_read32(SYS_CTRL_BASE + SYS_CTRL_RD_MAX_ACCEL); // 最大加速度',
+            '',
+            '    if (validate_parameter_values(values) != 0) {',
+            '        return -1;',
+            '    }',
+            '    apply_parameter_values(values);',
+            '}',
+        ].join('\n');
+        const expected = [
+            'static int read_and_apply_parameters(void) {',
+            '    uint32_t values[INTERP_VALUE_COUNT];',
+            '',
+            '    values[INTERP_VALUE_ACCEL_ACCEL]       = platform_read32(SYS_CTRL_BASE + SYS_CTRL_RD_ACCEL_ACCEL)       ;',
+            '    values[INTERP_VALUE_SCALE_SPEED_LIMIT] = platform_read32(SYS_CTRL_BASE + SYS_CTRL_RD_SCALE_SPEED_LIMIT) ;  // 限速',
+            '    values[INTERP_VALUE_MAX_ACCEL]         = platform_read32(SYS_CTRL_BASE + SYS_CTRL_RD_MAX_ACCEL)         ;  // 最大加速度',
+            '',
+            '    if (validate_parameter_values(values) != 0) {',
+            '        return -1;',
+            '    }',
+            '    apply_parameter_values(values);',
+            '}',
+        ].join('\n');
+        expect(formatC(input)).toBe(expected);
+        expect(formatC(expected)).toBe(expected);
+        expect(formatC(input.replace(/\n/g, '\r\n'))).toBe(expected.replace(/\n/g, '\r\n'));
+    });
+
+    it('按缩进、空行和控制语句分组，不把无花括号的条件赋值与后续语句对齐', () => {
+        const input = [
+            'void run() {',
+            '    if (ready)',
+            '        values[LONG_INDEX] = read32(BASE);',
+            '    x = read32(BASE);',
+            '    longer = read32(OFFSET);',
+            '',
+            '    y = 1;',
+            '    z = 2;',
+            '    // 下一组',
+            '    if (ready) {',
+            '        state.x = 1;',
+            '        state->longer = 20;',
+            '    }',
+            '}',
+        ].join('\n');
+        const expected = [
+            'void run() {',
+            '    if (ready)',
+            '        values[LONG_INDEX] = read32(BASE);',
+            '    x      = read32(BASE)   ;',
+            '    longer = read32(OFFSET) ;',
+            '',
+            '    y = 1 ;',
+            '    z = 2 ;',
+            '    // 下一组',
+            '    if (ready) {',
+            '        state.x       = 1  ;',
+            '        state->longer = 20 ;',
+            '    }',
+            '}',
+        ].join('\n');
+        expect(formatC(input)).toBe(expected);
+        expect(formatC(expected)).toBe(expected);
+    });
+
+    it('保留赋值表达式中的字符串、比较运算和多参数调用', () => {
+        const input = [
+            'void run() {',
+            '    text = "https://a;b=1";',
+            '    ready = count == limit;',
+            '    value = read32(BASE, OFFSET);',
+            '}',
+        ].join('\n');
+        const expected = [
+            'void run() {',
+            '    text  = "https://a;b=1"      ;',
+            '    ready = count == limit       ;',
+            '    value = read32(BASE, OFFSET) ;',
+            '}',
+        ].join('\n');
+        expect(formatC(input)).toBe(expected);
+        expect(formatC(expected)).toBe(expected);
+    });
+
+    it('跳过注释内赋值、比较语句、复合赋值和一行多条语句', () => {
+        const input = [
+            'void run() {',
+            '    /*',
+            '    values[A] = read32(BASE);',
+            '    values[LONG_INDEX] = read32(OFFSET);',
+            '    */',
+            '    x == 1;',
+            '    longer != 2;',
+            '    x += 1;',
+            '    longer += 2;',
+            '    x = 1; next = 2;',
+            '    longer = 3; next = 4;',
+            '    /* 保留前置注释 */ x = read32(BASE);',
+            '    /* 保留前置注释 */ longer = read32(OFFSET);',
+            '}',
+        ].join('\n');
+        expect(formatC(input)).toBe(input);
+    });
+
+    it('合并跨行调用后对齐赋值，保留 C++ 原始字符串内容', () => {
+        const input = [
+            'void run() {',
+            '    values[A] = read32(',
+            '        BASE, OFFSET);',
+            '    values[LONG_INDEX] = read32(BASE, LONG_OFFSET);',
+            '',
+            '    text = R"tag(a " = ; // b)tag";',
+            '    other = "short";',
+            '}',
+        ].join('\n');
+        const output = formatC(input);
+        const assignments = output.split('\n').filter(line => line.trim().startsWith('values['));
+        expect(assignments).toHaveLength(2);
+        expect(assignments[0].indexOf('=')).toBe(assignments[1].indexOf('='));
+        expect(assignments[0].indexOf(';')).toBe(assignments[1].indexOf(';'));
+        expect(output).toContain('read32(BASE, OFFSET)');
+        expect(output).toContain('R"tag(a " = ; // b)tag"');
+        expect(formatC(output)).toBe(output);
     });
 
     it('按类型、名称、分号和注释对齐结构体成员', () => {

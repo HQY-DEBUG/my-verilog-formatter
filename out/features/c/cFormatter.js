@@ -2,12 +2,13 @@
 // =========================================================================
 // 文件    : cFormatter.ts
 // 描述    : C/C++ 变量定义、函数调用和函数花括号格式化
-// 版本    : v1.4.8
+// 版本    : v1.4.9
 // 日期    : 2026/09/15
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.4.9  2026/09/15  对齐函数内连续赋值的左值、等号、表达式、分号和注释
 //  v1.4.8  2026/09/15  补齐变量声明的等号、初始值、分号和注释列对齐
 //  v1.4.2  2026/08/21  将跨行控制条件合并为单行
 //  v1.4.0  2026/08/21  按代码块层级重算 C/C++ 缩进
@@ -72,6 +73,7 @@ function formatC(code) {
     normalized = reindentCBlocks(normalized);
     normalized = alignMacroDefines(normalized);
     normalized = alignVariableDeclarations(normalized);
+    normalized = alignAssignments(normalized);
     normalized = alignEnumDeclarations(normalized);
     normalized = ensureBlankLineAfterTypeDeclarations(normalized);
     normalized = normalized.split('\n').map(line => line.trimEnd()).join('\n');
@@ -449,6 +451,68 @@ function alignVariableDeclarations(code) {
         i = end;
     }
     return result.join('\n');
+}
+function alignAssignments(code) {
+    const lines = code.split('\n');
+    // 遮蔽字面量和注释但保留字符位置，避免把其中的等号、分号和跨行内容当作语句。
+    const maskedLines = code.replace(/R"([^ ()\\\t\r\n]{0,16})\([\s\S]*?\)\1"|"(?:\\[\s\S]|[^"\\])*"|'(?:\\[^\r\n]|[^'\\\r\n])+'|\/\*[\s\S]*?(?:\*\/|$)|\/\/[^\n]*/g, literal => literal.replace(/[^\n]/g, ' ')).split('\n');
+    const assignments = lines.map((line, index) => parseAssignment(line, maskedLines[index]));
+    for (let i = 0; i < lines.length;) {
+        const first = assignments[i];
+        if (!first) {
+            i++;
+            continue;
+        }
+        const block = [first];
+        let end = i + 1;
+        while (end < lines.length) {
+            const next = assignments[end];
+            if (!next || next.indent !== first.indent) {
+                break;
+            }
+            block.push(next);
+            end++;
+        }
+        if (block.length > 1) {
+            const maxTarget = Math.max(...block.map(item => item.target.length));
+            const maxValue = Math.max(...block.map(item => item.value.length));
+            block.forEach((item, offset) => {
+                const target = item.target.padEnd(maxTarget + 1);
+                const value = item.value.padEnd(maxValue + 1);
+                const comment = item.comment ? `  ${item.comment}` : '';
+                lines[i + offset] = `${item.indent}${target}= ${value};${comment}`;
+            });
+        }
+        i = end;
+    }
+    return lines.join('\n');
+}
+function parseAssignment(line, maskedLine) {
+    const prefix = maskedLine.match(/^(\s*)([A-Za-z_]\w*(?:\s*(?:::|\.|->)\s*[A-Za-z_]\w*|\s*\[[^\[\]]+\])*)\s*=(?!=)/);
+    if (!prefix
+        || line.slice(0, prefix[1].length) !== prefix[1]
+        || CONTROL_KEYWORDS.has(prefix[2])
+        || NON_TYPE_KEYWORDS.has(prefix[2])) {
+        return undefined;
+    }
+    const semicolon = maskedLine.lastIndexOf(';');
+    if (semicolon < prefix[0].length
+        || maskedLine.slice(semicolon + 1).trim()
+        || maskedLine.slice(prefix[0].length, semicolon).includes(';')
+        || /[{}]/.test(maskedLine)
+        || parenthesisDelta(maskedLine) !== 0) {
+        return undefined;
+    }
+    const value = line.slice(prefix[0].length, semicolon).trim();
+    if (!value) {
+        return undefined;
+    }
+    return {
+        indent: prefix[1],
+        target: line.slice(prefix[1].length, prefix[0].length - 1).trimEnd(),
+        value,
+        comment: line.slice(semicolon + 1).trim(),
+    };
 }
 function alignMacroDefines(code) {
     const lines = code.split('\n');
