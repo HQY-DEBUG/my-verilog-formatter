@@ -1,2 +1,5 @@
 # 保留上游源码快照的原始空白，避免为消除历史格式告警而改写第三方代码。
 vendor/matlab/** -whitespace
+vendor/highlight-words/** -whitespace
+vendor/rainbow-csv/** -whitespace
+test/upstream/rainbow-csv/** -whitespace

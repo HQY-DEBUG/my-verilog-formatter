@@ -1,6 +1,6 @@
 # hanxuyao-plugin
 
-面向 FPGA 与嵌入式开发者的 VS Code Verilog / SystemVerilog / C / C++ / MATLAB 辅助插件，主要功能包括：
+面向 FPGA 与嵌入式开发者的 VS Code 开发辅助插件，支持 Verilog / SystemVerilog / C / C++ / MATLAB，并内置词语高亮和 CSV / TSV 数据处理，主要功能包括：
 
 1. 代码格式化：支持 Verilog、SystemVerilog、C、C++ 和 MATLAB 代码整理。
 2. 工程浏览：提供 Verilog 文件树与模块层级查看。
@@ -8,12 +8,40 @@
 4. 代码阅读：提供语法高亮、符号跳转、悬停定义和代码补全。
 5. 代码检查：支持 Verilog 语法检查以及 TODO 标签扫描与管理。
 6. MATLAB 开发：内置智能编辑、运行调试、交互终端、变量工作区、工程管理和测试支持。
+7. 词语高亮：跨编辑器多色标记词语、选区和正则表达式，支持全词匹配、忽略大小写、侧栏管理与前后跳转。
+8. CSV / TSV 数据处理：提供彩虹列高亮、分隔符识别、CSV 校验、表头与列编辑、对齐、格式复制和 RBQL 查询。
 
-> 版本：v1.4.10　日期：2026/09/15
+> 版本：v1.4.11　日期：2026/09/21
 
 ---
 
 ## 功能列表
+
+### 词语高亮（highlight-words）
+
+内置 highlight-words v0.1.3 的全部 11 个命令和 4 项设置，不需要另外安装该扩展，适用于所有文本语言。
+
+- 选择文字或将光标放在词语上，执行“词语高亮：切换当前词语高亮”；再次执行可移除该词语。
+- 执行“高亮正则表达式”输入表达式，支持 `/expression/i`；普通选区按字面量匹配。
+- 支持普通、全词、忽略大小写及全词且忽略大小写四种模式，可对单个词语修改匹配选项。
+- 多个可见编辑器同步高亮；浅色和深色主题可分别配置颜色、边框或背景填充，并显示概览标尺标记。
+- “词语高亮”侧栏支持逐项删除、修改选项、上一个/下一个匹配与回绕导航，也可一次清除全部标记。
+- 保留 `highlightwords.colors`、`highlightwords.box`、`highlightwords.defaultMode`、`highlightwords.showSidebar` 设置和原始命令 ID，可继续使用已有快捷键。
+
+### CSV / TSV（Rainbow CSV）
+
+内置 Rainbow CSV v3.24.1 的全部 24 个公开命令、21 项设置及 RBQL JavaScript/Python 引擎。
+
+- CSV、TSV、分号、竖线、空白分隔以及动态分隔格式，支持内容自动识别、自定义多字符分隔符和 RFC 4180 多行引号字段。
+- 彩虹列高亮、列名悬停提示、光标列信息、固定表头、虚拟表头、注释行，以及最多三列跟踪与交替行背景。
+- CSVLint 检查引号和字段数；支持空格对齐、虚拟对齐、取消对齐及字段首尾空格清理，对齐时支持中文双宽字符。
+- 列多光标选择、字段前后插入、跳转到列；复制为 Excel / Sheets 可粘贴格式或 Markdown 表格。
+- 大文件头尾预览；通过右键菜单或状态栏 Query 打开 RBQL，支持 SELECT、UPDATE、WHERE、ORDER BY、GROUP BY、JOIN、结果导出及复制回源文件。
+- 保留 `rainbow_csv.*` 设置和 `rainbow-csv.*` 命令 ID。JavaScript 查询直接可用；Python 查询需要 PATH 中可用的 `python3`。RBQL 需要受信任工作区。
+
+同时启用原始 `rsbondi.highlight-words` 或 `mechatroner.rainbow-csv` 时复用其运行服务，避免重复注册。要使用本插件的内置版本，禁用对应原扩展后重新加载窗口；不需要卸载。
+
+本次还提供 Web 入口，供浏览器扩展宿主运行词语高亮和 Rainbow CSV。其限制沿用 Rainbow CSV 上游：浏览器查询使用 JavaScript，不支持 Python、本地文件 JOIN、文件头尾预览和复制回源文件。原有 MATLAB、本地编译检查等桌面功能仍需桌面版 VS Code。当前发布目标仍为 Windows x64，本次没有发布 Web 安装包。
 
 ### C / C++
 
@@ -322,7 +350,7 @@ Anlogic ADC 文件支持整文档或选区格式化，可自动对齐信号名�
 ### 环境要求
 
 - Node.js ≥ 18
-- VS Code ≥ 1.80
+- VS Code ≥ 1.95（Rainbow CSV v3.24.1 的最低要求）
 
 ### 安装依赖 & 编译
 
@@ -341,13 +369,13 @@ npm run compile
 当前安装包面向 Windows x64，包含 MATLAB 运行组件和 Windows ripgrep。发布时上传生成的 `.vsix` 文件；修改记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ```bash
-npm run package -- --target win32-x64 --out hanxuyao-plugin-1.4.10-win32-x64.vsix
-code --install-extension hanxuyao-plugin-1.4.10-win32-x64.vsix --force
+npm run package -- --target win32-x64 --out hanxuyao-plugin-1.4.11-win32-x64.vsix
+code --install-extension hanxuyao-plugin-1.4.11-win32-x64.vsix --force
 ```
 
 ---
 
-MATLAB 上游源码、固定提交和本地适配说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+MATLAB、highlight-words、Rainbow CSV 上游源码、固定提交和本地适配说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。`npm run compile` 会构建全部内置组件；仅调试新增高亮和 CSV 组件可运行 `npm run compile:editor-tools`。
 
 ## 代码结构
 
@@ -355,7 +383,9 @@ MATLAB 上游源码、固定提交和本地适配说明见 [THIRD_PARTY_NOTICES.
 hanxuyao-plugin/
 ├── src/
 │   ├── extension.ts               # 入口，注册所有 Provider 和命令
+│   ├── editorToolsWeb.ts          # 浏览器中的词语高亮与 CSV 入口
 │   └── features/
+│       ├── editorTools/           # 词语高亮与 CSV 生命周期、资源路径适配
 │       └── verilog/
 │           ├── formatter.ts       # 格式化核心逻辑
 │           ├── completionProvider.ts # 代码补全（关键字/符号/模块）
@@ -387,6 +417,7 @@ GitHub 自动测试、打包和发布的配置及使用方法见 [自动发布](
 
 | 版本 | 日期 | 修改内容 |
 |------|------|---------|
+| v1.4.11 | 2026/09/21 | 内置 highlight-words 与 Rainbow CSV，保留完整命令、配置、CSV/RBQL 运行资源和 Web 入口；同步插件简介、中文功能说明与代码注释 |
 | v1.4.10 | 2026/09/15 | 统一宏定义的宏值和注释列，新增连续同名函数调用的参数、逗号和右括号对齐，保留字面量及嵌套表达式 |
 | v1.4.9 | 2026/09/15 | 补齐函数内连续赋值的等号、表达式、分号和注释对齐，支持数组元素及成员赋值，保留分组边界和字面量内容 |
 | v1.4.8 | 2026/09/15 | 修复 C/C++ 混合类型变量声明对齐，补齐等号、初始值、分号和行尾注释列，统一等号后的空格 |

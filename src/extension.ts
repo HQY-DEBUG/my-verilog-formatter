@@ -1,21 +1,20 @@
 // =========================================================================
 // 文件    : extension.ts
 // 描述    : VS Code 扩展入口，注册所有 Provider 和命令
-// 版本    : v1.4.4
-// 日期    : 2026/09/11
+// 版本    : v1.4.11
+// 日期    : 2026/09/21
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.4.11 2026/09/21  集成词语高亮与 Rainbow CSV 完整运行组件
 //  v1.4.4  2026/09/11  内置 MATLAB 官方功能并支持格式化实现切换
 //  v1.4.1  2026/08/21  主动触发 C/C++ 自动建议和函数参数提示
-//  v1.2.1  2026/08/21  使用插件专用命令执行快捷键格式化
-//  v1.1.0  2026/08/21  注册 C/C++ 格式化器并扩展保存时格式化范围
-//  v0.2.0  2026/05/25  新增文件树、例化、跳转、悬停、语法检查、UCF转XDC、数字编辑
-//  v0.1.0  2026/05/25  创建文件
 // =========================================================================
 
 import * as vscode from 'vscode';
+// 2026/09/21 新增：统一管理词语高亮、CSV 命令与资源的生命周期。
+import { activateEditorTools, deactivateEditorTools } from './features/editorTools/editorToolsIntegration';
 import { CFormatter }                from './features/c/cFormatter';
 import { activateMatlab, deactivateMatlab, useMathWorksFormatter } from './features/matlab/matlabIntegration';
 import { MatlabFormatter }           from './features/matlab/matlabFormatter';
@@ -37,6 +36,8 @@ export const C_LANGS = ['c', 'cpp'];
 export const MATLAB_LANGS = ['matlab'];
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
+    // 2026/09/21 新增：独立启动通用编辑功能，避免 MATLAB 初始化影响高亮与 CSV。
+    await activateEditorTools(context);
     const formatter = new VerilogFormatter();
     const cFormatter = new CFormatter();
     const matlabFormatter = new MatlabFormatter();
@@ -361,5 +362,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 }
 
 export async function deactivate(): Promise<void> {
+    // 2026/09/21 新增：释放本插件持有的高亮与 CSV 运行时。
+    await deactivateEditorTools();
     await deactivateMatlab();
 }

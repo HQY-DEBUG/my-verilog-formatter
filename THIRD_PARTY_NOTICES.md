@@ -1,4 +1,4 @@
-# MATLAB 内置组件来源
+# 内置组件来源
 
 本插件内置下列上游组件的源码快照，版权归原作者所有。插件身份保持为 `hanxuyao.hanxuyao-plugin`，不是 MathWorks 官方发行版。
 
@@ -40,3 +40,26 @@ npm test -- --runInBand
 ```
 
 `setup:matlab` 按三个上游锁文件安装构建依赖；`compile` 编译客户端、语言服务器、工作区界面和登录网页，再将运行资源复制到宿主输出目录。仅运行根目录 `tsc` 不会生成完整 MATLAB 组件。
+
+## highlight-words 与 Rainbow CSV（2026/09/21）
+
+| 组件 | 版本 / 固定提交 | 许可证 |
+| --- | --- | --- |
+| [highlight-words](https://github.com/rsbondi/highlight-words) | v0.1.3 / `a93c4967d36d861face6468ea0af698b646e7430` | MIT，保留 `vendor/highlight-words/LICENSE.md` |
+| [Rainbow CSV](https://github.com/mechatroner/vscode_rainbow_csv) | v3.24.1 / `82f1b82272e567d6e1736fce845f94eccef6d211` | MIT，保留 `vendor/rainbow-csv/LICENSE` |
+| RBQL | 随上述 Rainbow CSV 快照 | MIT，保留 `rbql_core/LICENSE` |
+| textarea-caret-position / wcwidth | 随上述 Rainbow CSV 快照 | 各自原许可，保留 `contrib/*/LICENSE` |
+
+生产源码位于 `vendor/highlight-words/`、`vendor/rainbow-csv/`，保留原始 manifest 以核对贡献点，不引入 Git 历史、CI 或开发依赖。Rainbow CSV 原单元测试位于 `test/upstream/rainbow-csv/`，仅调整两个模块加载路径，其许可见上述 Rainbow CSV 许可。
+
+`scripts/build-editor-tools.js` 用根目录已锁定的 esbuild 构建词语高亮，将 Rainbow CSV 的语法、Webview、列工具、RBQL 双引擎、辅助库和许可证复制到 `out/`；Web 入口按上游构建方式屏蔽 Node 专属模块。构建不连接上游服务，不增加运行时 npm 依赖。
+
+本地适配：
+
+1. 保留上游 11 + 24 个公开命令、4 + 21 项设置及其 ID，合并语言、语法、菜单、视图、颜色与语义高亮贡献；资源路径映射到 `out/<组件>/`，命令和设置说明使用中文。
+2. 使用独立资源上下文和宿主状态存储；已启用原扩展时复用原扩展服务。禁用原扩展后使用内置版本，原扩展的历史状态不会自动迁移。
+3. 修复 highlight-words 零长度正则循环、空编辑器/取消输入、前后回绕与多行匹配、跨编辑器计数、配置变更装饰器释放和树/命令/事件清理。普通文本继续转义后匹配，正则保留上游语义。
+4. Rainbow CSV 查询入口和实际执行处增加工作区信任检查，防止受限工作区执行查询代码；释放退出时的动态资源。其余生产算法保留上游实现。
+5. 桌面入口保留完整功能，新增 Web 入口仅运行这两个组件；浏览器运行限制与上游一致。现有桌面 MATLAB 和 Verilog 开发工具不因 Web 入口变为浏览器功能。
+
+许可证同时复制到安装包的 `out/highlight-words/` 和 `out/rainbow-csv/`。上游源码注释保持原文，本地适配以中文日期注释标明。后续升级需要重新核对全部贡献点、资源依赖、工作区信任和原扩展共存行为。

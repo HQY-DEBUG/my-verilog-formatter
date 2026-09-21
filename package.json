@@ -1,8 +1,8 @@
 {
     "name": "hanxuyao-plugin",
     "displayName": "hanxuyao-plugin",
-    "description": "Verilog / SystemVerilog / C / C++ 开发工具，内置 MATLAB 编辑、运行调试、工作区、工程与测试支持",
-    "version": "1.4.10",
+    "description": "Verilog / SystemVerilog / C / C++ / MATLAB 开发工具，内置词语与正则高亮、CSV/TSV 彩虹列高亮及 RBQL 查询",
+    "version": "1.4.11",
     "publisher": "hanxuyao",
     "repository": {
         "type": "git",
@@ -13,11 +13,15 @@
         "systemverilog",
         "formatter",
         "fpga",
-        "matlab"
+        "matlab",
+        "csv",
+        "tsv",
+        "highlight",
+        "rbql"
     ],
     "icon": "icon.png",
     "engines": {
-        "vscode": "^1.80.0"
+        "vscode": "^1.95.0"
     },
     "categories": [
         "Formatters",
@@ -48,7 +52,24 @@
         "onStartupFinished",
         "onDebugResolve:matlab",
         "onDebugDynamicConfigurations:matlab",
-        "onTerminalProfile:matlab.terminal-profile"
+        "onTerminalProfile:matlab.terminal-profile",
+        "onCommand:highlightwords.addHighlight",
+        "onCommand:highlightwords.removeHighlight",
+        "onCommand:highlightwords.addRegExpHighlight",
+        "onCommand:highlightwords.addHighlightWithOptions",
+        "onCommand:highlightwords.removeAllHighlights",
+        "onCommand:highlightwords.setHighlightMode",
+        "onLanguage:csv",
+        "onLanguage:tsv",
+        "onLanguage:csv (semicolon)",
+        "onLanguage:csv (pipe)",
+        "onLanguage:csv (whitespace)",
+        "onLanguage:dynamic csv",
+        "onLanguage:plaintext",
+        "onCommand:rainbow-csv.RBQL",
+        "onCommand:rainbow-csv.RainbowSeparator",
+        "onCommand:rainbow-csv.SampleHead",
+        "onCommand:rainbow-csv.SampleTail"
     ],
     "main": "./out/extension.js",
     "contributes": {
@@ -180,6 +201,65 @@
                     "light": "./out/matlab/public/fileIcon_24x24.png",
                     "dark": "./out/matlab/public/fileIcon_24x24.png"
                 }
+            },
+            {
+                "id": "csv",
+                "aliases": [
+                    "CSV",
+                    "csv"
+                ],
+                "extensions": [
+                    ".csv"
+                ],
+                "configuration": "./out/rainbow-csv/language-configuration.json"
+            },
+            {
+                "id": "tsv",
+                "aliases": [
+                    "TSV",
+                    "tsv"
+                ],
+                "extensions": [
+                    ".tsv",
+                    ".tab"
+                ],
+                "configuration": "./out/rainbow-csv/language-configuration.json"
+            },
+            {
+                "id": "csv (pipe)",
+                "aliases": [
+                    "CSV (pipe)",
+                    "csv (pipe)"
+                ],
+                "extensions": [],
+                "configuration": "./out/rainbow-csv/language-configuration.json"
+            },
+            {
+                "id": "csv (whitespace)",
+                "aliases": [
+                    "CSV (whitespace)",
+                    "csv (whitespace)"
+                ],
+                "extensions": [],
+                "configuration": "./out/rainbow-csv/language-configuration.json"
+            },
+            {
+                "id": "csv (semicolon)",
+                "aliases": [
+                    "CSV (semicolon)",
+                    "csv (semicolon)"
+                ],
+                "extensions": [],
+                "configuration": "./out/rainbow-csv/language-configuration.json"
+            },
+            {
+                "id": "dynamic csv",
+                "aliases": [
+                    "Dynamic CSV",
+                    "dynamic csv"
+                ],
+                "extensions": [],
+                "configuration": "./out/rainbow-csv/language-configuration.json"
             }
         ],
         "snippets": [
@@ -267,6 +347,36 @@
                 "language": "matlab",
                 "scopeName": "source.matlab",
                 "path": "./out/matlab/syntaxes/Matlab.tmbundle/Syntaxes/MATLAB.tmLanguage"
+            },
+            {
+                "language": "csv",
+                "scopeName": "text.csv",
+                "path": "./out/rainbow-csv/syntaxes/csv.tmLanguage.json"
+            },
+            {
+                "language": "tsv",
+                "scopeName": "text.tsv",
+                "path": "./out/rainbow-csv/syntaxes/tsv.tmLanguage.json"
+            },
+            {
+                "language": "csv (pipe)",
+                "scopeName": "text.psv",
+                "path": "./out/rainbow-csv/syntaxes/pipe_simple.tmLanguage.json"
+            },
+            {
+                "language": "csv (whitespace)",
+                "scopeName": "text.wspcsv",
+                "path": "./out/rainbow-csv/syntaxes/wspcsv.tmLanguage.json"
+            },
+            {
+                "language": "csv (semicolon)",
+                "scopeName": "text.scsv",
+                "path": "./out/rainbow-csv/syntaxes/scsv.tmLanguage.json"
+            },
+            {
+                "language": "dynamic csv",
+                "scopeName": "text.dynamiccsv",
+                "path": "./out/rainbow-csv/syntaxes/dynamic_csv.tmLanguage.json"
             }
         ],
         "views": {
@@ -280,6 +390,11 @@
                     "id": "verilogTodoTree",
                     "name": "TODO",
                     "when": "workbenchState != empty"
+                },
+                {
+                    "id": "hilightWordsExplore",
+                    "name": "词语高亮",
+                    "when": "showSidebar"
                 }
             ],
             "matlabSidebar": [
@@ -359,6 +474,24 @@
                     "command": "verilogFormatter.todo.resetPathFilter",
                     "when": "view == verilogTodoTree",
                     "group": "todo@2"
+                },
+                {
+                    "command": "highlightwords.treeRemoveHighlight",
+                    "when": "view == hilightWordsExplore"
+                },
+                {
+                    "command": "highlightwords.treeHighlightOptions",
+                    "when": "view == hilightWordsExplore"
+                },
+                {
+                    "command": "highlightwords.findPrevious",
+                    "when": "view == hilightWordsExplore",
+                    "group": "inline"
+                },
+                {
+                    "command": "highlightwords.findNext",
+                    "when": "view == hilightWordsExplore",
+                    "group": "inline"
                 }
             ],
             "editor/context": [
@@ -391,6 +524,9 @@
                     "command": "matlab.runSelection",
                     "when": "editorLangId == matlab && editorHasSelection && !editorHasMultipleSelections && !matlab.isDebugging",
                     "group": "3_run"
+                },
+                {
+                    "submenu": "rainbow_csv.submenu"
                 }
             ],
             "commandPalette": [
@@ -475,6 +611,16 @@
                     "command": "matlab.openFile",
                     "when": "!explorerResourceIsFolder",
                     "group": "files"
+                },
+                {
+                    "command": "rainbow-csv.SampleHead",
+                    "when": "config.rainbow_csv.enable_context_menu_head || resourceLangId =~ /plaintext|^[ct]sv/",
+                    "group": "rainbow_csv"
+                },
+                {
+                    "command": "rainbow-csv.SampleTail",
+                    "when": "config.rainbow_csv.enable_context_menu_tail",
+                    "group": "rainbow_csv"
                 }
             ],
             "matlab.addPath": [
@@ -527,6 +673,98 @@
                     "command": "matlab.project.close",
                     "when": "explorerResourceIsFolder || resourceExtname == .prj || resourceFilename == matlab.toml",
                     "group": "matlab_project@2"
+                }
+            ],
+            "rainbow_csv.submenu": [
+                {
+                    "when": "editorTextFocus && editorLangId =~ /dynamic csv|^[ct]sv/",
+                    "command": "rainbow-csv.GoToColumn",
+                    "group": "common@7"
+                },
+                {
+                    "when": "editorTextFocus && editorLangId =~ /dynamic csv|^[ct]sv/",
+                    "command": "rainbow-csv.SetHeaderLine",
+                    "group": "common@7"
+                },
+                {
+                    "when": "editorTextFocus && editorLangId =~ /dynamic csv|^[ct]sv/",
+                    "command": "rainbow-csv.SetCommentPrefix",
+                    "group": "common@6"
+                },
+                {
+                    "when": "editorTextFocus && editorLangId =~ /dynamic csv|plaintext|^[ct]sv/",
+                    "command": "rainbow-csv.RainbowSeparator",
+                    "group": "common@5"
+                },
+                {
+                    "when": "editorTextFocus && editorLangId =~ /dynamic csv|^[ct]sv/",
+                    "command": "rainbow-csv.RBQL",
+                    "group": "common@4"
+                },
+                {
+                    "when": "editorTextFocus && editorLangId =~ /dynamic csv|^[ct]sv/",
+                    "command": "rainbow-csv.ToggleRowBackground",
+                    "group": "common@3"
+                },
+                {
+                    "when": "editorTextFocus && editorLangId =~ /dynamic csv|^[ct]sv/",
+                    "command": "rainbow-csv.ToggleColumnTracking",
+                    "group": "common@2"
+                },
+                {
+                    "when": "editorTextFocus && editorLangId =~ /plaintext/",
+                    "command": "rainbow-csv.RainbowSeparatorOn",
+                    "group": "common@1"
+                },
+                {
+                    "when": "editorTextFocus && editorLangId =~ /dynamic csv|^[ct]sv/",
+                    "command": "rainbow-csv.ExcelCopy",
+                    "group": "datacopy@1"
+                },
+                {
+                    "when": "editorTextFocus && editorLangId =~ /dynamic csv|^[ct]sv/",
+                    "command": "rainbow-csv.MarkdownCopy",
+                    "group": "datacopy@2"
+                },
+                {
+                    "when": "editorTextFocus && editorLangId =~ /dynamic csv|^[ct]sv/",
+                    "command": "rainbow-csv.Align",
+                    "group": "regular_align@1"
+                },
+                {
+                    "when": "editorTextFocus && editorLangId =~ /dynamic csv|^[ct]sv/",
+                    "command": "rainbow-csv.Shrink",
+                    "group": "regular_align@2"
+                },
+                {
+                    "when": "editorTextFocus && editorLangId =~ /dynamic csv|^[ct]sv/",
+                    "command": "rainbow-csv.VirtualAlign",
+                    "group": "virtual_align@1"
+                },
+                {
+                    "when": "editorTextFocus && editorLangId =~ /dynamic csv|^[ct]sv/",
+                    "command": "rainbow-csv.VirtualShrink",
+                    "group": "virtual_align@2"
+                },
+                {
+                    "when": "editorTextFocus && editorLangId =~ /dynamic csv|^[ct]sv/",
+                    "command": "rainbow-csv.ColumnEditSelect",
+                    "group": "wgroup@1"
+                },
+                {
+                    "when": "editorTextFocus && editorLangId =~ /dynamic csv|^[ct]sv/",
+                    "command": "rainbow-csv.ColumnEditBefore",
+                    "group": "wgroup@2"
+                },
+                {
+                    "when": "editorTextFocus && editorLangId =~ /dynamic csv|^[ct]sv/",
+                    "command": "rainbow-csv.ColumnEditAfter",
+                    "group": "wgroup@3"
+                },
+                {
+                    "when": "editorTextFocus && editorLangId =~ /dynamic csv|^[ct]sv/",
+                    "command": "rainbow-csv.RainbowSeparatorOff",
+                    "group": "xgroup@1"
                 }
             ]
         },
@@ -747,6 +985,187 @@
                 "command": "matlab.testing.removeTestItem",
                 "title": "Remove Test",
                 "icon": "$(trash)"
+            },
+            {
+                "command": "highlightwords.addHighlight",
+                "title": "切换当前词语高亮",
+                "category": "词语高亮"
+            },
+            {
+                "command": "highlightwords.removeHighlight",
+                "title": "移除高亮",
+                "category": "词语高亮"
+            },
+            {
+                "command": "highlightwords.removeAllHighlights",
+                "title": "清除全部高亮",
+                "category": "词语高亮"
+            },
+            {
+                "command": "highlightwords.addRegExpHighlight",
+                "title": "高亮正则表达式",
+                "category": "词语高亮"
+            },
+            {
+                "command": "highlightwords.addHighlightWithOptions",
+                "title": "按选项高亮选区",
+                "category": "词语高亮"
+            },
+            {
+                "command": "highlightwords.setHighlightMode",
+                "title": "设置高亮模式",
+                "category": "词语高亮"
+            },
+            {
+                "command": "highlightwords.treeRemoveHighlight",
+                "title": "移除",
+                "category": "词语高亮"
+            },
+            {
+                "command": "highlightwords.treeHighlightOptions",
+                "title": "修改匹配选项",
+                "category": "词语高亮"
+            },
+            {
+                "command": "highlightwords.toggleSidebar",
+                "title": "显示或隐藏高亮侧栏",
+                "category": "词语高亮"
+            },
+            {
+                "command": "highlightwords.findPrevious",
+                "title": "上一个匹配",
+                "icon": {
+                    "light": "./out/highlight-words/resources/icons/arrow-left.svg",
+                    "dark": "./out/highlight-words/resources/icons/arrow-left-white.svg"
+                },
+                "category": "词语高亮"
+            },
+            {
+                "command": "highlightwords.findNext",
+                "title": "下一个匹配",
+                "icon": {
+                    "light": "./out/highlight-words/resources/icons/arrow-right.svg",
+                    "dark": "./out/highlight-words/resources/icons/arrow-right-white.svg"
+                },
+                "category": "词语高亮"
+            },
+            {
+                "command": "rainbow-csv.CSVLint",
+                "category": "Rainbow CSV",
+                "title": "检查 CSV 一致性"
+            },
+            {
+                "command": "rainbow-csv.SetVirtualHeader",
+                "category": "Rainbow CSV",
+                "title": "设置虚拟表头"
+            },
+            {
+                "command": "rainbow-csv.SetHeaderLine",
+                "category": "Rainbow CSV",
+                "title": "设置表头行"
+            },
+            {
+                "command": "rainbow-csv.SetCommentPrefix",
+                "category": "Rainbow CSV",
+                "title": "将选区设为注释前缀"
+            },
+            {
+                "command": "rainbow-csv.RBQL",
+                "category": "Rainbow CSV",
+                "title": "RBQL 查询"
+            },
+            {
+                "command": "rainbow-csv.SetJoinTableName",
+                "category": "Rainbow CSV",
+                "title": "设置 RBQL 关联表名称"
+            },
+            {
+                "command": "rainbow-csv.ColumnEditBefore",
+                "category": "Rainbow CSV",
+                "title": "列编辑：字段前插入"
+            },
+            {
+                "command": "rainbow-csv.ColumnEditAfter",
+                "category": "Rainbow CSV",
+                "title": "列编辑：字段后插入"
+            },
+            {
+                "command": "rainbow-csv.ColumnEditSelect",
+                "category": "Rainbow CSV",
+                "title": "列编辑：选择字段"
+            },
+            {
+                "command": "rainbow-csv.RainbowSeparator",
+                "category": "Rainbow CSV",
+                "title": "设置分隔符"
+            },
+            {
+                "command": "rainbow-csv.ToggleColumnTracking",
+                "category": "Rainbow CSV",
+                "title": "切换列跟踪"
+            },
+            {
+                "command": "rainbow-csv.ExcelCopy",
+                "category": "Rainbow CSV",
+                "title": "复制为 Excel / Sheets 格式"
+            },
+            {
+                "command": "rainbow-csv.MarkdownCopy",
+                "category": "Rainbow CSV",
+                "title": "复制为 Markdown 表格"
+            },
+            {
+                "command": "rainbow-csv.RainbowSeparatorOff",
+                "category": "Rainbow CSV",
+                "title": "关闭彩虹高亮"
+            },
+            {
+                "command": "rainbow-csv.RainbowSeparatorOn",
+                "category": "Rainbow CSV",
+                "title": "恢复彩虹高亮"
+            },
+            {
+                "command": "rainbow-csv.ToggleRowBackground",
+                "category": "Rainbow CSV",
+                "title": "切换交替行背景"
+            },
+            {
+                "command": "rainbow-csv.Align",
+                "category": "Rainbow CSV",
+                "title": "使用空格对齐列"
+            },
+            {
+                "command": "rainbow-csv.Shrink",
+                "category": "Rainbow CSV",
+                "title": "清理字段首尾空格"
+            },
+            {
+                "command": "rainbow-csv.VirtualAlign",
+                "category": "Rainbow CSV",
+                "title": "虚拟对齐列"
+            },
+            {
+                "command": "rainbow-csv.VirtualShrink",
+                "category": "Rainbow CSV",
+                "title": "取消虚拟对齐"
+            },
+            {
+                "command": "rainbow-csv.CopyBack",
+                "category": "Rainbow CSV",
+                "title": "将查询结果复制回源文件"
+            },
+            {
+                "command": "rainbow-csv.SampleHead",
+                "title": "预览大文件头部"
+            },
+            {
+                "command": "rainbow-csv.SampleTail",
+                "title": "预览大文件尾部"
+            },
+            {
+                "command": "rainbow-csv.GoToColumn",
+                "category": "Rainbow CSV",
+                "title": "跳转到列"
             }
         ],
         "keybindings": [
@@ -1044,6 +1463,262 @@
                         ]
                     }
                 }
+            },
+            {
+                "properties": {
+                    "highlightwords.colors": {
+                        "default": [
+                            {
+                                "light": "#b3d9ff",
+                                "dark": "cyan"
+                            },
+                            {
+                                "light": "#e6ffb3",
+                                "dark": "pink"
+                            },
+                            {
+                                "light": "#b3b3ff",
+                                "dark": "lightgreen"
+                            },
+                            {
+                                "light": "#ffd9b3",
+                                "dark": "magenta"
+                            },
+                            {
+                                "light": "#ffb3ff",
+                                "dark": "cornflowerblue"
+                            },
+                            {
+                                "light": "#b3ffb3",
+                                "dark": "orange"
+                            },
+                            {
+                                "light": "#ffff80",
+                                "dark": "green"
+                            },
+                            {
+                                "light": "#d1e0e0",
+                                "dark": "red"
+                            }
+                        ],
+                        "type": "array",
+                        "minItems": 1,
+                        "description": "按顺序循环使用的浅色和深色主题配色。",
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "light",
+                                "dark"
+                            ],
+                            "properties": {
+                                "light": {
+                                    "type": "string"
+                                },
+                                "dark": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "highlightwords.box": {
+                        "default": {
+                            "light": false,
+                            "dark": true
+                        },
+                        "type": "object",
+                        "description": "浅色和深色主题是否使用边框高亮；关闭时使用背景填充。",
+                        "properties": {
+                            "light": {
+                                "type": "boolean"
+                            },
+                            "dark": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "highlightwords.defaultMode": {
+                        "default": 0,
+                        "type": "integer",
+                        "enum": [
+                            0,
+                            1,
+                            2,
+                            3
+                        ],
+                        "enumDescriptions": [
+                            "普通匹配",
+                            "全词匹配",
+                            "忽略大小写",
+                            "全词并忽略大小写"
+                        ],
+                        "description": "切换当前词语高亮时的默认匹配模式。"
+                    },
+                    "highlightwords.showSidebar": {
+                        "default": true,
+                        "type": "boolean",
+                        "description": "默认显示词语高亮侧栏。"
+                    }
+                },
+                "title": "词语高亮"
+            },
+            {
+                "type": "object",
+                "title": "Rainbow CSV",
+                "properties": {
+                    "rainbow_csv.enable_sticky_header": {
+                        "type": "boolean",
+                        "default": true,
+                        "order": 1,
+                        "description": "在顶部显示固定表头。"
+                    },
+                    "rainbow_csv.enable_separator_autodetection": {
+                        "type": "boolean",
+                        "default": true,
+                        "order": 2,
+                        "description": "根据文件内容自动识别分隔符。"
+                    },
+                    "rainbow_csv.autodetect_separators": {
+                        "type": "array",
+                        "default": [
+                            "TAB",
+                            ",",
+                            ";",
+                            "|"
+                        ],
+                        "description": "参与自动识别的分隔符，支持多字符；TAB 表示制表符。",
+                        "order": 3,
+                        "items": {
+                            "type": "string",
+                            "description": "分隔符"
+                        }
+                    },
+                    "rainbow_csv.autodetection_min_line_count": {
+                        "type": "number",
+                        "default": 10,
+                        "order": 4,
+                        "description": "自动识别所需的最少非注释行数。"
+                    },
+                    "rainbow_csv.highlight_rows": {
+                        "type": "boolean",
+                        "default": false,
+                        "order": 5,
+                        "description": "默认使用交替背景色区分相邻行。"
+                    },
+                    "rainbow_csv.virtual_alignment_mode": {
+                        "type": "string",
+                        "enum": [
+                            "disabled",
+                            "manual",
+                            "always"
+                        ],
+                        "enumDescriptions": [
+                            "仅通过虚拟对齐命令启用",
+                            "点击状态栏对齐按钮时启用",
+                            "自动对齐所有 CSV 文件"
+                        ],
+                        "order": 6,
+                        "default": "disabled",
+                        "description": "虚拟对齐模式：通过内嵌提示对齐，不修改文件内容。"
+                    },
+                    "rainbow_csv.virtual_alignment_char": {
+                        "type": "string",
+                        "enum": [
+                            "middot",
+                            "space"
+                        ],
+                        "enumDescriptions": [
+                            "中点",
+                            "空格"
+                        ],
+                        "order": 7,
+                        "default": "middot",
+                        "description": "虚拟对齐时使用的填充字符。"
+                    },
+                    "rainbow_csv.virtual_alignment_vertical_grid": {
+                        "type": "boolean",
+                        "default": false,
+                        "order": 8,
+                        "description": "虚拟对齐时显示竖向网格。"
+                    },
+                    "rainbow_csv.enable_tooltip": {
+                        "type": "boolean",
+                        "default": true,
+                        "order": 9,
+                        "description": "悬停时显示列信息。"
+                    },
+                    "rainbow_csv.enable_tooltip_column_names": {
+                        "type": "boolean",
+                        "default": true,
+                        "order": 10,
+                        "description": "悬停提示中显示列名。"
+                    },
+                    "rainbow_csv.enable_cursor_position_info": {
+                        "type": "boolean",
+                        "default": true,
+                        "order": 11,
+                        "description": "在状态栏显示光标所在的列信息。"
+                    },
+                    "rainbow_csv.double_width_alignment": {
+                        "type": "boolean",
+                        "default": true,
+                        "order": 12,
+                        "description": "对齐时将中文、日文等全角字符按双宽计算。"
+                    },
+                    "rainbow_csv.enable_auto_csv_lint": {
+                        "type": "boolean",
+                        "default": true,
+                        "order": 13,
+                        "description": "自动检查 CSV 引号和字段数量的一致性。"
+                    },
+                    "rainbow_csv.csv_lint_detect_trailing_spaces": {
+                        "type": "boolean",
+                        "default": false,
+                        "order": 14,
+                        "description": "CSV 检查时报告字段首尾空格。"
+                    },
+                    "rainbow_csv.comment_prefix": {
+                        "type": "string",
+                        "default": "",
+                        "order": 15,
+                        "description": "注释行前缀，例如 #；空字符串表示禁用。"
+                    },
+                    "rainbow_csv.rbql_output_dir": {
+                        "type": "string",
+                        "default": "TMP",
+                        "order": 16,
+                        "description": "RBQL 输出目录：TMP 为系统临时目录，INPUT 为输入文件目录，也可指定绝对路径。"
+                    },
+                    "rainbow_csv.rbql_with_headers_by_default": {
+                        "type": "boolean",
+                        "default": false,
+                        "order": 17,
+                        "description": "RBQL 默认将第一行作为表头。"
+                    },
+                    "rainbow_csv.rbql_strip_spaces": {
+                        "type": "boolean",
+                        "default": true,
+                        "order": 18,
+                        "description": "RBQL 查询预处理时去除字段首尾空格。"
+                    },
+                    "rainbow_csv.enable_context_menu_head": {
+                        "type": "boolean",
+                        "default": false,
+                        "order": 19,
+                        "description": "在所有文件的资源管理器菜单中启用头部预览。"
+                    },
+                    "rainbow_csv.enable_context_menu_tail": {
+                        "type": "boolean",
+                        "default": false,
+                        "order": 20,
+                        "description": "在所有文件的资源管理器菜单中启用尾部预览。"
+                    },
+                    "rainbow_csv.enable_debug_logging": {
+                        "type": "boolean",
+                        "default": false,
+                        "order": 21,
+                        "description": "启用开发调试日志，通过 Developer: Show Logs 打开 rainbow_csv_debug_channel。"
+                    }
+                }
             }
         ],
         "breakpoints": [
@@ -1081,6 +1756,10 @@
             {
                 "id": "matlab.project",
                 "label": "MATLAB: Project"
+            },
+            {
+                "id": "rainbow_csv.submenu",
+                "label": "Rainbow CSV"
             }
         ],
         "semanticTokenTypes": [
@@ -1110,15 +1789,93 @@
                     "icon": "./out/matlab/public/logo_outline.svg"
                 }
             ]
+        },
+        "colors": [
+            {
+                "id": "rainbowtrack1",
+                "description": "Color for column tracking one.",
+                "defaults": {
+                    "dark": "#ff0000",
+                    "light": "#ff0000",
+                    "highContrast": "#ff0000",
+                    "highContrastLight": "#ff0000"
+                }
+            },
+            {
+                "id": "rainbowtrack2",
+                "description": "Color for column tracking two.",
+                "defaults": {
+                    "dark": "#00ff00",
+                    "light": "#00ff00",
+                    "highContrast": "#00ff00",
+                    "highContrastLight": "#00ff00"
+                }
+            },
+            {
+                "id": "rainbowtrack3",
+                "description": "Color for column tracking three.",
+                "defaults": {
+                    "dark": "#0000ff",
+                    "light": "#0000ff",
+                    "highContrast": "#0000ff",
+                    "highContrastLight": "#0000ff"
+                }
+            }
+        ],
+        "semanticTokenScopes": [
+            {
+                "language": "dynamic csv",
+                "scopes": {
+                    "rainbow1": [
+                        "rainbow1"
+                    ],
+                    "rainbow2": [
+                        "keyword.rainbow2"
+                    ],
+                    "rainbow3": [
+                        "entity.name.function.rainbow3"
+                    ],
+                    "rainbow4": [
+                        "comment.rainbow4"
+                    ],
+                    "rainbow5": [
+                        "string.rainbow5"
+                    ],
+                    "rainbow6": [
+                        "variable.parameter.rainbow6"
+                    ],
+                    "rainbow7": [
+                        "constant.numeric.rainbow7"
+                    ],
+                    "rainbow8": [
+                        "entity.name.type.rainbow8"
+                    ],
+                    "rainbow9": [
+                        "markup.bold.rainbow9"
+                    ],
+                    "rainbow10": [
+                        "invalid.rainbow10"
+                    ],
+                    "comment": [
+                        "comment"
+                    ]
+                }
+            }
+        ],
+        "configurationDefaults": {
+            "[dynamic csv][csv][tsv][csv (semicolon)][csv (pipe)][csv (whitespace)]": {
+                "editor.semanticHighlighting.enabled": true
+            }
         }
     },
     "scripts": {
-        "compile": "tsc -p ./ && node scripts/build-matlab.js",
+        "compile": "tsc -p ./ && node scripts/build-matlab.js && node scripts/build-editor-tools.js",
         "watch": "tsc -watch -p ./",
         "test": "jest",
         "package": "vsce package",
         "vscode:prepublish": "npm run compile",
-        "setup:matlab": "node scripts/build-matlab.js --install"
+        "setup:matlab": "node scripts/build-matlab.js --install",
+        "compile:editor-tools": "node scripts/build-editor-tools.js"
     },
     "jest": {
         "preset": "ts-jest",
@@ -1149,10 +1906,11 @@
     "capabilities": {
         "untrustedWorkspaces": {
             "supported": "limited",
-            "description": "未受信任工作区仅提供基础编辑功能，MATLAB 语言服务器不会启动。",
+            "description": "未受信任工作区可使用基础编辑、高亮及 CSV 工具，MATLAB 语言服务器和 RBQL 代码查询不会启动。",
             "restrictedConfigurations": [
                 "MATLAB.installPath"
             ]
         }
-    }
+    },
+    "browser": "./out/editorToolsWeb.js"
 }
