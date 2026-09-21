@@ -2,4 +2,5 @@
 vendor/matlab/** -whitespace
 vendor/highlight-words/** -whitespace
 vendor/rainbow-csv/** -whitespace
+vendor/tcl-navigate/** -whitespace
 test/upstream/rainbow-csv/** -whitespace

@@ -1,6 +1,6 @@
 # hanxuyao-plugin
 
-面向 FPGA 与嵌入式开发者的 VS Code 开发辅助插件，支持 Verilog / SystemVerilog / C / C++ / MATLAB，并内置词语高亮和 CSV / TSV 数据处理，主要功能包括：
+面向 FPGA 与嵌入式开发者的 VS Code 开发辅助插件，支持 Verilog / SystemVerilog / C / C++ / MATLAB / Tcl，并内置词语高亮和 CSV / TSV 数据处理，主要功能包括：
 
 1. 代码格式化：支持 Verilog、SystemVerilog、C、C++ 和 MATLAB 代码整理。
 2. 工程浏览：提供 Verilog 文件树与模块层级查看。
@@ -10,12 +10,25 @@
 6. MATLAB 开发：内置智能编辑、运行调试、交互终端、变量工作区、工程管理和测试支持。
 7. 词语高亮：跨编辑器多色标记词语、选区和正则表达式，支持全词匹配、忽略大小写、侧栏管理与前后跳转。
 8. CSV / TSV 数据处理：提供彩虹列高亮、分隔符识别、CSV 校验、表头与列编辑、对齐、格式复制和 RBQL 查询。
+9. Tcl 编辑增强：提供过程、命名空间与变量大纲、定义跳转、代码折叠、悬停说明和粘性滚动支持。
 
-> 版本：v1.4.11　日期：2026/09/21
+> 版本：v1.5.0　日期：2026/09/21
 
 ---
 
 ## 功能列表
+
+### Tcl 导航与编辑（tcl-navigate）
+
+内置 [tcl-navigate v1.0.0](https://github.com/lukemt/tcl-navigate) 的四类 Provider 和语言编辑配置，与本插件已有的 Tcl 语言注册、语法高亮配合使用。
+
+- 大纲：查看过程、命名空间、全局变量、命名空间变量及过程中的局部变量、数组；层级符号供 VS Code 粘性滚动使用。
+- 定义跳转：使用 `F12` 或 `Ctrl+单击` 跳转到过程、命名空间及变量定义，优先读取当前未保存缓冲区，找不到过程或命名空间时搜索工作区 `.tcl` 文件。
+- 悬停：显示过程参数和前置注释、变量在源码中的赋值内容、命名空间说明。
+- 折叠与编辑：支持过程、命名空间和控制块折叠，以及括号匹配、`#` 行注释与花括号块缩进。
+- 同时启用 `lukemt.tcl-navigate` 时复用原扩展，避免重复注册；禁用原扩展并重新加载窗口后使用本插件内置版本。
+
+Tcl 导航集成到桌面入口。本次新增功能按次版本发布为 **1.5.0**；后续兼容性修复使用补丁版本，新增功能升级次版本，不兼容变更升级主版本。
 
 ### 词语高亮（highlight-words）
 
@@ -369,13 +382,13 @@ npm run compile
 当前安装包面向 Windows x64，包含 MATLAB 运行组件和 Windows ripgrep。发布时上传生成的 `.vsix` 文件；修改记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ```bash
-npm run package -- --target win32-x64 --out hanxuyao-plugin-1.4.11-win32-x64.vsix
-code --install-extension hanxuyao-plugin-1.4.11-win32-x64.vsix --force
+npm run package -- --target win32-x64 --out hanxuyao-plugin-1.5.0-win32-x64.vsix
+code --install-extension hanxuyao-plugin-1.5.0-win32-x64.vsix --force
 ```
 
 ---
 
-MATLAB、highlight-words、Rainbow CSV 上游源码、固定提交和本地适配说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。`npm run compile` 会构建全部内置组件；仅调试新增高亮和 CSV 组件可运行 `npm run compile:editor-tools`。
+MATLAB、highlight-words、Rainbow CSV、tcl-navigate 上游源码、固定提交和本地适配说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。`npm run compile` 会构建全部内置组件；仅构建高亮、CSV 和 Tcl 组件可运行 `npm run compile:editor-tools`。
 
 ## 代码结构
 
@@ -386,6 +399,7 @@ hanxuyao-plugin/
 │   ├── editorToolsWeb.ts          # 浏览器中的词语高亮与 CSV 入口
 │   └── features/
 │       ├── editorTools/           # 词语高亮与 CSV 生命周期、资源路径适配
+│       ├── tcl/                   # Tcl 导航集成与原扩展共存
 │       └── verilog/
 │           ├── formatter.ts       # 格式化核心逻辑
 │           ├── completionProvider.ts # 代码补全（关键字/符号/模块）
@@ -417,6 +431,7 @@ GitHub 自动测试、打包和发布的配置及使用方法见 [自动发布](
 
 | 版本 | 日期 | 修改内容 |
 |------|------|---------|
+| v1.5.0 | 2026/09/21 | 内置 Tcl 大纲、定义跳转、折叠、悬停及粘性滚动支持，修复上游导航边界，同步简介与文档；调整为按功能范围选择版本 |
 | v1.4.11 | 2026/09/21 | 内置 highlight-words 与 Rainbow CSV，保留完整命令、配置、CSV/RBQL 运行资源和 Web 入口；同步插件简介、中文功能说明与代码注释 |
 | v1.4.10 | 2026/09/15 | 统一宏定义的宏值和注释列，新增连续同名函数调用的参数、逗号和右括号对齐，保留字面量及嵌套表达式 |
 | v1.4.9 | 2026/09/15 | 补齐函数内连续赋值的等号、表达式、分号和注释对齐，支持数组元素及成员赋值，保留分组边界和字面量内容 |

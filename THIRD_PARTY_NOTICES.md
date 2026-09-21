@@ -63,3 +63,13 @@ npm test -- --runInBand
 5. 桌面入口保留完整功能，新增 Web 入口仅运行这两个组件；浏览器运行限制与上游一致。现有桌面 MATLAB 和 Verilog 开发工具不因 Web 入口变为浏览器功能。
 
 许可证同时复制到安装包的 `out/highlight-words/` 和 `out/rainbow-csv/`。上游源码注释保持原文，本地适配以中文日期注释标明。后续升级需要重新核对全部贡献点、资源依赖、工作区信任和原扩展共存行为。
+
+## tcl-navigate（2026/09/21）
+
+来源：[lukemt/tcl-navigate](https://github.com/lukemt/tcl-navigate)，v1.0.0，固定提交 `e3e78a050ee400fb8777adc523f0b8d444c82757`，MIT 许可证，Copyright (c) 2025 lukemt。
+
+源码位于 `vendor/tcl-navigate/src/extension.ts`，保留上游 manifest、README 和 LICENSE。根目录锁定的 esbuild 将运行时构建为 `out/tcl-navigate/extension.js`，许可证同时复制到 `out/tcl-navigate/LICENSE`，不安装上游开发依赖。
+
+集成全部 DocumentSymbol、Definition、FoldingRange、Hover Provider，以及缩进、注释和括号配置；大纲符号支持 VS Code 粘性滚动。已有 Tcl 语言与语法资源沿用宿主贡献，未启用原扩展时直接使用内置实现。
+
+本地适配包括：语言配置随上下文释放；取消启动提示；修复单行过程选区超出符号范围、限定名跨文件检索丢失 `::`、变量引用前缀识别、转义花括号和首行文档注释。保留上游静态解析方式，没有加入 Tcl 执行器或语言服务器；Tcl 增强目前仅注册在桌面入口。

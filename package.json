@@ -1,8 +1,8 @@
 {
     "name": "hanxuyao-plugin",
     "displayName": "hanxuyao-plugin",
-    "description": "Verilog / SystemVerilog / C / C++ / MATLAB 开发工具，内置词语与正则高亮、CSV/TSV 彩虹列高亮及 RBQL 查询",
-    "version": "1.4.11",
+    "description": "Verilog / SystemVerilog / C / C++ / MATLAB 开发工具，内置 Tcl 导航、词语与正则高亮、CSV/TSV 彩虹列高亮及 RBQL 查询",
+    "version": "1.5.0",
     "publisher": "hanxuyao",
     "repository": {
         "type": "git",
@@ -17,7 +17,8 @@
         "csv",
         "tsv",
         "highlight",
-        "rbql"
+        "rbql",
+        "tcl"
     ],
     "icon": "icon.png",
     "engines": {

@@ -1,5 +1,6 @@
-// 文件：build-editor-tools.js；描述：构建词语高亮与 CSV 内置组件。
-// 版本：v1.0；日期：2026/09/21
+// 文件：build-editor-tools.js；描述：构建词语高亮、CSV 与 Tcl 导航内置组件。
+// 版本：v1.5.0；日期：2026/09/21
+// 修改记录：v1.5.0 2026/09/21 新增 Tcl 导航构建与许可证复制。
 // 修改记录：v1.0 2026/09/21 新增固定源码构建和运行资源复制。
 const fs = require('fs');
 const path = require('path');
@@ -8,6 +9,15 @@ const esbuild = require('esbuild');
 // 2026/09/21 新增：仅从仓库固定源码构建，构建过程不下载上游或安装外部扩展。
 async function build() {
     const root = path.resolve(__dirname, '..');
+    // 2026/09/21 新增：构建固定版本的 Tcl 导航，不引入上游开发依赖。
+    const tclOutput = path.join(root, 'out/tcl-navigate');
+    fs.mkdirSync(tclOutput, { recursive: true });
+    await esbuild.build({
+        entryPoints: [path.join(root, 'vendor/tcl-navigate/src/extension.ts')],
+        outfile: path.join(tclOutput, 'extension.js'),
+        bundle: true, platform: 'node', format: 'cjs', target: 'node18', external: ['vscode'],
+    });
+    fs.copyFileSync(path.join(root, 'vendor/tcl-navigate/LICENSE'), path.join(tclOutput, 'LICENSE'));
     const highlight = path.join(root, 'vendor/highlight-words');
     const highlightOutput = path.join(root, 'out/highlight-words');
     fs.mkdirSync(highlightOutput, { recursive: true });

@@ -1,18 +1,20 @@
 // =========================================================================
 // 文件    : extension.ts
 // 描述    : VS Code 扩展入口，注册所有 Provider 和命令
-// 版本    : v1.4.11
+// 版本    : v1.5.0
 // 日期    : 2026/09/21
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.5.0  2026/09/21  集成 Tcl 大纲、导航、折叠和悬停
 //  v1.4.11 2026/09/21  集成词语高亮与 Rainbow CSV 完整运行组件
 //  v1.4.4  2026/09/11  内置 MATLAB 官方功能并支持格式化实现切换
-//  v1.4.1  2026/08/21  主动触发 C/C++ 自动建议和函数参数提示
 // =========================================================================
 
 import * as vscode from 'vscode';
+// 2026/09/21 新增：接入 Tcl 导航组件及生命周期。
+import { activateTcl, deactivateTcl } from './features/tcl/tclIntegration';
 // 2026/09/21 新增：统一管理词语高亮、CSV 命令与资源的生命周期。
 import { activateEditorTools, deactivateEditorTools } from './features/editorTools/editorToolsIntegration';
 import { CFormatter }                from './features/c/cFormatter';
@@ -38,6 +40,8 @@ export const MATLAB_LANGS = ['matlab'];
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
     // 2026/09/21 新增：独立启动通用编辑功能，避免 MATLAB 初始化影响高亮与 CSV。
     await activateEditorTools(context);
+    // 2026/09/21 新增：注册 Tcl 编辑增强，沿用原有 Tcl 语法高亮。
+    await activateTcl(context);
     const formatter = new VerilogFormatter();
     const cFormatter = new CFormatter();
     const matlabFormatter = new MatlabFormatter();
@@ -364,5 +368,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 export async function deactivate(): Promise<void> {
     // 2026/09/21 新增：释放本插件持有的高亮与 CSV 运行时。
     await deactivateEditorTools();
+    // 2026/09/21 新增：释放内置 Tcl 运行时。
+    deactivateTcl();
     await deactivateMatlab();
 }
