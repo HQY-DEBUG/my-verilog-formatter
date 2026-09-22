@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.test.ts
 // 描述    : C/C++ 格式化器回归测试
-// 版本    : v1.4.10
-// 日期    : 2026/09/15
+// 版本    : v1.6.0
+// 日期    : 2026/09/22
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.6.0  2026/09/22  验证定制对齐保留宏、注释和通用排版的换行
 //  v1.4.10 2026/09/15  验证宏值注释和连续调用参数对齐，保留表达式及分组边界
 //  v1.4.9  2026/09/15  验证函数内数组赋值、调用表达式及对齐分组边界
 //  v1.4.8  2026/09/15  验证混合类型变量的赋值、分号和注释对齐及重复格式化
@@ -24,6 +25,81 @@
 import { formatC } from '../src/features/c/cFormatter';
 
 describe('C/C++ formatter', () => {
+    it.each(['\n', '\r\n'])('保留 TX/RX 续行宏及后续函数声明（%j）', eol => {
+        const input = [
+            '/* Helper macros for TX descriptor handling */',
+            '#define INCR_TX_DESC_INDEX(Index, Offset) do {\\',
+            '    (Index) += (Offset);\\',
+            '    if ((Index) >= (AL_U32)AL_GBE_TX_DESC_CNT) {\\',
+            '        (Index) = ((Index) - (AL_U32)AL_GBE_TX_DESC_CNT);}\\',
+            '} while (0)',
+            '',
+            '/* Helper macros for RX descriptor handling */',
+            '#define INCR_RX_DESC_INDEX(Index, Offset) do { \\',
+            '    (Index) += (Offset); \\',
+            '    if ((Index) >= (AL_U32)AL_GBE_RX_DESC_CNT) { \\',
+            '        (Index) = ((Index) - (AL_U32)AL_GBE_RX_DESC_CNT); \\',
+            '    } \\',
+            '} while (0)',
+            '',
+            'AL_GBE_HwConfigStruct *AlGbe_Dev_LookupConfig(AL_U32 DevId);',
+            '',
+            'AL_S32 AlGbe_Dev_Init(AL_GBE_DevStruct *Gbe, AL_GBE_HwConfigStruct *HwConfig,',
+            '                     AL_GBE_InitStruct *InitConfig, AL_GBE_MacDmaConfigStruct *MacDmaConfig);',
+        ].join(eol);
+        expect(formatC(input)).toBe(input);
+        expect(formatC(formatC(input))).toBe(input);
+    });
+
+    it('宏内跨行条件、调用和声明保持原样，宏外保留通用换行', () => {
+        const macro = [
+            '# define UPDATE(x) do { \\',
+            '    if ((x) && \\',
+            '        ready()) { \\',
+            '        send( \\',
+            '            x); \\',
+            '        value = factor * \\',
+            '            read(x); \\',
+            '    } \\',
+            '    int last = 1; \\',
+            '    int longer = 2; \\',
+            '} while (0)',
+        ].join('\n');
+        const input = `${macro}\n\nvoid run()\n{\nsend(\n    value);\n}`;
+        const expected = input;
+        expect(formatC(input)).toBe(expected);
+        expect(formatC(expected)).toBe(expected);
+    });
+
+    it('宏内未配对的括号不改变外部代码的缩进层级', () => {
+        const macro = '#define OPEN_SCOPE \\\n    {';
+        const input = `void run() {\n${macro}\n    run_step();\n}`;
+        const expected = `void run() {\n${macro}\n    run_step();\n}`;
+        expect(formatC(input)).toBe(expected);
+        expect(formatC(expected)).toBe(expected);
+    });
+
+    it('Doxygen 分组中的花括号不使顶层枚举多缩进一层', () => {
+        const input = [
+            '/**',
+            ' * @defgroup GBE GBE driver',
+            ' * @{',
+            ' */',
+            '#define AL_GBE_CRC_PAD_INSERT 0x04000000U',
+            '',
+            '/* GBE error code define */',
+            'typedef enum {',
+            '    AL_GBE_ERR_INVALID_DEVICE_ID = 0x100,',
+            '    AL_GBE_ERR_CONFIG = 0x101,',
+            '} AL_GBE_ErrorCodeEnum;',
+        ].join('\n');
+        const output = formatC(input);
+        expect(output).toContain('\n/* GBE error code define */\ntypedef enum {\n');
+        expect(output).toContain('\n    AL_GBE_ERR_CONFIG');
+        expect(output).toContain('\n} AL_GBE_ErrorCodeEnum;');
+        expect(formatC(output)).toBe(output);
+    });
+
     it('对齐连续的变量定义', () => {
         const input = [
             'uint8_t a = 0;',
@@ -65,13 +141,13 @@ describe('C/C++ formatter', () => {
     it('保留初始值内部空格和比较表达式并分别对齐独立声明组', () => {
         const input = [
             'void run() {',
-            'const char *label =  "a  =  b"  ; // 文本',
-            'bool ready =count == limit;',
+            '    const char *label =  "a  =  b"  ; // 文本',
+            '    bool ready =count == limit;',
             '',
-            'int x =1;',
-            'int total =  20;',
-            '// 独立声明',
-            'int single = 3;',
+            '    int x =1;',
+            '    int total =  20;',
+            '    // 独立声明',
+            '    int single = 3;',
             '}',
         ].join('\n');
         const expected = [
@@ -200,11 +276,10 @@ describe('C/C++ formatter', () => {
         expect(formatC(input)).toBe(input);
     });
 
-    it('合并跨行调用后对齐赋值，保留 C++ 原始字符串内容', () => {
+    it('对齐通用排版后的赋值，保留 C++ 原始字符串内容', () => {
         const input = [
             'void run() {',
-            '    values[A] = read32(',
-            '        BASE, OFFSET);',
+            '    values[A] = read32(BASE, OFFSET);',
             '    values[LONG_INDEX] = read32(BASE, LONG_OFFSET);',
             '',
             '    text = R"tag(a " = ; // b)tag";',
@@ -241,7 +316,8 @@ describe('C/C++ formatter', () => {
         ].join('\n');
 
         expect(formatC(input)).toBe([
-            'typedef struct ListMem {',
+            'typedef struct ListMem',
+            '{',
             '    uint32_t          total_pos      ;  // 总 storage positions 数',
             '    ListRegion        list1          ;  // List1',
             '    ListRegion        list2          ;  // List2（size=0 表示未启用）',
@@ -259,54 +335,6 @@ describe('C/C++ formatter', () => {
         expect(formatC(formatC(input))).toBe(formatC(input));
     });
 
-    it('在类型定义结束与后续注释之间增加一个空行', () => {
-        const input = [
-            'typedef struct ListCmd',
-            '{',
-            '    ListCmdType type;',
-            '} ListCmd;',
-            '// List 区域判定',
-            'typedef struct ListRegion',
-            '{',
-            '    ListId id;',
-            '} ListRegion;',
-        ].join('\n');
-
-        const expected = [
-            'typedef struct ListCmd {',
-            '    ListCmdType type;',
-            '} ListCmd;',
-            '',
-            '// List 区域判定',
-            'typedef struct ListRegion {',
-            '    ListId id;',
-            '} ListRegion;',
-        ].join('\n');
-        expect(formatC(input)).toBe(expected);
-        expect(formatC(expected)).toBe(expected);
-    });
-
-    it('把结构体左花括号放到类型声明末尾', () => {
-        const input = [
-            'typedef struct CmdBuffer',
-            '{',
-            '    ListCmd *data; // 按 Position 索引的命令数组',
-            '    size_t cnt; // 已写入的有效 Position 数，不是数组下标',
-            '    size_t capacity; // 总 Position 数',
-            '} CmdBuffer;',
-        ].join('\n');
-
-        const expected = [
-            'typedef struct CmdBuffer {',
-            '    ListCmd *data    ;  // 按 Position 索引的命令数组',
-            '    size_t  cnt      ;  // 已写入的有效 Position 数，不是数组下标',
-            '    size_t  capacity ;  // 总 Position 数',
-            '} CmdBuffer;',
-        ].join('\n');
-        expect(formatC(input)).toBe(expected);
-        expect(formatC(expected)).toBe(expected);
-    });
-
     it('按名称、赋值、逗号和注释对齐枚举项', () => {
         const input = [
             'typedef enum',
@@ -319,7 +347,8 @@ describe('C/C++ formatter', () => {
         ].join('\n');
 
         const expected = [
-            'typedef enum {',
+            'typedef enum',
+            '{',
             '    APPEND_OK            = 0 ,  // 追加成功',
             '    APPEND_INVALID_STATE     ,  // 状态无效',
             '    APPEND_NO_POSITION       ,',
@@ -405,10 +434,9 @@ describe('C/C++ formatter', () => {
         expect(formatC(input)).toBe(input);
     });
 
-    it('将跨行调用合并后对齐参数，并跳过模板实参和一行多条语句', () => {
+    it('对齐通用排版后的参数，并跳过模板实参和一行多条语句', () => {
         const input = [
-            'write_reg(',
-            '    A, x);',
+            'write_reg(A, x);',
             'write_reg(LONG, value);',
             '',
             'write_reg(A, pair<int, int>());',
@@ -429,7 +457,7 @@ describe('C/C++ formatter', () => {
         expect(formatC(expected)).toBe(expected);
     });
 
-    it('把多行函数调用整理为单行', () => {
+    it('多列对齐不合并通用排版保留的跨行函数调用', () => {
         const input = [
             '    send_packet(',
             '        socket,',
@@ -437,27 +465,27 @@ describe('C/C++ formatter', () => {
             '        length);',
         ].join('\n');
 
-        expect(formatC(input)).toBe('    send_packet(socket, buffer, length);');
+        expect(formatC(input)).toBe(input);
     });
 
-    it('把赋值和成员函数的多行调用整理为单行', () => {
+    it('多列对齐不合并赋值和成员函数的跨行调用', () => {
         const input = [
             'result = object.build(',
             '    first,',
             '    second);',
         ].join('\n');
 
-        expect(formatC(input)).toBe('result = object.build(first, second);');
+        expect(formatC(input)).toBe(input);
     });
 
-    it('把赋值表达式中的跨行函数调用整理为单行', () => {
+    it('多列对齐不合并赋值表达式的跨行计算', () => {
         const input = [
             'plan->accel[i] = direction * peak_accel *',
             '   s_curve_weight(i, step_num, selected_ramp) /',
             '   (double)selected_ramp;',
         ].join('\n');
 
-        expect(formatC(input)).toBe('plan->accel[i] = direction * peak_accel * s_curve_weight(i, step_num, selected_ramp) / (double)selected_ramp;');
+        expect(formatC(input)).toBe(input);
     });
 
     it('对齐连续宏定义的宏体列', () => {
@@ -579,118 +607,6 @@ describe('C/C++ formatter', () => {
         ].join('\n'));
     });
 
-    it('把控制条件中的多行函数调用整理为单行', () => {
-        const input = [
-            'if (is_ready(',
-            '        device,',
-            '        timeout))',
-            '{',
-            '    run();',
-            '}',
-        ].join('\n');
-
-        expect(formatC(input)).toBe([
-            'if (is_ready(device, timeout))',
-            '{',
-            '    run();',
-            '}',
-        ].join('\n'));
-    });
-
-    it('把跨行 if 条件整理为单行', () => {
-        const input = [
-            'bool list_mem_jump_output(ListMem *mem, uint32_t abs_pos) {',
-            '    if ((target_region == NULL) ||',
-            '        (target_region->id != mem->out_ptr.list_id)) {',
-            '        return false;',
-            '    }',
-            '}',
-        ].join('\n');
-
-        expect(formatC(input)).toBe([
-            'bool list_mem_jump_output(ListMem *mem, uint32_t abs_pos) {',
-            '    if ((target_region == NULL) || (target_region->id != mem->out_ptr.list_id)) {',
-            '        return false;',
-            '    }',
-            '}',
-        ].join('\n'));
-    });
-
-    it('函数左花括号跟在签名最后一行', () => {
-        const input = [
-            'static int calculate(',
-            '    int first,',
-            '    int second)',
-            '{',
-            '    return first + second;',
-            '}',
-        ].join('\n');
-
-        expect(formatC(input)).toBe([
-            'static int calculate(',
-            '    int first,',
-            '    int second) {',
-            '    return first + second;',
-            '}',
-        ].join('\n'));
-    });
-
-    it('单行 static bool 函数的左花括号不换行', () => {
-        const input = [
-            'static bool cmd_buffer_is_vld(uint32_t pos)',
-            '{',
-            '    if (pos > LIST_MEM_MAX_POSITION)',
-            '        return false;',
-            '}',
-        ].join('\n');
-
-        expect(formatC(input)).toBe([
-            'static bool cmd_buffer_is_vld(uint32_t pos) {',
-            '    if (pos > LIST_MEM_MAX_POSITION)',
-            '        return false;',
-            '}',
-        ].join('\n'));
-    });
-
-    it('单行 if 返回后恢复函数体缩进', () => {
-        const input = [
-            'static void cmd_position_set_vld(uint32_t pos) {',
-            '        if (pos >= LIST_MEM_MAX_POSITION) return;',
-            '',
-            '            g_list_cmd_vld_map[pos / 8u] |= (1u << (pos % 8u));',
-            '    }',
-        ].join('\n');
-
-        expect(formatC(input)).toBe([
-            'static void cmd_position_set_vld(uint32_t pos) {',
-            '    if (pos >= LIST_MEM_MAX_POSITION) return;',
-            '',
-            '    g_list_cmd_vld_map[pos / 8u] |= (1u << (pos % 8u));',
-            '}',
-        ].join('\n'));
-    });
-
-    it('按花括号层级重算函数内部缩进', () => {
-        const input = [
-            'static void run(bool ready)',
-            '{',
-            'if (ready)',
-            '{',
-            'execute();',
-            '}',
-            '}',
-        ].join('\n');
-
-        expect(formatC(input)).toBe([
-            'static void run(bool ready) {',
-            '    if (ready)',
-            '    {',
-            '        execute();',
-            '    }',
-            '}',
-        ].join('\n'));
-    });
-
     it('不把普通函数调用后的代码块误识别为函数定义', () => {
         const input = ['foo()', '{', '    run();', '}'].join('\n');
         expect(formatC(input)).toBe(input);
@@ -699,22 +615,5 @@ describe('C/C++ formatter', () => {
     it('不把控制语句的左花括号改成函数样式', () => {
         const input = ['if (ready)', '{', '    run();', '}'].join('\n');
         expect(formatC(input)).toBe(input);
-    });
-
-    it('保留 C++ 成员函数的多行签名并移动左花括号', () => {
-        const input = [
-            'Widget::Widget(',
-            '    int width,',
-            '    int height)',
-            '{',
-            '}',
-        ].join('\n');
-
-        expect(formatC(input)).toBe([
-            'Widget::Widget(',
-            '    int width,',
-            '    int height) {',
-            '}',
-        ].join('\n'));
     });
 });

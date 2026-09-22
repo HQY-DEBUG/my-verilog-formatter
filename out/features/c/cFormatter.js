@@ -1,13 +1,14 @@
 "use strict";
 // =========================================================================
 // 文件    : cFormatter.ts
-// 描述    : C/C++ 变量定义、函数调用和函数花括号格式化
-// 版本    : v1.4.10
-// 日期    : 2026/09/15
+// 描述    : clang-format 通用排版与 C/C++ 定制多列对齐
+// 版本    : v1.6.0
+// 日期    : 2026/09/22
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.6.0  2026/09/22  通用排版交给 clang-format，保护宏续行并保留定制对齐
 //  v1.4.10 2026/09/15  对齐宏定义的宏值和注释，以及连续同名调用的参数列
 //  v1.4.9  2026/09/15  对齐函数内连续赋值的左值、等号、表达式、分号和注释
 //  v1.4.8  2026/09/15  补齐变量声明的等号、初始值、分号和注释列对齐
@@ -58,181 +59,87 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CFormatter = void 0;
 exports.formatC = formatC;
 const vscode = __importStar(require("vscode"));
+const clangFormat_1 = require("./clangFormat");
 const CONTROL_KEYWORDS = new Set(['if', 'for', 'while', 'switch', 'catch']);
 const NON_TYPE_KEYWORDS = new Set([
     'break', 'case', 'continue', 'delete', 'else', 'goto', 'new', 'return', 'throw', 'using',
 ]);
 const C_LITERALS_AND_COMMENTS = /R"([^ ()\\\t\r\n]{0,16})\([\s\S]*?\)\1"|"(?:\\[\s\S]|[^"\\])*"|'(?:\\[^\r\n]|[^'\\\r\n])+'|\/\*[\s\S]*?(?:\*\/|$)|\/\/[^\n]*/g;
-/** 格式化 C/C++ 源码中明确要求统一的布局，不改写表达式语义。 */
-function formatC(code) {
+/** 仅应用明确约定的多列对齐；通用空格、缩进和换行由 clang-format 完成。 */
+function formatC(code, range) {
     const eol = code.includes('\r\n') ? '\r\n' : '\n';
-    let normalized = code.replace(/\r\n/g, '\n');
-    normalized = collapseMultilineControlConditions(normalized);
-    normalized = collapseMultilineCalls(normalized);
-    normalized = collapseMultilineCallExpressions(normalized);
-    normalized = placeFunctionOpeningBraces(normalized);
-    normalized = placeTypeOpeningBraces(normalized);
-    normalized = reindentCBlocks(normalized);
+    const protectedRegions = protectCLayoutRegions(code.replace(/\r\n/g, '\n'));
+    const lines = protectedRegions.code.split('\n');
+    const start = range ? range.start - 1 : 0;
+    const end = range ? range.end : lines.length;
+    let normalized = lines.slice(start, end).join('\n');
     normalized = alignMacroDefines(normalized);
     normalized = alignVariableDeclarations(normalized);
     normalized = alignAssignments(normalized);
     normalized = alignConsecutiveCalls(normalized);
     normalized = alignEnumDeclarations(normalized);
-    normalized = ensureBlankLineAfterTypeDeclarations(normalized);
-    normalized = normalized.split('\n').map(line => line.trimEnd()).join('\n');
+    normalized = [...lines.slice(0, start), ...normalized.split('\n').map(line => line.trimEnd()), ...lines.slice(end)]
+        .map(line => protectedRegions.blocks.get(line) ?? line).join('\n');
     return eol === '\n' ? normalized : normalized.replace(/\n/g, '\r\n');
 }
-function collapseMultilineCalls(code) {
+function protectCLayoutRegions(code) {
     const lines = code.split('\n');
+    const maskedLines = maskCLiteralsAndComments(code).split('\n');
+    const blocks = new Map();
     const result = [];
+    const protectedLines = new Set();
+    let markerPrefix = '__C_FORMATTER_DIRECTIVE_';
+    while (code.includes(markerPrefix)) {
+        markerPrefix += '_';
+    }
+    let offset = 0;
+    let tokenLine = 0;
+    let disabledStart;
+    for (const match of code.matchAll(C_LITERALS_AND_COMMENTS)) {
+        tokenLine += code.slice(offset, match.index).split('\n').length - 1;
+        const endLine = tokenLine + match[0].split('\n').length - 1;
+        if (endLine > tokenLine) {
+            for (let line = tokenLine; line <= endLine; line++) {
+                protectedLines.add(line);
+            }
+        }
+        if (/^(?:\/\/|\/\*)\s*clang-format off\b/.test(match[0])) {
+            disabledStart ?? (disabledStart = tokenLine);
+        }
+        else if (/^(?:\/\/|\/\*)\s*clang-format on\b/.test(match[0]) && disabledStart !== undefined) {
+            for (let line = disabledStart; line <= endLine; line++) {
+                protectedLines.add(line);
+            }
+            disabledStart = undefined;
+        }
+        offset = match.index + match[0].length;
+        tokenLine = endLine;
+    }
+    if (disabledStart !== undefined) {
+        for (let line = disabledStart; line < lines.length; line++) {
+            protectedLines.add(line);
+        }
+    }
     for (let i = 0; i < lines.length; i++) {
-        if (!isCallStart(lines[i])) {
-            result.push(lines[i]);
+        if (!/^\s*#/.test(maskedLines[i]) || !lines[i].trimEnd().endsWith('\\')) {
             continue;
         }
-        let balance = parenthesisDelta(lines[i]);
-        if (balance <= 0) {
-            result.push(lines[i]);
-            continue;
-        }
-        let end = i;
-        let containsComment = hasComment(lines[i]);
-        while (balance > 0 && end + 1 < lines.length) {
-            end++;
-            balance += parenthesisDelta(lines[end]);
-            containsComment || (containsComment = hasComment(lines[end]));
-        }
-        if (balance !== 0
-            || end === i
-            || containsComment
-            || !isCallTerminator(lines[end])
-            || (isFunctionBodyFollowing(lines, end) && !isControlStatement(lines[i]))) {
-            result.push(lines[i]);
-            continue;
-        }
-        const indent = lines[i].match(/^\s*/)?.[0] ?? '';
-        const joined = joinInlineLines(lines.slice(i, end + 1));
-        result.push(indent + joined);
-        i = end;
+        do {
+            protectedLines.add(i);
+        } while (lines[i].trimEnd().endsWith('\\') && ++i < lines.length);
     }
-    return result.join('\n');
-}
-function collapseMultilineCallExpressions(code) {
-    const lines = code.split('\n');
-    const result = [];
     for (let i = 0; i < lines.length; i++) {
-        if (!isCallExpressionStart(lines[i])) {
+        if (protectedLines.has(i)) {
+            // 每个受保护物理行占用一行，保留选区行号和对齐分组边界。
+            const marker = `# /* ${markerPrefix}${i} */`;
+            blocks.set(marker, lines[i]);
+            result.push(marker);
+        }
+        else {
             result.push(lines[i]);
-            continue;
         }
-        let end = i;
-        let balance = parenthesisDelta(lines[i]);
-        let containsComment = hasComment(lines[i]);
-        while (!/;\s*$/.test(lines[end].trim()) && end + 1 < lines.length) {
-            end++;
-            balance += parenthesisDelta(lines[end]);
-            containsComment || (containsComment = hasComment(lines[end]));
-        }
-        const block = lines.slice(i, end + 1);
-        if (end === i
-            || balance !== 0
-            || containsComment
-            || !/;\s*$/.test(lines[end].trim())
-            || !block.some(line => /(?:[A-Za-z_]\w*\s*(?:::|\.|->)\s*)*[A-Za-z_]\w*\s*\(/.test(line))) {
-            result.push(lines[i]);
-            continue;
-        }
-        const indent = lines[i].match(/^\s*/)?.[0] ?? '';
-        result.push(indent + joinInlineLines(block));
-        i = end;
     }
-    return result.join('\n');
-}
-function collapseMultilineControlConditions(code) {
-    const lines = code.split('\n');
-    const result = [];
-    for (let i = 0; i < lines.length; i++) {
-        const trimmed = lines[i].trim();
-        if (!/^(?:(?:if|while|for|switch)\s*\(|else\s+if\s*\()/.test(trimmed)) {
-            result.push(lines[i]);
-            continue;
-        }
-        let balance = parenthesisDelta(lines[i]);
-        if (balance <= 0) {
-            result.push(lines[i]);
-            continue;
-        }
-        let end = i;
-        let containsComment = hasComment(lines[i]);
-        while (balance > 0 && end + 1 < lines.length) {
-            end++;
-            balance += parenthesisDelta(lines[end]);
-            containsComment || (containsComment = hasComment(lines[end]));
-        }
-        if (balance !== 0 || end === i || containsComment) {
-            result.push(lines[i]);
-            continue;
-        }
-        const indent = lines[i].match(/^\s*/)?.[0] ?? '';
-        result.push(indent + joinInlineLines(lines.slice(i, end + 1)));
-        i = end;
-    }
-    return result.join('\n');
-}
-function isCallExpressionStart(line) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#') || hasComment(line)) {
-        return false;
-    }
-    if (/^(?:if|for|while|switch|catch|else)\b/.test(trimmed)) {
-        return false;
-    }
-    return (/(?:^|[^=!<>])=(?!=)/.test(trimmed) || /^(?:return|throw|co_return)\b/.test(trimmed))
-        && !/[;{}]\s*$/.test(trimmed);
-}
-function joinInlineLines(lines) {
-    const trimmedLines = lines.map(line => line.trim());
-    return trimmedLines.slice(1).reduce((current, next) => {
-        const separator = current.endsWith('(') || /^[),;]/.test(next) ? '' : ' ';
-        return current + separator + next;
-    }, trimmedLines[0]);
-}
-function isCallStart(line) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#') || hasComment(line)) {
-        return false;
-    }
-    const directCall = trimmed.match(/^([A-Za-z_]\w*)\s*\(/);
-    if (directCall) {
-        if (!CONTROL_KEYWORDS.has(directCall[1])) {
-            return true;
-        }
-        const condition = trimmed.slice(directCall[0].length);
-        return /(?:[A-Za-z_]\w*\s*(?:::|\.|->)\s*)*[A-Za-z_]\w*\s*\(/.test(condition);
-    }
-    if (/^(?:return|throw|co_return)\b/.test(trimmed) || /=/.test(trimmed)) {
-        return /(?:[A-Za-z_]\w*\s*(?:::|\.|->)\s*)*[A-Za-z_]\w*\s*\(/.test(trimmed);
-    }
-    return /^(?:[A-Za-z_]\w*\s*(?:::|\.|->)\s*)+[A-Za-z_]\w*\s*\(/.test(trimmed);
-}
-function isCallTerminator(line) {
-    return /\)\s*[;,]?\s*$/.test(line.trim());
-}
-function isControlStatement(line) {
-    const firstWord = line.trim().match(/^([A-Za-z_]\w*)/)?.[1] ?? '';
-    return CONTROL_KEYWORDS.has(firstWord);
-}
-function isFunctionBodyFollowing(lines, end) {
-    for (let i = end + 1; i < lines.length; i++) {
-        if (!lines[i].trim()) {
-            continue;
-        }
-        return /^\s*\{\s*$/.test(lines[i]);
-    }
-    return false;
-}
-function hasComment(line) {
-    return line.includes('//') || line.includes('/*') || line.includes('*/');
+    return { code: result.join('\n'), blocks };
 }
 function parenthesisDelta(line) {
     let delta = 0;
@@ -267,154 +174,6 @@ function parenthesisDelta(line) {
         }
     }
     return delta;
-}
-function placeFunctionOpeningBraces(code) {
-    const lines = code.split('\n');
-    const result = [];
-    for (const line of lines) {
-        if (!/^\s*\{\s*$/.test(line)) {
-            result.push(line);
-            continue;
-        }
-        let previous = result.length - 1;
-        while (previous >= 0 && result[previous].trim() === '') {
-            previous--;
-        }
-        if (previous < 0 || !isFunctionSignature(result, previous)) {
-            result.push(line);
-            continue;
-        }
-        result.splice(previous + 1);
-        result[previous] = `${result[previous].trimEnd()} {`;
-    }
-    return result.join('\n');
-}
-function placeTypeOpeningBraces(code) {
-    const lines = code.split('\n');
-    const result = [];
-    for (const line of lines) {
-        if (!/^\s*\{\s*$/.test(line)) {
-            result.push(line);
-            continue;
-        }
-        let previous = result.length - 1;
-        while (previous >= 0 && result[previous].trim() === '') {
-            previous--;
-        }
-        if (previous < 0
-            || !/^\s*(?:typedef\s+)?(?:struct|union|enum)\b(?:\s+[A-Za-z_]\w*)?\s*$/.test(result[previous])) {
-            result.push(line);
-            continue;
-        }
-        result.splice(previous + 1);
-        result[previous] = `${result[previous].trimEnd()} {`;
-    }
-    return result.join('\n');
-}
-function reindentCBlocks(code, indentSize = 4) {
-    const lines = code.split('\n');
-    const result = [];
-    const existingIndents = lines
-        .filter(line => line.trim() && !line.trim().startsWith('#'))
-        .map(line => line.match(/^\s*/)?.[0].length ?? 0);
-    const baseIndent = existingIndents.length > 0 ? Math.min(...existingIndents) : 0;
-    let braceDepth = 0;
-    let parenthesisDepth = 0;
-    let previousControlWithoutBrace = false;
-    for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed) {
-            result.push('');
-            continue;
-        }
-        if (trimmed.startsWith('#')) {
-            result.push(trimmed);
-            previousControlWithoutBrace = false;
-            continue;
-        }
-        const continuationLine = parenthesisDepth > 0;
-        let indentDepth = Math.max(0, braceDepth - (trimmed.startsWith('}') ? 1 : 0));
-        if (/^(?:case\b.*:|default\s*:|public:|protected:|private:)$/.test(trimmed)) {
-            indentDepth = Math.max(0, indentDepth - 1);
-        }
-        if (previousControlWithoutBrace && !trimmed.startsWith('{')) {
-            indentDepth++;
-        }
-        const originalIndent = line.match(/^\s*/)?.[0] ?? '';
-        const indent = continuationLine
-            ? originalIndent
-            : ' '.repeat(baseIndent + indentDepth * indentSize);
-        result.push(indent + trimmed);
-        braceDepth = Math.max(0, braceDepth + structuralBraceDelta(line));
-        parenthesisDepth = Math.max(0, parenthesisDepth + parenthesisDelta(line));
-        previousControlWithoutBrace = isControlWithoutBrace(trimmed);
-    }
-    return result.join('\n');
-}
-function structuralBraceDelta(line) {
-    let delta = 0;
-    let quote = '';
-    let escaped = false;
-    for (let i = 0; i < line.length; i++) {
-        const char = line[i];
-        const next = line[i + 1] ?? '';
-        if (!quote && char === '/' && (next === '/' || next === '*')) {
-            break;
-        }
-        if (quote) {
-            if (escaped) {
-                escaped = false;
-            }
-            else if (char === '\\') {
-                escaped = true;
-            }
-            else if (char === quote) {
-                quote = '';
-            }
-            continue;
-        }
-        if (char === '"' || char === "'") {
-            quote = char;
-        }
-        else if (char === '{') {
-            delta++;
-        }
-        else if (char === '}') {
-            delta--;
-        }
-    }
-    return delta;
-}
-function isControlWithoutBrace(line) {
-    const code = line.replace(/\/\/.*$/, '').trimEnd();
-    return /^(?:if|for|while|switch)\s*\(.*\)\s*$/.test(code)
-        || /^else(?:\s+if\s*\(.*\))?\s*$/.test(code);
-}
-function isFunctionSignature(lines, end) {
-    let start = end;
-    let balance = parenthesisDelta(lines[end]);
-    while (start > 0 && balance < 0) {
-        start--;
-        balance += parenthesisDelta(lines[start]);
-    }
-    const signature = lines.slice(start, end + 1).map(line => line.trim()).join(' ');
-    const firstWord = signature.match(/^([A-Za-z_]\w*)/)?.[1] ?? '';
-    if (CONTROL_KEYWORDS.has(firstWord)
-        || /^(?:else|do|return|throw|co_return)\b/.test(signature)) {
-        return false;
-    }
-    const open = signature.indexOf('(');
-    if (open < 0 || signature.includes(';') || signature.slice(0, open).includes('=')) {
-        return false;
-    }
-    const beforeParenthesis = signature.slice(0, open).trimEnd();
-    const nameMatch = beforeParenthesis.match(/([~A-Za-z_]\w*(?:::[~A-Za-z_]\w*)*)$/);
-    if (!nameMatch) {
-        return false;
-    }
-    const functionName = nameMatch[1];
-    const prefix = beforeParenthesis.slice(0, -functionName.length).trim();
-    return prefix.length > 0 || functionName.includes('::');
 }
 function alignVariableDeclarations(code) {
     const lines = code.split('\n');
@@ -670,18 +429,6 @@ function parseMacroDefine(line) {
         comment: commentMatch ? replacement.slice(commentMatch.index) : '',
     };
 }
-function ensureBlankLineAfterTypeDeclarations(code) {
-    const lines = code.split('\n');
-    const result = [];
-    for (let i = 0; i < lines.length; i++) {
-        result.push(lines[i]);
-        const closesNamedType = /^\s*}\s*[A-Za-z_]\w*\s*;\s*(?:\/\/.*)?$/.test(lines[i]);
-        if (closesNamedType && i + 1 < lines.length && lines[i + 1].trim() !== '') {
-            result.push('');
-        }
-    }
-    return result.join('\n');
-}
 function alignEnumDeclarations(code) {
     const lines = code.split('\n');
     for (let i = 0; i < lines.length; i++) {
@@ -830,21 +577,46 @@ function parseDeclaration(line) {
     };
 }
 class CFormatter {
-    provideDocumentFormattingEdits(document) {
+    constructor(clang = clangFormat_1.runClangFormat) {
+        this.clang = clang;
+    }
+    async provideDocumentFormattingEdits(document) {
+        return this.formatDocument(document);
+    }
+    async provideDocumentRangeFormattingEdits(document, range) {
+        return this.formatDocument(document, {
+            start: range.start.line + 1,
+            end: range.end.line + (range.end.character === 0 && range.end.line > range.start.line ? 0 : 1),
+        });
+    }
+    async formatDocument(document, range) {
+        const version = document.version;
         const original = document.getText();
-        const formatted = formatC(original);
-        if (formatted === original) {
+        const filename = document.fileName || (document.languageId === 'c' ? 'untitled.c' : 'untitled.cpp');
+        const base = await this.clang(original, filename, range);
+        const formatted = formatC(base, range ? affectedLineRange(original, base, range) : undefined);
+        if (formatted === original || document.version !== version) {
             return [];
         }
         const lastLine = document.lineAt(document.lineCount - 1);
-        const range = new vscode.Range(new vscode.Position(0, 0), lastLine.range.end);
-        return [vscode.TextEdit.replace(range, formatted)];
-    }
-    provideDocumentRangeFormattingEdits(document, range) {
-        const original = document.getText(range);
-        const formatted = formatC(original);
-        return formatted === original ? [] : [vscode.TextEdit.replace(range, formatted)];
+        const fullRange = new vscode.Range(new vscode.Position(0, 0), lastLine.range.end);
+        return [vscode.TextEdit.replace(fullRange, formatted)];
     }
 }
 exports.CFormatter = CFormatter;
+function affectedLineRange(original, formatted, range) {
+    const before = original.split(/\r?\n/);
+    const after = formatted.split(/\r?\n/);
+    let start = 0;
+    while (start < range.start - 1 && before[start] === after[start]) {
+        start++;
+    }
+    let suffix = 0;
+    while (suffix < before.length - range.end && suffix < after.length - start
+        && before[before.length - suffix - 1] === after[after.length - suffix - 1]) {
+        suffix++;
+    }
+    // clang-format 可以扩展到完整语句；定制对齐只覆盖实际影响区域及原选区。
+    return { start: start + 1, end: after.length - suffix };
+}
 //# sourceMappingURL=cFormatter.js.map

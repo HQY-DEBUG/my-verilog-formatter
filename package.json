@@ -2,7 +2,7 @@
     "name": "hanxuyao-plugin",
     "displayName": "hanxuyao-plugin",
     "description": "Verilog / SystemVerilog / C / C++ / MATLAB 开发工具，内置 Tcl 导航、词语与正则高亮、CSV/TSV 彩虹列高亮及 RBQL 查询",
-    "version": "1.5.0",
+    "version": "1.6.0",
     "publisher": "hanxuyao",
     "repository": {
         "type": "git",
@@ -1230,6 +1230,12 @@
             {
                 "title": "hanxuyao-plugin",
                 "properties": {
+                    "verilogFormatter.c.clangFormatPath": {
+                        "type": "string",
+                        "scope": "machine",
+                        "default": "",
+                        "description": "C/C++ 格式化：clang-format 18 或更高版本的绝对路径。留空时优先使用 Microsoft C/C++ 扩展自带程序，否则从 PATH 查找。通用样式继承工程 .clang-format，未配置时使用 LLVM 风格。"
+                    },
                     "verilogFormatter.indentSize": {
                         "type": "number",
                         "default": 2,

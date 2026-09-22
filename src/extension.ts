@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : extension.ts
 // 描述    : VS Code 扩展入口，注册所有 Provider 和命令
-// 版本    : v1.5.0
-// 日期    : 2026/09/21
+// 版本    : v1.6.0
+// 日期    : 2026/09/22
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v1.6.0  2026/09/22  等待 clang-format 异步结果并跳过过期文档修改
 //  v1.5.0  2026/09/21  集成 Tcl 大纲、导航、折叠和悬停
 //  v1.4.11 2026/09/21  集成词语高亮与 Rainbow CSV 完整运行组件
 //  v1.4.4  2026/09/11  内置 MATLAB 官方功能并支持格式化实现切换
@@ -87,6 +88,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             if (!editor) { return; }
 
             const document = editor.document;
+            const documentVersion = document.version;
             const tabSize = typeof editor.options.tabSize === 'number' ? editor.options.tabSize : 2;
             const insertSpaces = typeof editor.options.insertSpaces === 'boolean'
                 ? editor.options.insertSpaces
@@ -95,7 +97,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             let edits: vscode.TextEdit[] = [];
 
             if (C_LANGS.includes(document.languageId)) {
-                edits = cFormatter.provideDocumentFormattingEdits(document);
+                edits = await cFormatter.provideDocumentFormattingEdits(document);
             } else if (MATLAB_LANGS.includes(document.languageId)) {
                 edits = useMathWorksFormatter()
                     ? await vscode.commands.executeCommand<vscode.TextEdit[]>('vscode.executeFormatDocumentProvider', document.uri, options) ?? []
@@ -106,7 +108,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
                 edits = adcFormatter.provideDocumentFormattingEdits(document);
             }
 
-            if (edits.length === 0) { return; }
+            if (edits.length === 0 || document.version !== documentVersion) { return; }
             const applied = await editor.edit(builder => {
                 for (const edit of edits) {
                     builder.replace(edit.range, edit.newText);
