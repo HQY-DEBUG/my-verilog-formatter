@@ -12,7 +12,7 @@
 8. CSV / TSV 数据处理：提供彩虹列高亮、分隔符识别、CSV 校验、表头与列编辑、对齐、格式复制和 RBQL 查询。
 9. Tcl 编辑增强：提供过程、命名空间与变量大纲、定义跳转、代码折叠、悬停说明和粘性滚动支持。
 
-> 版本：v1.6.0　日期：2026/09/22
+> 版本：v1.6.1　日期：2026/09/22
 
 ---
 
@@ -386,8 +386,8 @@ npm run compile
 当前安装包面向 Windows x64，包含 MATLAB 运行组件和 Windows ripgrep。发布时上传生成的 `.vsix` 文件；修改记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ```bash
-npm run package -- --target win32-x64 --out hanxuyao-plugin-1.6.0-win32-x64.vsix
-code --install-extension hanxuyao-plugin-1.6.0-win32-x64.vsix --force
+npm run package -- --target win32-x64 --out hanxuyao-plugin-1.6.1-win32-x64.vsix
+code --install-extension hanxuyao-plugin-1.6.1-win32-x64.vsix --force
 ```
 
 ---
@@ -435,6 +435,7 @@ GitHub 自动测试、打包和发布的配置及使用方法见 [自动发布](
 
 | 版本 | 日期 | 修改内容 |
 |------|------|---------|
+| v1.6.1 | 2026/09/22 | 每次修改通过验证后默认自动打包发布，统一仓库规则、版本规则和发布文档；发布此前完成的 C/C++ clang-format 集成 |
 | v1.6.0 | 2026/09/22 | C/C++ 通用格式与换行接入 clang-format，保留定制多列对齐，修复宏续行和枚举缩进，支持工程样式及完整上下文选区格式化 |
 | v1.5.0 | 2026/09/21 | 内置 Tcl 大纲、定义跳转、折叠、悬停及粘性滚动支持，修复上游导航边界，同步简介与文档；调整为按功能范围选择版本 |
 | v1.4.11 | 2026/09/21 | 内置 highlight-words 与 Rainbow CSV，保留完整命令、配置、CSV/RBQL 运行资源和 Web 入口；同步插件简介、中文功能说明与代码注释 |
