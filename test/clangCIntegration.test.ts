@@ -14,7 +14,9 @@ const executable = process.env.CLANG_FORMAT_TEST_EXE;
 const nativeTests = executable ? describe : describe.skip;
 nativeTests('真实 clang-format 集成', () => {
     beforeEach(() => {
-        jest.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: () => executable } as any);
+        jest.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({
+            get: (key: string, defaultValue: unknown) => key === 'clangFormatPath' ? executable : defaultValue,
+        } as any);
     });
     afterEach(() => jest.restoreAllMocks());
 
@@ -41,8 +43,9 @@ nativeTests('真实 clang-format 集成', () => {
         expect(await format(output)).toBe(output);
     });
 
-    it('长调用和控制条件按通用行宽换行，不再强制合并', async () => {
+    it('默认行宽 999999 保留带中文注释的声明、长调用和控制条件', async () => {
         const input = [
+            'static volatile AL_U32 TimerCount = 0; // 中断写入、主循环读取，需要使用 volatile。',
             'void process_packet() {',
             'send_packet(first_very_long_argument_name, second_very_long_argument_name, third_very_long_argument_name);',
             'if (first_very_long_condition_name && second_very_long_condition_name && third_very_long_condition_name) {',
@@ -50,12 +53,17 @@ nativeTests('真实 clang-format 集成', () => {
         ].join('\n');
         const output = await format(input);
         expect(output).toBe(await runClangFormat(input, path.join(__dirname, 'example.cpp')));
-        expect(output).toMatch(/send_packet\([^;]*\n[^;]*\);/);
-        expect(output).toMatch(/if \([^)]*\n[^)]*\)/);
+        expect(output).toContain(input.split('\n')[0]);
+        expect(output).toContain('send_packet(first_very_long_argument_name, second_very_long_argument_name, third_very_long_argument_name);');
+        expect(output).toContain('if (first_very_long_condition_name && second_very_long_condition_name && third_very_long_condition_name)');
         expect(await format(output)).toBe(output);
     });
 
-    it('工程配置可以改变行宽和花括号换行', async () => {
+    it('可以修改行宽设置，其他工程样式仍继承', async () => {
+        (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+            get: (key: string, defaultValue: unknown) => key === 'clangFormatPath' ? executable
+                : key === 'columnLimit' ? 48 : defaultValue,
+        });
         const filename = path.join(__dirname, 'samples', 'c-clang-style', 'example.cpp');
         const input = 'void process_packet(){ send_packet(first_argument_name, second_argument_name, third_argument_name); }\n';
         const output = await format(input, filename);

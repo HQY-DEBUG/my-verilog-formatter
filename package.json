@@ -2,7 +2,7 @@
     "name": "hanxuyao-plugin",
     "displayName": "hanxuyao-plugin",
     "description": "Verilog / SystemVerilog / C / C++ / MATLAB 开发工具，内置 Tcl 导航、词语与正则高亮、CSV/TSV 彩虹列高亮及 RBQL 查询",
-    "version": "1.6.1",
+    "version": "1.6.2",
     "publisher": "hanxuyao",
     "repository": {
         "type": "git",
@@ -1230,6 +1230,14 @@
             {
                 "title": "hanxuyao-plugin",
                 "properties": {
+                    "verilogFormatter.c.columnLimit": {
+                        "type": "integer",
+                        "scope": "resource",
+                        "default": 999999,
+                        "minimum": 0,
+                        "maximum": 4294967295,
+                        "description": "C/C++ 行宽上限：每行最大列数，默认 999999；设为 0 时取消行宽限制。可在用户或工作区设置中修改，优先于工程 .clang-format 的 ColumnLimit，下一次格式化即生效。"
+                    },
                     "verilogFormatter.c.clangFormatPath": {
                         "type": "string",
                         "scope": "machine",

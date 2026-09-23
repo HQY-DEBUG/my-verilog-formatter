@@ -65,9 +65,14 @@ function clangFormatExecutable() {
 }
 async function runClangFormat(code, filename, range) {
     const executable = clangFormatExecutable();
+    const columnLimit = vscode.workspace.getConfiguration('verilogFormatter.c', vscode.Uri.file(filename))
+        .get('columnLimit', 999999);
+    if (!Number.isInteger(columnLimit) || columnLimit < 0 || columnLimit > 4294967295) {
+        throw new Error('C/C++ 格式化：columnLimit 必须是 0 到 4294967295 之间的整数。');
+    }
     const args = [
         `--assume-filename=${filename}`,
-        `--style=${JSON.stringify(exports.C_CLANG_STYLE)}`,
+        `--style=${JSON.stringify({ ...exports.C_CLANG_STYLE, ColumnLimit: columnLimit })}`,
         '--fallback-style=LLVM',
     ];
     if (range) {

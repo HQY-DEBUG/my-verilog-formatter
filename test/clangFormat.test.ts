@@ -36,7 +36,10 @@ describe('clang-format 进程', () => {
         return stdin;
     }
 
-    it('源码从标准输入传递，保留参数边界并使用工程配置及 LLVM 后备样式', async () => {
+    it.each([999999, 120, 0])('源码从标准输入传递并应用行宽设置 %i', async columnLimit => {
+        jest.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({
+            get: (key: string, defaultValue: unknown) => key === 'columnLimit' ? columnLimit : defaultValue,
+        } as any);
         const stdin = processResult(null, 'int x = 1;\n');
         const filename = path.resolve('带 空格', 'a.cpp');
         const output = await runClangFormat('int x=1;\n', filename, { start: 2, end: 4 });
@@ -48,14 +51,17 @@ describe('clang-format 进程', () => {
         expect(args).toContain('--lines=2:4');
         expect(args).toContain('--fallback-style=LLVM');
         const style = JSON.parse(args.find((arg: string) => arg.startsWith('--style=')).slice(8));
-        expect(style).toEqual({ BasedOnStyle: 'InheritParentConfig', IndentWidth: 4, SkipMacroDefinitionBody: true });
+        expect(style).toEqual({ BasedOnStyle: 'InheritParentConfig', IndentWidth: 4, ColumnLimit: columnLimit, SkipMacroDefinitionBody: true });
+        expect(vscode.workspace.getConfiguration).toHaveBeenCalledWith('verilogFormatter.c', vscode.Uri.file(filename));
         expect(options).toMatchObject({ windowsHide: true, timeout: 10000 });
         expect(options.shell).toBeUndefined();
     });
 
     it('优先使用用户配置的绝对路径', async () => {
         const executable = path.resolve('tools', 'clang-format');
-        jest.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: () => executable } as any);
+        jest.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({
+            get: (key: string, defaultValue: unknown) => key === 'clangFormatPath' ? executable : defaultValue,
+        } as any);
         processResult(null, '');
         await runClangFormat('', 'test.cpp');
         expect((execFile as unknown as jest.Mock).mock.calls[0][0]).toBe(executable);
@@ -74,6 +80,14 @@ describe('clang-format 进程', () => {
     it('可执行文件或配置错误向上传播，不返回局部格式化结果', async () => {
         processResult(new Error('exit 1'), 'partial', 'invalid style');
         await expect(runClangFormat('int x;', 'test.cpp')).rejects.toThrow('invalid style');
+    });
+
+    it.each([-1, 1.5, '80', 4294967296])('拒绝非法行宽 %p', async columnLimit => {
+        jest.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({
+            get: (key: string, defaultValue: unknown) => key === 'columnLimit' ? columnLimit : defaultValue,
+        } as any);
+        await expect(runClangFormat('int x;', 'test.cpp')).rejects.toThrow('columnLimit');
+        expect(execFile).not.toHaveBeenCalled();
     });
 
     it('拒绝相对路径并报告标准输入错误', async () => {
