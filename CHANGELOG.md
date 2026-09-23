@@ -2,6 +2,11 @@
 
 记录近期版本的主要变化，更早的记录见 [README 修改记录](README.md#修改记录)。历史日期沿用仓库中的修改记录日期。
 
+## [1.6.3] - 2026/09/23
+
+- 设置 `AllowShortFunctionsOnASingleLine: None`，禁止因行宽足够而将整个函数合并成一行，并展开已有的单行函数。
+- 保留 `verilogFormatter.c.columnLimit` 的默认值 `999999` 和用户配置能力，其他格式规则保持不变。
+
 ## [1.6.2] - 2026/09/23
 
 - 新增 C/C++ 行宽设置 `verilogFormatter.c.columnLimit`，默认 `999999`，可在用户或工作区设置中自行修改，下一次格式化生效；`0` 表示取消行宽限制。

@@ -9,6 +9,7 @@ export interface ClangLineRange { start: number; end: number }
 export const C_CLANG_STYLE = {
     BasedOnStyle: 'InheritParentConfig',
     IndentWidth: 4,
+    AllowShortFunctionsOnASingleLine: 'None',
     SkipMacroDefinitionBody: true,
 };
 

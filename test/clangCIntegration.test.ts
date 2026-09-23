@@ -34,12 +34,14 @@ nativeTests('真实 clang-format 集成', () => {
         return edits.length ? edits[0].newText : text;
     }
 
-    it('普通 C++ 空格、块缩进和花括号布局与原生结果一致', async () => {
-        const input = 'namespace sample{\nvoid run(int n){for(int i=0;i<n;++i){if(i%2==0){emit(i);}else{emit(-i);}}}\n}\n';
+    it('普通 C++ 布局遵循原生规则，短函数保持多行', async () => {
+        const input = 'namespace sample{\nvoid run(int n){for(int i=0;i<n;++i){if(i%2==0){emit(i);}else{emit(-i);}}}\n}\n'
+            + 'static void ps_led_flashing() { AlGpio_Hal_WritePin(GPIO, PL_LED_1, ~LedState); }\n';
         const output = await format(input);
         expect(output).toBe(await runClangFormat(input, path.join(__dirname, 'example.cpp')));
         expect(output).toContain('for (int i = 0; i < n; ++i)');
         expect(output).toContain('if (i % 2 == 0)');
+        expect(output).toContain('static void ps_led_flashing() {\n    AlGpio_Hal_WritePin(GPIO, PL_LED_1, ~LedState);\n}');
         expect(await format(output)).toBe(output);
     });
 

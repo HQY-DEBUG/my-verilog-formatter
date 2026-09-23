@@ -43,6 +43,7 @@ const child_process_1 = require("child_process");
 exports.C_CLANG_STYLE = {
     BasedOnStyle: 'InheritParentConfig',
     IndentWidth: 4,
+    AllowShortFunctionsOnASingleLine: 'None',
     SkipMacroDefinitionBody: true,
 };
 function clangFormatExecutable() {

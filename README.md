@@ -12,7 +12,7 @@
 8. CSV / TSV 数据处理：提供彩虹列高亮、分隔符识别、CSV 校验、表头与列编辑、对齐、格式复制和 RBQL 查询。
 9. Tcl 编辑增强：提供过程、命名空间与变量大纲、定义跳转、代码折叠、悬停说明和粘性滚动支持。
 
-> 版本：v1.6.2　日期：2026/09/23
+> 版本：v1.6.3　日期：2026/09/23
 
 ---
 
@@ -68,7 +68,7 @@ Tcl 导航自 **1.5.0** 集成到桌面入口；兼容性修复使用补丁版�
 - 按类型、变量名、分号和注释多列对齐结构体成员。
 - 按枚举项名称、赋值表达式、逗号和注释多列对齐枚举定义。
 
-多行调用、控制条件、函数签名、花括号和空行统一遵循 clang-format 的通用规则。行宽设置 `verilogFormatter.c.columnLimit` 默认为 `999999`，优先于工程的 `ColumnLimit`；可在 VS Code 用户或工作区设置中修改，下一次格式化即生效，设为 `0` 时取消行宽限制。其他样式仍可通过工程的 `BreakBeforeBraces` 等选项调整。后处理保留 clang-format 的换行、原始字符串、多行注释和 `clang-format off/on` 区域；定制列对齐可能增加行宽。
+函数体固定保持多行（`AllowShortFunctionsOnASingleLine: None`），已有的单行函数也会展开；调用、控制条件、函数签名、花括号和空行继续遵循 clang-format 的通用规则。行宽设置 `verilogFormatter.c.columnLimit` 默认为 `999999`，优先于工程的 `ColumnLimit`；可在 VS Code 用户或工作区设置中修改，下一次格式化即生效，设为 `0` 时取消行宽限制。其他样式仍可通过工程的 `BreakBeforeBraces` 等选项调整。后处理保留 clang-format 的换行、原始字符串、多行注释和 `clang-format off/on` 区域；定制列对齐可能增加行宽。
 
 需要 `clang-format 18+`。默认优先复用 Microsoft C/C++ 扩展自带的程序，否则从 PATH 查找；也可在用户设置 `verilogFormatter.c.clangFormatPath` 中指定可执行文件的绝对路径。该设置仅作用于当前机器。程序不可用或工程配置错误时报告失败，不应用局部结果。
 
@@ -386,8 +386,8 @@ npm run compile
 当前安装包面向 Windows x64，包含 MATLAB 运行组件和 Windows ripgrep。发布时上传生成的 `.vsix` 文件；修改记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ```bash
-npm run package -- --target win32-x64 --out hanxuyao-plugin-1.6.2-win32-x64.vsix
-code --install-extension hanxuyao-plugin-1.6.2-win32-x64.vsix --force
+npm run package -- --target win32-x64 --out hanxuyao-plugin-1.6.3-win32-x64.vsix
+code --install-extension hanxuyao-plugin-1.6.3-win32-x64.vsix --force
 ```
 
 ---
@@ -435,6 +435,7 @@ GitHub 自动测试、打包和发布的配置及使用方法见 [自动发布](
 
 | 版本 | 日期 | 修改内容 |
 |------|------|---------|
+| v1.6.3 | 2026/09/23 | 禁止短函数合并为单行，展开已有单行函数，保留可配置行宽及其他格式规则 |
 | v1.6.2 | 2026/09/23 | C/C++ 行宽默认设为 999999，支持用户或工作区设置；记录新版核验后自动清理旧安装包的授权 |
 | v1.6.1 | 2026/09/22 | 每次修改通过验证后默认自动打包发布，统一仓库规则、版本规则和发布文档；发布此前完成的 C/C++ clang-format 集成 |
 | v1.6.0 | 2026/09/22 | C/C++ 通用格式与换行接入 clang-format，保留定制多列对齐，修复宏续行和枚举缩进，支持工程样式及完整上下文选区格式化 |

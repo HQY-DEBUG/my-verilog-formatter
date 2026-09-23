@@ -51,7 +51,7 @@ describe('clang-format 进程', () => {
         expect(args).toContain('--lines=2:4');
         expect(args).toContain('--fallback-style=LLVM');
         const style = JSON.parse(args.find((arg: string) => arg.startsWith('--style=')).slice(8));
-        expect(style).toEqual({ BasedOnStyle: 'InheritParentConfig', IndentWidth: 4, ColumnLimit: columnLimit, SkipMacroDefinitionBody: true });
+        expect(style).toEqual({ BasedOnStyle: 'InheritParentConfig', IndentWidth: 4, AllowShortFunctionsOnASingleLine: 'None', ColumnLimit: columnLimit, SkipMacroDefinitionBody: true });
         expect(vscode.workspace.getConfiguration).toHaveBeenCalledWith('verilogFormatter.c', vscode.Uri.file(filename));
         expect(options).toMatchObject({ windowsHide: true, timeout: 10000 });
         expect(options.shell).toBeUndefined();
