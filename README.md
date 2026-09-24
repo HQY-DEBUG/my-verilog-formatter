@@ -12,7 +12,7 @@
 8. CSV / TSV 数据处理：提供彩虹列高亮、分隔符识别、CSV 校验、表头与列编辑、对齐、格式复制和 RBQL 查询。
 9. Tcl 编辑增强：提供过程、命名空间与变量大纲、定义跳转、代码折叠、悬停说明和粘性滚动支持。
 
-> 版本：v1.6.3　日期：2026/09/23
+> 版本：v2.0.0　日期：2026/09/24
 
 ---
 
@@ -126,7 +126,7 @@ MATLAB 设置说明、下拉选项和工作区设置分组使用中文。设置�
 | 属性前缀支持 | `(* mark_debug = "true" *)` 声明单独分组对齐 |
 | 行尾空格清除 | 格式化后自动去除每行末尾多余空格 |
 
-启用保存时自动格式化（`settings.json`）：
+启用 Verilog/SystemVerilog 保存时自动格式化（`settings.json`）：
 
 ```jsonc
 {
@@ -309,8 +309,17 @@ Anlogic ADC 文件支持整文档或选区格式化，可自动对齐信号名�
   // begin 是否另起一行，默认 true
   "verilogFormatter.newlineBeforeBegin": true,
 
-  // 保存时自动格式化，默认 false
+  // Verilog/SystemVerilog 保存时自动格式化，默认 false
   "verilogFormatter.formatOnSave": false,
+
+  // C/C++ 保存时自动格式化，默认 false
+  "verilogFormatter.c.formatOnSave": false,
+
+  // MATLAB 保存时自动格式化，默认 false
+  "verilogFormatter.matlab.formatOnSave": false,
+
+  // Anlogic ADC 保存时自动格式化，默认 false
+  "verilogFormatter.adc.formatOnSave": false,
 
   // 是否启用 xvlog 语法检查，默认 false
   "verilogFormatter.lintEnabled": false,
@@ -319,6 +328,10 @@ Anlogic ADC 文件支持整文档或选区格式化，可自动对齐信号名�
   "verilogFormatter.hoverEnabled": true
 }
 ```
+
+四个保存开关互相独立，均支持用户和工作区设置，下一次保存即生效。VS Code 自带的 `editor.formatOnSave` 另行配置。
+
+**从 1.x 升级：**原 `verilogFormatter.formatOnSave` 仅保留为 Verilog/SystemVerilog 开关，不再同时开启 C/C++、MATLAB 和 ADC。如果以前依赖总开关开启这些语言，需要分别开启对应的新设置；新增开关默认关闭。
 
 ### TODO 配置
 
@@ -386,8 +399,8 @@ npm run compile
 当前安装包面向 Windows x64，包含 MATLAB 运行组件和 Windows ripgrep。发布时上传生成的 `.vsix` 文件；修改记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ```bash
-npm run package -- --target win32-x64 --out hanxuyao-plugin-1.6.3-win32-x64.vsix
-code --install-extension hanxuyao-plugin-1.6.3-win32-x64.vsix --force
+npm run package -- --target win32-x64 --out hanxuyao-plugin-2.0.0-win32-x64.vsix
+code --install-extension hanxuyao-plugin-2.0.0-win32-x64.vsix --force
 ```
 
 ---
@@ -435,6 +448,7 @@ GitHub 自动测试、打包和发布的配置及使用方法见 [自动发布](
 
 | 版本 | 日期 | 修改内容 |
 |------|------|---------|
+| v2.0.0 | 2026/09/24 | 按 Verilog/SystemVerilog、C/C++、MATLAB、ADC 拆分保存格式化开关；原开关仅控制 Verilog，提供独立工作区配置及升级说明 |
 | v1.6.3 | 2026/09/23 | 禁止短函数合并为单行，展开已有单行函数，保留可配置行宽及其他格式规则 |
 | v1.6.2 | 2026/09/23 | C/C++ 行宽默认设为 999999，支持用户或工作区设置；记录新版核验后自动清理旧安装包的授权 |
 | v1.6.1 | 2026/09/22 | 每次修改通过验证后默认自动打包发布，统一仓库规则、版本规则和发布文档；发布此前完成的 C/C++ clang-format 集成 |

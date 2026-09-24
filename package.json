@@ -2,7 +2,7 @@
     "name": "hanxuyao-plugin",
     "displayName": "hanxuyao-plugin",
     "description": "Verilog / SystemVerilog / C / C++ / MATLAB 开发工具，内置 Tcl 导航、词语与正则高亮、CSV/TSV 彩虹列高亮及 RBQL 查询",
-    "version": "1.6.3",
+    "version": "2.0.0",
     "publisher": "hanxuyao",
     "repository": {
         "type": "git",
@@ -1299,8 +1299,27 @@
                     },
                     "verilogFormatter.formatOnSave": {
                         "type": "boolean",
+                        "scope": "resource",
                         "default": false,
-                        "description": "保存时自动格式化 Verilog/SystemVerilog/C/C++/MATLAB 文件"
+                        "description": "Verilog / SystemVerilog：保存时自动格式化，仅控制这两种语言。"
+                    },
+                    "verilogFormatter.c.formatOnSave": {
+                        "type": "boolean",
+                        "scope": "resource",
+                        "default": false,
+                        "description": "C / C++：保存时自动格式化，与其他语言的开关独立。"
+                    },
+                    "verilogFormatter.matlab.formatOnSave": {
+                        "type": "boolean",
+                        "scope": "resource",
+                        "default": false,
+                        "description": "MATLAB：保存时自动格式化，与其他语言的开关独立。"
+                    },
+                    "verilogFormatter.adc.formatOnSave": {
+                        "type": "boolean",
+                        "scope": "resource",
+                        "default": false,
+                        "description": "Anlogic ADC：保存时自动格式化，与其他语言的开关独立。"
                     },
                     "verilogFormatter.todo.tags": {
                         "type": "array",

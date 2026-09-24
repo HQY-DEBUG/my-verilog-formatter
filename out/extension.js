@@ -2,12 +2,13 @@
 // =========================================================================
 // 文件    : extension.ts
 // 描述    : VS Code 扩展入口，注册所有 Provider 和命令
-// 版本    : v1.6.0
-// 日期    : 2026/09/22
+// 版本    : v2.0.0
+// 日期    : 2026/09/24
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.0.0  2026/09/24  按语言拆分保存时自动格式化开关
 //  v1.6.0  2026/09/22  等待 clang-format 异步结果并跳过过期文档修改
 //  v1.5.0  2026/09/21  集成 Tcl 大纲、导航、折叠和悬停
 //  v1.4.11 2026/09/21  集成词语高亮与 Rainbow CSV 完整运行组件
@@ -51,6 +52,7 @@ exports.MATLAB_LANGS = exports.C_LANGS = exports.VERILOG_LANGS = void 0;
 exports.activate = activate;
 exports.deactivate = deactivate;
 const vscode = __importStar(require("vscode"));
+const formatOnSave_1 = require("./features/formatOnSave");
 // 2026/09/21 新增：接入 Tcl 导航组件及生命周期。
 const tclIntegration_1 = require("./features/tcl/tclIntegration");
 // 2026/09/21 新增：统一管理词语高亮、CSV 命令与资源的生命周期。
@@ -173,14 +175,7 @@ async function activate(context) {
     }));
     // ---- 保存时自动格式化 ----//
     context.subscriptions.push(vscode.workspace.onDidSaveTextDocument(async (doc) => {
-        const cfg = vscode.workspace.getConfiguration('verilogFormatter');
-        if (!cfg.get('formatOnSave', false)) {
-            return;
-        }
-        if (!exports.VERILOG_LANGS.includes(doc.languageId)
-            && !exports.C_LANGS.includes(doc.languageId)
-            && !exports.MATLAB_LANGS.includes(doc.languageId)
-            && doc.languageId !== 'anlogic-adc') {
+        if (!(0, formatOnSave_1.shouldFormatOnSave)(doc)) {
             return;
         }
         await vscode.commands.executeCommand('editor.action.formatDocument', doc.uri);

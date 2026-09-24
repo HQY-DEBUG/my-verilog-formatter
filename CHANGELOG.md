@@ -2,6 +2,12 @@
 
 记录近期版本的主要变化，更早的记录见 [README 修改记录](README.md#修改记录)。历史日期沿用仓库中的修改记录日期。
 
+## [2.0.0] - 2026/09/24
+
+- 将保存时自动格式化拆为 Verilog/SystemVerilog、C/C++、MATLAB、Anlogic ADC 四个独立布尔开关，均支持用户和工作区设置。
+- 原 `verilogFormatter.formatOnSave` 现在仅控制 Verilog/SystemVerilog。此前通过总开关启用其他语言的用户，需要分别开启 `verilogFormatter.c.formatOnSave`、`verilogFormatter.matlab.formatOnSave` 和 `verilogFormatter.adc.formatOnSave`；新增开关默认关闭。
+- 保存时按文档所属工作区读取对应开关，修改后下一次保存生效；由于旧总开关作用范围改变，按主版本发布。
+
 ## [1.6.3] - 2026/09/23
 
 - 设置 `AllowShortFunctionsOnASingleLine: None`，禁止因行宽足够而将整个函数合并成一行，并展开已有的单行函数。
