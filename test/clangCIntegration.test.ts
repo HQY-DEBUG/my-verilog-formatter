@@ -61,6 +61,35 @@ nativeTests('真实 clang-format 集成', () => {
         expect(await format(output)).toBe(output);
     });
 
+    it.each(['\n', '\r\n'])('匿名枚举成员一行一个，并保留枚举项对齐（%j）', async eol => {
+        const input = `enum { BOOT_WAIT, BOOT_READY, BOOT_FAILED };${eol}`;
+        const expected = [
+            'enum {',
+            '    BOOT_WAIT   ,',
+            '    BOOT_READY  ,',
+            '    BOOT_FAILED',
+            '};', '',
+        ].join(eol);
+        expect(await format(input)).toBe(expected);
+        expect(await format(expected)).toBe(expected);
+    });
+
+    it.each([
+        ['enum BootState', ''],
+        ['typedef enum', ' BootState'],
+        ['enum class BootState : unsigned', ''],
+    ])('展开 %s 并保留赋值和行尾注释', async (declaration, suffix) => {
+        const input = `${declaration} { BOOT_WAIT = 0, BOOT_READY = 1, BOOT_FAILED = 2 }${suffix}; // 状态\n`;
+        const output = await format(input);
+        const members = output.split('\n').filter(line => /^\s+BOOT_/.test(line));
+        expect(members).toHaveLength(3);
+        expect(members[0]).toMatch(/^\s+BOOT_WAIT\s*= 0\s*,$/);
+        expect(members[1]).toMatch(/^\s+BOOT_READY\s*= 1\s*,$/);
+        expect(members[2]).toMatch(/^\s+BOOT_FAILED\s*= 2\s*$/);
+        expect(output).toContain(`}${suffix}; // 状态`);
+        expect(await format(output)).toBe(output);
+    });
+
     it('可以修改行宽设置，其他工程样式仍继承', async () => {
         (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
             get: (key: string, defaultValue: unknown) => key === 'clangFormatPath' ? executable

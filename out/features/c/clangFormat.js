@@ -44,6 +44,7 @@ exports.C_CLANG_STYLE = {
     BasedOnStyle: 'InheritParentConfig',
     IndentWidth: 4,
     AllowShortFunctionsOnASingleLine: 'None',
+    AllowShortEnumsOnASingleLine: false,
     SkipMacroDefinitionBody: true,
 };
 function clangFormatExecutable() {
