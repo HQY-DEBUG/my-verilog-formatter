@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.ts
 // 描述    : clang-format 通用排版与 C/C++ 定制多列对齐
-// 版本    : v1.6.0
-// 日期    : 2026/09/22
+// 版本    : v2.0.1
+// 日期    : 2026/09/29
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.0.1  2026/09/29  对齐连续简单 typedef 的类型、别名、分号和行尾注释
 //  v1.6.0  2026/09/22  通用排版交给 clang-format，保护宏续行并保留定制对齐
 //  v1.4.10 2026/09/15  对齐宏定义的宏值和注释，以及连续同名调用的参数列
 //  v1.4.9  2026/09/15  对齐函数内连续赋值的左值、等号、表达式、分号和注释
@@ -71,6 +72,7 @@ export function formatC(code: string, range?: ClangLineRange): string {
     const end = range ? range.end : lines.length;
     let normalized = lines.slice(start, end).join('\n');
     normalized = alignMacroDefines(normalized);
+    normalized = alignTypedefDeclarations(normalized);
     normalized = alignVariableDeclarations(normalized);
     normalized = alignAssignments(normalized);
     normalized = alignConsecutiveCalls(normalized);
@@ -148,6 +150,45 @@ function parenthesisDelta(line: string): number {
     }
 
     return delta;
+}
+
+function alignTypedefDeclarations(code: string): string {
+    const lines = code.split('\n');
+    const maskedLines = maskCLiteralsAndComments(code).split('\n');
+    const aliases = lines.map((line, index) => {
+        const semicolon = maskedLines[index].indexOf(';');
+        if (semicolon < 0 || maskedLines[index].slice(semicolon + 1).trim()) { return undefined; }
+        // 仅识别简单类型别名；函数指针、内联类型体和声明中间的注释沿用 clang-format 布局。
+        const match = line.slice(0, semicolon)
+            .match(/^([ \t]*)typedef[ \t]+([A-Za-z_]\w*(?:[ \t]+[A-Za-z_]\w*)*)[ \t]+([A-Za-z_]\w*)[ \t]*$/);
+        if (!match) { return undefined; }
+        const comment = line.slice(semicolon + 1).trim();
+        if (comment && !comment.startsWith('//') && !comment.startsWith('/*')) { return undefined; }
+        return { indent: match[1], type: match[2].replace(/[ \t]+/g, ' '), name: match[3], comment };
+    });
+
+    for (let i = 0; i < lines.length;) {
+        const first = aliases[i];
+        if (!first) { i++; continue; }
+        const block = [first];
+        let end = i + 1;
+        while (end < lines.length) {
+            const next = aliases[end];
+            if (!next || next.indent !== first.indent) { break; }
+            block.push(next);
+            end++;
+        }
+        if (block.length > 1) {
+            const typeWidth = Math.max(...block.map(item => item.type.length)) + 1;
+            const nameWidth = Math.max(...block.map(item => item.name.length)) + 1;
+            block.forEach((item, offset) => {
+                const comment = item.comment ? `  ${item.comment}` : '';
+                lines[i + offset] = `${item.indent}typedef ${item.type.padEnd(typeWidth)}${item.name.padEnd(nameWidth)};${comment}`;
+            });
+        }
+        i = end;
+    }
+    return lines.join('\n');
 }
 
 function alignVariableDeclarations(code: string): string {

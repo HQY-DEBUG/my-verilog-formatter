@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.test.ts
 // 描述    : C/C++ 格式化器回归测试
-// 版本    : v1.6.0
-// 日期    : 2026/09/22
+// 版本    : v2.0.1
+// 日期    : 2026/09/29
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.0.1  2026/09/29  验证 typedef 多列对齐、块注释、分组边界及重复格式化
 //  v1.6.0  2026/09/22  验证定制对齐保留宏、注释和通用排版的换行
 //  v1.4.10 2026/09/15  验证宏值注释和连续调用参数对齐，保留表达式及分组边界
 //  v1.4.9  2026/09/15  验证函数内数组赋值、调用表达式及对齐分组边界
@@ -25,6 +26,74 @@
 import { formatC } from '../src/features/c/cFormatter';
 
 describe('C/C++ formatter', () => {
+    it.each(['\n', '\r\n'])('对齐截图中的 typedef 类型、别名、分号和 Doxygen 注释（%j）', eol => {
+        const input = [
+            'typedef uint8_t Xuint8; /**< unsigned 8-bit */',
+            'typedef char Xint8; /**< signed 8-bit */',
+            'typedef uint16_t Xuint16; /**< unsigned 16-bit */',
+            'typedef short Xint16; /**< signed 16-bit */',
+            'typedef uint32_t Xuint32; /**< unsigned 32-bit */',
+            'typedef long Xint32; /**< signed 32-bit */',
+            'typedef float Xfloat32; /**< 32-bit floating point */',
+            'typedef double Xfloat64; /**< 64-bit double precision FP */',
+            'typedef unsigned long Xboolean; /**< boolean (XTRUE or XFALSE) */',
+        ].join(eol);
+        const expected = [
+            'typedef uint8_t       Xuint8   ;  /**< unsigned 8-bit */',
+            'typedef char          Xint8    ;  /**< signed 8-bit */',
+            'typedef uint16_t      Xuint16  ;  /**< unsigned 16-bit */',
+            'typedef short         Xint16   ;  /**< signed 16-bit */',
+            'typedef uint32_t      Xuint32  ;  /**< unsigned 32-bit */',
+            'typedef long          Xint32   ;  /**< signed 32-bit */',
+            'typedef float         Xfloat32 ;  /**< 32-bit floating point */',
+            'typedef double        Xfloat64 ;  /**< 64-bit double precision FP */',
+            'typedef unsigned long Xboolean ;  /**< boolean (XTRUE or XFALSE) */',
+        ].join(eol);
+        expect(formatC(input)).toBe(expected);
+        expect(formatC(expected)).toBe(expected);
+    });
+
+    it('typedef 按缩进、空行和其他语句分组，保留各种行尾注释内容', () => {
+        const input = [
+            'typedef int A;',
+            'typedef unsigned long Longer; // 别名',
+            'typedef char Byte; /**< ; // 原始内容 */',
+            '',
+            'typedef short Single;',
+            'int value;',
+            'typedef char Local;',
+            '    typedef int A;',
+            '    typedef long B;',
+        ].join('\n');
+        const expected = [
+            'typedef int           A      ;',
+            'typedef unsigned long Longer ;  // 别名',
+            'typedef char          Byte   ;  /**< ; // 原始内容 */',
+            '',
+            'typedef short Single;',
+            'int value;',
+            'typedef char Local;',
+            '    typedef int  A ;',
+            '    typedef long B ;',
+        ].join('\n');
+        expect(formatC(input)).toBe(expected);
+        expect(formatC(expected)).toBe(expected);
+    });
+
+    it('跳过复杂 typedef、宏体、注释和禁止格式化的区域', () => {
+        const input = [
+            'typedef void (*Callback)(int);',
+            'typedef int (*Matrix)[4];',
+            'typedef struct { int x; } Point;',
+            'typedef int A, B;',
+            'typedef int /* 类型说明 */ Number;',
+            '/*', 'typedef int A;', 'typedef long Longer;', '*/',
+            '#define TYPES \\', '    typedef int A; \\', '    typedef long Longer;',
+            '// clang-format off', 'typedef int A;', 'typedef long Longer;', '// clang-format on',
+        ].join('\n');
+        expect(formatC(input)).toBe(input);
+    });
+
     it.each(['\n', '\r\n'])('保留 TX/RX 续行宏及后续函数声明（%j）', eol => {
         const input = [
             '/* Helper macros for TX descriptor handling */',

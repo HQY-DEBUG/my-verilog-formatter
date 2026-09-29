@@ -119,6 +119,24 @@ nativeTests('真实 clang-format 集成', () => {
         expect(await format(output)).toBe(output);
     });
 
+    it('clang-format 后继续对齐 typedef 别名、分号和块注释', async () => {
+        const input = [
+            'typedef uint8_t Xuint8; /**< unsigned 8-bit */',
+            'typedef float Xfloat32; /**< 32-bit floating point */',
+            'typedef unsigned long Xboolean; /**< boolean (XTRUE or XFALSE) */',
+            '',
+        ].join('\n');
+        const expected = [
+            'typedef uint8_t       Xuint8   ;  /**< unsigned 8-bit */',
+            'typedef float         Xfloat32 ;  /**< 32-bit floating point */',
+            'typedef unsigned long Xboolean ;  /**< boolean (XTRUE or XFALSE) */',
+            '',
+        ].join('\n');
+        expect(await format(input)).toBe(expected);
+        expect(await format(expected)).toBe(expected);
+        expect(await format(input.replace(/\n/g, '\r\n'))).toBe(expected.replace(/\n/g, '\r\n'));
+    });
+
     it('选区保留完整函数上下文且不对齐区域外的变量', async () => {
         const input = 'int outside=1;\nlong another=2;\nvoid run() {\nint x=1;\nlong longer=2;\n}\n';
         const output = await format(input, undefined, new vscode.Range(3, 0, 5, 0));
