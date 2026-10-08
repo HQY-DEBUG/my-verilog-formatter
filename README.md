@@ -12,7 +12,7 @@
 8. CSV / TSV 数据处理：提供彩虹列高亮、分隔符识别、CSV 校验、表头与列编辑、对齐、格式复制和 RBQL 查询。
 9. Tcl 编辑增强：提供过程、命名空间与变量大纲、定义跳转、代码折叠、悬停说明和粘性滚动支持。
 
-> 版本：v2.0.2　日期：2026/09/29
+> 版本：v2.0.3　日期：2026/10/08
 
 ---
 
@@ -126,6 +126,7 @@ MATLAB 设置说明、下拉选项和工作区设置分组使用中文。设置�
 | 行尾注释对齐 | 连续代码块的 `//` 注释对齐到同一列 |
 | 属性前缀支持 | `(* mark_debug = "true" *)` 声明单独分组对齐 |
 | 行尾空格清除 | 格式化后自动去除每行末尾多余空格 |
+| 例化参数展开 | 将单行例化头中的具名 `#(.参数(值), …)` 拆为独立参数行，并与端口列表分别对齐；模块声明、位置参数、宏体及夹有注释的紧凑参数列表保持原有布局 |
 
 启用 Verilog/SystemVerilog 保存时自动格式化（`settings.json`）：
 
@@ -400,8 +401,8 @@ npm run compile
 当前安装包面向 Windows x64，包含 MATLAB 运行组件和 Windows ripgrep。发布时上传生成的 `.vsix` 文件；修改记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ```bash
-npm run package -- --target win32-x64 --out hanxuyao-plugin-2.0.2-win32-x64.vsix
-code --install-extension hanxuyao-plugin-2.0.2-win32-x64.vsix --force
+npm run package -- --target win32-x64 --out hanxuyao-plugin-2.0.3-win32-x64.vsix
+code --install-extension hanxuyao-plugin-2.0.3-win32-x64.vsix --force
 ```
 
 ---
@@ -449,6 +450,7 @@ GitHub 自动测试、打包和发布的配置及使用方法见 [自动发布](
 
 | 版本 | 日期 | 修改内容 |
 |------|------|---------|
+| v2.0.3 | 2026/10/08 | 修复 Verilog 紧凑例化参数留在一行的问题，拆分具名参数并保留嵌套表达式，参数与端口分别对齐 |
 | v2.0.2 | 2026/09/29 | 禁止枚举合并为单行，保持每个成员独占一行并保留既有枚举项对齐 |
 | v2.0.1 | 2026/09/29 | 修复连续简单 typedef 的类型、别名、分号和行尾注释对齐，保留复杂声明及分组边界 |
 | v2.0.0 | 2026/09/24 | 按 Verilog/SystemVerilog、C/C++、MATLAB、ADC 拆分保存格式化开关；原开关仅控制 Verilog，提供独立工作区配置及升级说明 |

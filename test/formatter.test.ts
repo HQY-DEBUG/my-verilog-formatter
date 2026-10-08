@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : formatter.test.ts
 // 描述    : VerilogFormatter 单元测试
-// 版本    : v0.1.0
-// 日期    : 2026/05/25
+// 版本    : v2.0.3
+// 日期    : 2026/10/08
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.0.3  2026/10/08  验证紧凑例化参数展开、嵌套表达式及重复格式化
 //  v0.1.0  2026/05/25  创建测试文件
 // =========================================================================
 
@@ -650,6 +651,63 @@ describe('VerilogFormatter', () => {
         ].join('\n');
 
         expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
+    test('展开截图中的紧凑例化参数，并分别对齐参数和端口', () => {
+        const input = [
+            '// 融合输出已经是单周期有效，无需重复取沿，直接推进平滑窗口。',
+            'smooth #(.DATA_WIDTH(20), .WIN_LEN(WIN_LEN)) u_smooth (',
+            '.clk(clk),', '.rstn(rstn),', '.s_valid(merged_valid),',
+            '.s_data(merged_data),', '.m_valid(data_out_vld),', '.m_data(data_out)',
+            ');', 'assign sample_valid = data_out_vld;',
+        ].join('\n');
+        const expected = [
+            '// 融合输出已经是单周期有效，无需重复取沿，直接推进平滑窗口。',
+            'smooth #(',
+            '  .DATA_WIDTH ( 20       ),',
+            '  .WIN_LEN    ( WIN_LEN  )',
+            ') u_smooth (',
+            '  .clk     ( clk           ),',
+            '  .rstn    ( rstn          ),',
+            '  .s_valid ( merged_valid  ),',
+            '  .s_data  ( merged_data   ),',
+            '  .m_valid ( data_out_vld  ),',
+            '  .m_data  ( data_out      )',
+            ');', 'assign sample_valid = data_out_vld;',
+        ].join('\n');
+        expect(fmt['format'](input, defaultCfg)).toBe(expected);
+        expect(fmt['format'](expected, defaultCfg)).toBe(expected);
+        expect(fmt['format'](input.replace(/\n/g, '\r\n'), defaultCfg)).toBe(expected);
+    });
+
+    test('拆分参数时保留嵌套调用、拼接和字符串中的括号与逗号', () => {
+        const input = 'filter #(.WIDTH(calc(8, $clog2(N))), .MASK({A, B}), .TEXT("a,b)")) u_filter (\n.clk(clk)\n);';
+        const output = fmt['format'](input, defaultCfg);
+        const parameters = output.split('\n').filter(line => /^\s+\.(WIDTH|MASK|TEXT)\b/.test(line));
+        expect(parameters).toHaveLength(3);
+        expect(output).toContain('calc(8, $clog2(N))');
+        expect(output).toContain('{A, B}');
+        expect(output).toContain('"a,b)"');
+        expect(new Set(parameters.map(line => line.indexOf('('))).size).toBe(1);
+        expect(new Set(parameters.map(line => line.lastIndexOf(')'))).size).toBe(1);
+        expect(fmt['format'](output, defaultCfg)).toBe(output);
+    });
+
+    test('不把模块声明、延时、宏和注释中的参数样式当作例化头拆开', () => {
+        const cases = [
+            'module sample #(parameter WIDTH = 8) (input clk);',
+            'initial #(20) run();',
+            '`define INSTANCE smooth #(.W(20), .N(N)) u_smooth (.clk(clk));',
+            '`define INSTANCE \\\n  smooth #(.W(20), .N(N)) u_smooth (.clk(clk));',
+            '// smooth #(.W(20), .N(N)) u_smooth (.clk(clk));',
+            '/* smooth #(.W(20), .N(N)) u_smooth (.clk(clk)); */',
+            'smooth #(20, N) u_smooth (.clk(clk));',
+            'smooth #(.W(20) /* 位宽说明 */, .N(N)) u_smooth (.clk(clk));',
+            'smooth #(.W(20), .N(N) u_smooth (',
+        ];
+        for (const input of cases) {
+            expect(fmt['format'](input, defaultCfg).split('\n')).toHaveLength(input.split('\n').length);
+        }
     });
 
     test('例化参数和端口连接行应缩进两个空格', () => {

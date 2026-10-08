@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : formatter.ts
 // 描述    : Verilog 格式化核心逻辑
-// 版本    : v0.2.0
-// 日期    : 2026/05/25
+// 版本    : v2.0.3
+// 日期    : 2026/10/08
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.0.3  2026/10/08  展开紧凑例化参数，忽略字符串和注释中的括号
 //  v0.2.0  2026/05/25  根据代码风格规范实现各格式化规则
 //  v0.1.0  2026/05/25  创建文件，搭建基础框架
 // =========================================================================
@@ -87,6 +88,7 @@ export class VerilogFormatter
         r = this.alignLocalparams(r);
         r = this.alignSignalDeclarations(r);
         r = this.alignPortDeclarations(r);
+        r = this.expandInlineInstantiationParameters(r);
         r = this.alignInstantiationPorts(r);
         if (config.alignPortComment) {
             r = this.alignTrailingComments(r);
@@ -710,6 +712,52 @@ export class VerilogFormatter
         });
     }
 
+    private maskVerilogNonCode(code: string): string {
+        // 保留字符位置，仅让结构扫描忽略字符串、注释和转义标识符中的括号与逗号。
+        return code.replace(/"(?:\\[\s\S]|[^"\\])*"|\/\*[\s\S]*?(?:\*\/|$)|\/\/[^\n]*|\\[^\s]+/g,
+            token => token.replace(/[^\n]/g, ' '));
+    }
+
+    // 将单行例化头的具名参数展开，随后复用连接行对齐；不改写模块声明或位置参数。
+    private expandInlineInstantiationParameters(code: string): string {
+        const lines = code.split('\n');
+        const maskedLines = this.maskVerilogNonCode(code).split('\n');
+        return lines.map((line, index) => {
+            if (line.trimEnd().endsWith('\\') || lines[index - 1]?.trimEnd().endsWith('\\')) { return line; }
+            const masked = maskedLines[index];
+            const header = masked.match(/^([ \t]*)([A-Za-z_][\w$]*)[ \t]*#[ \t]*\(/);
+            if (!header || line.slice(0, header[0].length) !== header[0]) { return line; }
+            const open = header[0].length - 1;
+            const boundaries = [open + 1];
+            let depth = 1;
+            let close = -1;
+            for (let pos = open + 1; pos < masked.length; pos++) {
+                if (masked[pos] === '(') { depth++; }
+                else if (masked[pos] === ')') {
+                    depth--;
+                    if (depth === 0) { close = pos; break; }
+                } else if (masked[pos] === ',' && depth === 1) { boundaries.push(pos + 1); }
+            }
+            if (close < 0 || !/^[ \t]*[A-Za-z_][\w$]*[ \t]*\(/.test(masked.slice(close + 1))) { return line; }
+            // 紧凑列表中夹有注释时保留原文，避免拆行改变注释的附着位置。
+            if (/\/[/*]/.test(line.slice(open + 1, close))) { return line; }
+            boundaries.push(close);
+            const parameters: string[] = [];
+            for (let part = 0; part < boundaries.length - 1; part++) {
+                const start = boundaries[part];
+                const end = boundaries[part + 1];
+                if (!/^\s*\.[A-Za-z_][\w$]*\s*\([\s\S]*\)\s*,?\s*$/.test(masked.slice(start, end))) { return line; }
+                parameters.push(line.slice(start, end).trim());
+            }
+            const indent = header[1];
+            return [
+                `${indent}${header[2]} #(`,
+                ...parameters.map(parameter => `${indent}  ${parameter}`),
+                `${indent}) ${line.slice(close + 1).trimStart()}`,
+            ].join('\n');
+        }).join('\n');
+    }
+
     // ---- 对齐例化端口连接 ----//
     // 格式：  .portName ( signalExpr  ),  // comment
     // 支持：  紧凑写法 .port(sig), → 展开为 .port ( sig  ),
@@ -727,14 +775,15 @@ export class VerilogFormatter
             const indent = pm[1];
             const port   = pm[2];
             const pos    = pm[0].length - 1; // 首个 '(' 的下标
+            const masked = this.maskVerilogNonCode(line);
             let   depth  = 0;
             let   exprStart = -1;
             let   closeParen = -1;
             for (let k = pos; k < line.length; k++) {
-                if (line[k] === '(') {
+                if (masked[k] === '(') {
                     depth++;
                     if (depth === 1) { exprStart = k + 1; }
-                } else if (line[k] === ')') {
+                } else if (masked[k] === ')') {
                     depth--;
                     if (depth === 0) { closeParen = k; break; }
                 }
