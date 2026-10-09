@@ -2,7 +2,7 @@
     "name": "hanxuyao-plugin",
     "displayName": "hanxuyao-plugin",
     "description": "Verilog / SystemVerilog / C / C++ / MATLAB 开发工具，内置 Tcl 导航、词语与正则高亮、CSV/TSV 彩虹列高亮及 RBQL 查询",
-    "version": "2.0.3",
+    "version": "2.1.0",
     "publisher": "hanxuyao",
     "repository": {
         "type": "git",
@@ -408,6 +408,24 @@
             ]
         },
         "menus": {
+            "verilogFormatter.codeFolding": [
+                {
+                    "command": "verilogFormatter.fold",
+                    "group": "1_current@1"
+                },
+                {
+                    "command": "verilogFormatter.unfold",
+                    "group": "1_current@2"
+                },
+                {
+                    "command": "verilogFormatter.foldAll",
+                    "group": "2_all@1"
+                },
+                {
+                    "command": "verilogFormatter.unfoldAll",
+                    "group": "2_all@2"
+                }
+            ],
             "view/title": [
                 {
                     "command": "verilogFormatter.refreshFileTree",
@@ -496,6 +514,11 @@
                 }
             ],
             "editor/context": [
+                {
+                    "submenu": "verilogFormatter.codeFolding",
+                    "when": "foldingEnabled",
+                    "group": "navigation@20"
+                },
                 {
                     "command": "verilogFormatter.instantiate",
                     "when": "editorLangId =~ /verilog|systemverilog/",
@@ -770,6 +793,30 @@
             ]
         },
         "commands": [
+            {
+                "command": "verilogFormatter.fold",
+                "title": "折叠当前代码块",
+                "category": "代码折叠",
+                "enablement": "foldingEnabled"
+            },
+            {
+                "command": "verilogFormatter.unfold",
+                "title": "展开当前代码块",
+                "category": "代码折叠",
+                "enablement": "foldingEnabled"
+            },
+            {
+                "command": "verilogFormatter.foldAll",
+                "title": "全部折叠",
+                "category": "代码折叠",
+                "enablement": "foldingEnabled"
+            },
+            {
+                "command": "verilogFormatter.unfoldAll",
+                "title": "全部展开",
+                "category": "代码折叠",
+                "enablement": "foldingEnabled"
+            },
             {
                 "command": "verilogFormatter.formatDocument",
                 "title": "hanxuyao-plugin: 格式化当前文档"
@@ -1783,6 +1830,10 @@
             }
         ],
         "submenus": [
+            {
+                "id": "verilogFormatter.codeFolding",
+                "label": "代码折叠/展开"
+            },
             {
                 "id": "matlab.addPath",
                 "label": "MATLAB: Add to Path"
