@@ -13,7 +13,7 @@
 9. Tcl 编辑增强：提供过程、命名空间与变量大纲、定义跳转、代码折叠、悬停说明和粘性滚动支持。
 10. 代码折叠：通过编辑器右键菜单收起或展开当前代码块、全部代码，只改变显示状态。
 
-> 版本：v2.1.0　日期：2026/10/09
+> 版本：v2.1.1　日期：2026/10/09
 
 ---
 
@@ -77,6 +77,7 @@ Tcl 导航自 **1.5.0** 集成到桌面入口；兼容性修复使用补丁版�
 - 按类型、变量名、分号和注释多列对齐结构体成员。
 - 按基础类型、别名、分号和行尾注释对齐连续简单 `typedef`，支持 `/**< … */`、`/* … */`、`//` 注释；不同缩进、空行或其他语句分别分组。
 - 枚举成员一行一个（`AllowShortEnumsOnASingleLine: false`），并按枚举项名称、赋值表达式、逗号和注释多列对齐枚举定义。
+- `switch` 内的 `case`、`default` 标签缩进一级（`IndentCaseLabels: true`），分支语句再缩进一级；连续 case 保持同级。
 
 函数体固定保持多行（`AllowShortFunctionsOnASingleLine: None`），已有的单行函数也会展开；调用、控制条件、函数签名、花括号和空行继续遵循 clang-format 的通用规则。行宽设置 `verilogFormatter.c.columnLimit` 默认为 `999999`，优先于工程的 `ColumnLimit`；可在 VS Code 用户或工作区设置中修改，下一次格式化即生效，设为 `0` 时取消行宽限制。其他样式仍可通过工程的 `BreakBeforeBraces` 等选项调整。后处理保留 clang-format 的换行、原始字符串、多行注释和 `clang-format off/on` 区域；定制列对齐可能增加行宽。
 
@@ -410,8 +411,8 @@ npm run compile
 当前安装包面向 Windows x64，包含 MATLAB 运行组件和 Windows ripgrep。发布时上传生成的 `.vsix` 文件；修改记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ```bash
-npm run package -- --target win32-x64 --out hanxuyao-plugin-2.1.0-win32-x64.vsix
-code --install-extension hanxuyao-plugin-2.1.0-win32-x64.vsix --force
+npm run package -- --target win32-x64 --out hanxuyao-plugin-2.1.1-win32-x64.vsix
+code --install-extension hanxuyao-plugin-2.1.1-win32-x64.vsix --force
 ```
 
 ---
@@ -459,6 +460,7 @@ GitHub 自动测试、打包和发布的配置及使用方法见 [自动发布](
 
 | 版本 | 日期 | 修改内容 |
 |------|------|---------|
+| v2.1.1 | 2026/10/09 | C/C++ 的 case/default 相对 switch 缩进一级，保留连续标签和嵌套分支的正确层级 |
 | v2.1.0 | 2026/10/09 | 新增编辑器右键代码折叠/展开子菜单，复用当前块和全部代码的原生折叠命令，不改写源码 |
 | v2.0.3 | 2026/10/08 | 修复 Verilog 紧凑例化参数留在一行的问题，拆分具名参数并保留嵌套表达式，参数与端口分别对齐 |
 | v2.0.2 | 2026/09/29 | 禁止枚举合并为单行，保持每个成员独占一行并保留既有枚举项对齐 |

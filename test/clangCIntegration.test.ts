@@ -61,6 +61,48 @@ nativeTests('真实 clang-format 集成', () => {
         expect(await format(output)).toBe(output);
     });
 
+    it.each(['\n', '\r\n'])('switch 的连续 case/default 缩进一级，分支语句再缩进一级（%j）', async eol => {
+        const input = [
+            'void handle_event(void) {',
+            'switch (event->Event) {',
+            'case AL_GBE_EVENT_RX_DONE:',
+            'case AL_GBE_EVENT_RX_BUFFER_UNAVAILABLE:',
+            'ethernetif_input(&g_platform_netif);',
+            'break;',
+            'case AL_GBE_EVENT_TX_DONE:',
+            'case AL_GBE_EVENT_TX_BUFFER_UNAVAILABLE:',
+            'if (AlGbe_Hal_ReleaseTxPacket(hdl) != ST_SUCCESS)',
+            'g_gbe_error = 1;',
+            'break;',
+            'default:', '++g_gbe_other_event;', 'break;', '}', '}', '',
+        ].join(eol);
+        const expected = [
+            'void handle_event(void) {',
+            '    switch (event->Event) {',
+            '        case AL_GBE_EVENT_RX_DONE:',
+            '        case AL_GBE_EVENT_RX_BUFFER_UNAVAILABLE:',
+            '            ethernetif_input(&g_platform_netif);',
+            '            break;',
+            '        case AL_GBE_EVENT_TX_DONE:',
+            '        case AL_GBE_EVENT_TX_BUFFER_UNAVAILABLE:',
+            '            if (AlGbe_Hal_ReleaseTxPacket(hdl) != ST_SUCCESS)',
+            '                g_gbe_error = 1;',
+            '            break;',
+            '        default:', '            ++g_gbe_other_event;', '            break;', '    }', '}', '',
+        ].join(eol);
+        expect(await format(input)).toBe(expected);
+        expect(await format(expected)).toBe(expected);
+    });
+
+    it('嵌套 switch 的 case/default 分别跟随所属 switch 缩进', async () => {
+        const input = 'void run() { switch (outer) { case 1: switch (inner) { case 2: work(); break; default: break; } break; default: break; } }\n';
+        const output = await format(input);
+        expect(output).toContain('\n        case 1:\n            switch (inner) {\n                case 2:\n                    work();');
+        expect(output).toContain('\n                default:\n                    break;\n            }');
+        expect(output).toContain('\n        default:\n            break;\n    }');
+        expect(await format(output)).toBe(output);
+    });
+
     it.each(['\n', '\r\n'])('匿名枚举成员一行一个，并保留枚举项对齐（%j）', async eol => {
         const input = `enum { BOOT_WAIT, BOOT_READY, BOOT_FAILED };${eol}`;
         const expected = [
