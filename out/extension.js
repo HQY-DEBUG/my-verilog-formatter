@@ -2,12 +2,13 @@
 // =========================================================================
 // 文件    : extension.ts
 // 描述    : VS Code 扩展入口，注册所有 Provider 和命令
-// 版本    : v2.1.0
-// 日期    : 2026/10/09
+// 版本    : v2.2.0
+// 日期    : 2026/10/12
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.2.0  2026/10/12  注册 C 函数定义跳转与独立实现查找命令
 //  v2.1.0  2026/10/09  注册编辑器代码折叠与展开入口
 //  v2.0.0  2026/09/24  按语言拆分保存时自动格式化开关
 //  v1.6.0  2026/09/22  等待 clang-format 异步结果并跳过过期文档修改
@@ -60,6 +61,7 @@ const tclIntegration_1 = require("./features/tcl/tclIntegration");
 // 2026/09/21 新增：统一管理词语高亮、CSV 命令与资源的生命周期。
 const editorToolsIntegration_1 = require("./features/editorTools/editorToolsIntegration");
 const cFormatter_1 = require("./features/c/cFormatter");
+const cDefinitionProvider_1 = require("./features/c/cDefinitionProvider");
 const matlabIntegration_1 = require("./features/matlab/matlabIntegration");
 const matlabFormatter_1 = require("./features/matlab/matlabFormatter");
 const formatter_1 = require("./features/verilog/formatter");
@@ -79,6 +81,7 @@ exports.C_LANGS = ['c', 'cpp'];
 exports.MATLAB_LANGS = ['matlab'];
 async function activate(context) {
     (0, foldingCommands_1.registerFoldingCommands)(context);
+    (0, cDefinitionProvider_1.registerCFunctionNavigation)(context);
     // 2026/09/21 新增：独立启动通用编辑功能，避免 MATLAB 初始化影响高亮与 CSV。
     await (0, editorToolsIntegration_1.activateEditorTools)(context);
     // 2026/09/21 新增：注册 Tcl 编辑增强，沿用原有 Tcl 语法高亮。

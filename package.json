@@ -2,7 +2,7 @@
     "name": "hanxuyao-plugin",
     "displayName": "hanxuyao-plugin",
     "description": "Verilog / SystemVerilog / C / C++ / MATLAB 开发工具，内置 Tcl 导航、词语与正则高亮、CSV/TSV 彩虹列高亮及 RBQL 查询",
-    "version": "2.1.2",
+    "version": "2.2.0",
     "publisher": "hanxuyao",
     "repository": {
         "type": "git",
@@ -794,6 +794,11 @@
         },
         "commands": [
             {
+                "command": "verilogFormatter.c.goToFunction",
+                "title": "C：转到函数实现",
+                "enablement": "config.verilogFormatter.c.functionNavigation && resourceScheme == file && resourceExtname =~ /^\\.(c|h)$/ && editorLangId =~ /^(c|cpp)$/"
+            },
+            {
                 "command": "verilogFormatter.fold",
                 "title": "折叠当前代码块",
                 "category": "代码折叠",
@@ -1218,6 +1223,11 @@
         ],
         "keybindings": [
             {
+                "command": "verilogFormatter.c.goToFunction",
+                "key": "f4",
+                "when": "editorTextFocus && config.verilogFormatter.c.functionNavigation && resourceScheme == file && resourceExtname =~ /^\\.(c|h)$/ && editorLangId =~ /^(c|cpp)$/"
+            },
+            {
                 "command": "verilogFormatter.formatDocument",
                 "key": "ctrl+alt+f",
                 "when": "editorTextFocus && editorLangId =~ /verilog|systemverilog|anlogic-adc|c|cpp|matlab/"
@@ -1277,6 +1287,12 @@
             {
                 "title": "hanxuyao-plugin",
                 "properties": {
+                    "verilogFormatter.c.functionNavigation": {
+                        "type": "boolean",
+                        "scope": "resource",
+                        "default": true,
+                        "description": "为 .c/.h 中普通 C 函数提供定义跳转和 F4 直接查找实现，不依赖编译数据库；不解析预处理条件、C++ 重载或函数指针目标。"
+                    },
                     "verilogFormatter.c.columnLimit": {
                         "type": "integer",
                         "scope": "resource",
