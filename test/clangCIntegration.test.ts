@@ -208,6 +208,55 @@ nativeTests('真实 clang-format 集成', () => {
         expect(await format(input.replace(/\n/g, '\r\n'))).toBe(expected.replace(/\n/g, '\r\n'));
     });
 
+    it.each(['\n', '\r\n'])('保留指定成员初始化的多行布局和内嵌单行数组（%j）', async eol => {
+        const initializer = [
+            'const NetConfig net_config = {',
+            '    .ip_addr  = "192.168.1.10",',
+            '    .netmask  = "255.255.255.0",',
+            '    .gateway  = "192.168.1.1",',
+            '    .mac      = {0x00, 0x0a, 0x35, 0x00, 0x01, 0x02},',
+            '    .udp_port = 6001u',
+            '};', '',
+        ].join(eol);
+        const input = initializer + `void run(){work(1,2);}${eol}`;
+        const expected = initializer + ['void run() {', '    work(1, 2);', '}', ''].join(eol);
+        const output = await format(input);
+        expect(output).toBe(expected);
+        expect(await format(output)).toBe(output);
+        expect(await format(input, undefined, new vscode.Range(1, 0, 6, 0))).toBe(input);
+        (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+            get: (key: string, defaultValue: unknown) => key === 'clangFormatPath' ? executable
+                : key === 'columnLimit' ? 48 : defaultValue,
+        });
+        expect(await format(initializer)).toBe(initializer);
+    });
+
+    it('保留嵌套指定成员初始化中的注释、字符串和各层换行', async () => {
+        const input = [
+            'const Config config = {',
+            '    .name = "text }, { // not comment",',
+            '    .network = {',
+            '        .port = 6001, /* 保留这一行 */',
+            '        .flags = {1, 2}',
+            '    }',
+            '};', '',
+        ].join('\n');
+        expect(await format(input)).toBe(input);
+        expect(await format(await format(input))).toBe(input);
+    });
+
+    it('不提前结束用户的 clang-format off 区域，单行初始化仍按通用规则处理', async () => {
+        const disabled = [
+            '// clang-format off', 'const Config x={', ' .value=1', '};',
+            'int   keep=1;', '// clang-format on', '',
+        ].join('\n');
+        const input = disabled + 'const Config single={.value=1, .other=2};\n';
+        const output = await format(input);
+        expect(output.startsWith(disabled)).toBe(true);
+        expect(output).toContain('const Config single = {.value = 1, .other = 2};');
+        expect(await format(output)).toBe(output);
+    });
+
     it('选区保留完整函数上下文且不对齐区域外的变量', async () => {
         const input = 'int outside=1;\nlong another=2;\nvoid run() {\nint x=1;\nlong longer=2;\n}\n';
         const output = await format(input, undefined, new vscode.Range(3, 0, 5, 0));

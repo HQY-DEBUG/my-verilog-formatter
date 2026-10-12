@@ -135,6 +135,35 @@ describe('C/C++ 格式化入口', () => {
         expect(await new CFormatter(clang).provideDocumentFormattingEdits(doc)).toEqual([]);
     });
 
+    it('临时保护不改变选区行号，返回结果不残留标记', async () => {
+        const original = 'const Config x = {\n    .value = 1\n};\n';
+        const doc = document(original);
+        const clang = jest.fn().mockImplementation(async (code: string) => {
+            expect(code.split('\n')).toHaveLength(original.split('\n').length);
+            expect(code).toContain('/* clang-format off */');
+            return code;
+        });
+        expect(await new CFormatter(clang).provideDocumentRangeFormattingEdits(doc, new vscode.Range(1, 0, 2, 0))).toEqual([]);
+        expect(clang.mock.calls[0][2]).toEqual({ start: 2, end: 2 });
+    });
+
+    it('保护标记被意外删除时不产生源码编辑', async () => {
+        const original = 'const Config x = {\n    .value = 1\n};';
+        const clang = jest.fn().mockResolvedValue(original);
+        await expect(new CFormatter(clang).provideDocumentFormattingEdits(document(original))).rejects.toThrow('保护标记丢失');
+    });
+
+    it('不向宏、原始字符串和注释内的初始化样式插入保护标记', async () => {
+        const original = [
+            '#define CONFIG \\', 'const Config x = { \\', '    .value = 1 \\', '};',
+            'const char *text = R"tag(const Config y = {', '    .value = 2', '};)tag";',
+            '/* const Config z = {', '    .value = 3', '}; */',
+        ].join('\n');
+        const clang = jest.fn().mockImplementation(async (code: string) => code);
+        expect(await new CFormatter(clang).provideDocumentFormattingEdits(document(original))).toEqual([]);
+        expect(clang.mock.calls[0][0]).toBe(original);
+    });
+
     it('部分宏选区也保留宏体，不把最后一行当作普通声明对齐', () => {
         const code = '#define DECLARE \\\n    int x; \\\n    int longer;\nint normal;';
         expect(formatC(code, { start: 2, end: 4 })).toBe(code);

@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.ts
 // 描述    : clang-format 通用排版与 C/C++ 定制多列对齐
-// 版本    : v2.0.1
-// 日期    : 2026/09/29
+// 版本    : v2.1.2
+// 日期    : 2026/10/12
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.1.2  2026/10/12  保留多行指定成员初始化布局及内嵌单行数组
 //  v2.0.1  2026/09/29  对齐连续简单 typedef 的类型、别名、分号和行尾注释
 //  v1.6.0  2026/09/22  通用排版交给 clang-format，保护宏续行并保留定制对齐
 //  v1.4.10 2026/09/15  对齐宏定义的宏值和注释，以及连续同名调用的参数列
@@ -578,6 +579,75 @@ function parseDeclaration(line: string): DeclarationLine | undefined {
     };
 }
 
+function protectMultilineInitializers(code: string): { code: string; restore: (formatted: string) => string } {
+    let masked = maskCLiteralsAndComments(code);
+    const controls = [...code.matchAll(C_LITERALS_AND_COMMENTS)]
+        .filter(match => /^(?:\/\/|\/\*)\s*clang-format (?:off|on)\b/.test(match[0]));
+    let disabledStart: number | undefined;
+    for (const control of controls) {
+        if (/clang-format off\b/.test(control[0])) { disabledStart ??= control.index!; }
+        else if (disabledStart !== undefined) {
+            const end = control.index! + control[0].length;
+            masked = masked.slice(0, disabledStart) + masked.slice(disabledStart, end).replace(/[^\n]/g, ' ') + masked.slice(end);
+            disabledStart = undefined;
+        }
+    }
+    if (disabledStart !== undefined) {
+        masked = masked.slice(0, disabledStart) + masked.slice(disabledStart).replace(/[^\n]/g, ' ');
+    }
+    const originalLines = code.split('\n');
+    let continuedDirective = false;
+    masked = masked.split('\n').map((line, index) => {
+        const directive = continuedDirective || /^\s*#/.test(line);
+        continuedDirective = directive && originalLines[index].trimEnd().endsWith('\\');
+        return directive ? ' '.repeat(line.length) : line;
+    }).join('\n');
+
+    let prefix = '__C_FORMATTER_INITIALIZER_';
+    while (code.includes(prefix)) { prefix += '_'; }
+    const markers: Array<{ begin: string; finish: RegExp }> = [];
+    const openings = /=\s*\{/g;
+    let result = '';
+    let copied = 0;
+    let match: RegExpExecArray | null;
+    while ((match = openings.exec(masked)) !== null) {
+        const open = match.index + match[0].length - 1;
+        if (!/^\s*\.[A-Za-z_]\w*\s*=/.test(masked.slice(open + 1))) { continue; }
+        let depth = 1;
+        let end = open + 1;
+        for (; end < masked.length && depth > 0; end++) {
+            if (masked[end] === '{') { depth++; }
+            else if (masked[end] === '}') { depth--; }
+        }
+        if (depth !== 0 || !code.slice(open, end).includes('\n')
+            || controls.some(control => control.index! >= open && control.index! < end)) { continue; }
+        let start = code.lastIndexOf('\n', open) + 1;
+        while (/[ \t]/.test(code[start])) { start++; }
+        if (start < copied || /[{};]/.test(masked.slice(start, open))) { continue; }
+        // 临时标记不增减物理行，选区行号保持有效；只保护已有分行的指定成员初始化。
+        const begin = `/* clang-format off *//* ${prefix}${markers.length}_BEGIN */`;
+        const endMarker = `/* ${prefix}${markers.length}_END */`;
+        const finish = new RegExp(`/\\* ${prefix}${markers.length}_END \\*/\\s*/\\* clang-format on \\*/`);
+        markers.push({ begin, finish });
+        // 从声明行开始保护，避免临时注释长度触发行宽限制，使声明头额外换行。
+        result += code.slice(copied, start) + begin + code.slice(start, end) + endMarker + '/* clang-format on */';
+        copied = end;
+        openings.lastIndex = end;
+    }
+    return {
+        code: result + code.slice(copied),
+        restore: formatted => {
+            for (const marker of markers) {
+                if (!formatted.includes(marker.begin) || !marker.finish.test(formatted)) {
+                    throw new Error('C/C++ 格式化：初始化布局保护标记丢失，未应用修改。');
+                }
+                formatted = formatted.replace(marker.begin, '').replace(marker.finish, '');
+            }
+            return formatted;
+        },
+    };
+}
+
 export class CFormatter implements
         vscode.DocumentFormattingEditProvider,
         vscode.DocumentRangeFormattingEditProvider {
@@ -602,7 +672,8 @@ export class CFormatter implements
         const version = document.version;
         const original = document.getText();
         const filename = document.fileName || (document.languageId === 'c' ? 'untitled.c' : 'untitled.cpp');
-        const base = await this.clang(original, filename, range);
+        const initializers = protectMultilineInitializers(original);
+        const base = initializers.restore(await this.clang(initializers.code, filename, range));
         const formatted = formatC(base, range ? affectedLineRange(original, base, range) : undefined);
         if (formatted === original || document.version !== version) { return []; }
         const lastLine = document.lineAt(document.lineCount - 1);
