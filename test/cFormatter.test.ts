@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.test.ts
 // 描述    : C/C++ 格式化器回归测试
-// 版本    : v2.0.1
-// 日期    : 2026/09/29
+// 版本    : v2.2.1
+// 日期    : 2026/10/14
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.2.1  2026/10/14  验证 Doxygen 多行展开、保护边界及选区格式化
 //  v2.0.1  2026/09/29  验证 typedef 多列对齐、块注释、分组边界及重复格式化
 //  v1.6.0  2026/09/22  验证定制对齐保留宏、注释和通用排版的换行
 //  v1.4.10 2026/09/15  验证宏值注释和连续调用参数对齐，保留表达式及分组边界
@@ -26,6 +27,52 @@
 import { formatC } from '../src/features/c/cFormatter';
 
 describe('C/C++ formatter', () => {
+    it.each(['\n', '\r\n'])('将截图中的 Doxygen 注释展开为标准多行格式（%j）', eol => {
+        const input = '/** @brief FileSaveParams 命令参数，字段按协议顺序排列。 */' + eol;
+        const expected = ['/**', ' * @brief FileSaveParams 命令参数，字段按协议顺序排列。', ' */', ''].join(eol);
+        expect(formatC(input)).toBe(expected);
+        expect(formatC(expected)).toBe(expected);
+    });
+
+    it('展开不同缩进的 Doxygen 注释并保留内容内部空格', () => {
+        const input = ['    /**   @brief 保存  参数。   */', '\t/*! \\brief 读取参数。 */'].join('\n');
+        expect(formatC(input)).toBe([
+            '    /**', '     * @brief 保存  参数。', '     */',
+            '\t/*!', '\t * \\brief 读取参数。', '\t */',
+        ].join('\n'));
+    });
+
+    it('不展开普通注释、尾随注释、字符串、宏续行和禁用格式化区域', () => {
+        const input = [
+            '/* 普通注释 */', '/*** 装饰注释 */', '/**/', '/** 未闭合',
+        ].join('\n');
+        expect(formatC(input)).toBe(input);
+        const protectedText = [
+            'int x; /**< 成员说明 */', 'int y; /*!< 成员说明 */',
+            '/**< 前一成员说明 */', '/** @brief 同行声明 */ void run(void);',
+            'const char *text = "/** @brief 字符串 */";',
+            'const char *raw = R"tag(', '/** @brief 原始字符串 */', ')tag";',
+            '#define DOC \\', '    /** @brief 宏注释 */ \\', '    work()',
+            '// clang-format off', '/** @brief 不改动 */', '// clang-format on',
+        ].join('\n');
+        expect(formatC(protectedText)).toBe(protectedText);
+    });
+
+    it('保持已有多行注释中的参数、代码块和空行', () => {
+        const input = ['/**', ' * @brief 描述', ' *', ' * @param[in] value 输入',
+            ' * @code', ' *     call(value);', ' * @endcode', ' * @return 状态', ' */'].join('\n');
+        expect(formatC(input)).toBe(input);
+    });
+
+    it('只展开选区中的注释，增加行数不影响选区之后受保护内容', () => {
+        const input = ['/** @brief 区域外 */', '/** @brief 区域内 */',
+            '/* 保持', ' * 原始  内容', ' */', '/** @brief 区域外 */'].join('\n');
+        expect(formatC(input, { start: 2, end: 2 })).toBe([
+            '/** @brief 区域外 */', '/**', ' * @brief 区域内', ' */',
+            '/* 保持', ' * 原始  内容', ' */', '/** @brief 区域外 */',
+        ].join('\n'));
+    });
+
     it.each(['\n', '\r\n'])('对齐截图中的 typedef 类型、别名、分号和 Doxygen 注释（%j）', eol => {
         const input = [
             'typedef uint8_t Xuint8; /**< unsigned 8-bit */',

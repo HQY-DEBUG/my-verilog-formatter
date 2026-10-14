@@ -257,6 +257,41 @@ nativeTests('真实 clang-format 集成', () => {
         expect(await format(output)).toBe(output);
     });
 
+    it.each(['\n', '\r\n'])('真实格式化将 Doxygen 展开为多行并保持重复格式化稳定（%j）', async eol => {
+        const input = ['/** @brief FileSaveParams 命令参数，字段按协议顺序排列。 */',
+            'typedef struct {', '    int value; /**< 参数值 */', '} FileSaveParams;', ''].join(eol);
+        const expected = ['/**', ' * @brief FileSaveParams 命令参数，字段按协议顺序排列。', ' */',
+            'typedef struct {', '    int value; /**< 参数值 */', '} FileSaveParams;', ''].join(eol);
+        expect(await format(input)).toBe(expected);
+        expect(await format(expected)).toBe(expected);
+    });
+
+    it('真实格式化只展开选中的注释并保护禁用区域', async () => {
+        const before = '/** @brief 区域外 */\nvoid first(void);\n\n';
+        const selected = '/** @brief 区域内 */\nvoid second(void);\n';
+        const after = '// clang-format off\n/** @brief 保持 */\n// clang-format on\n';
+        const expected = before + '/**\n * @brief 区域内\n */\nvoid second(void);\n' + after;
+        expect(await format(before + selected + after, undefined, new vscode.Range(3, 0, 4, 0))).toBe(expected);
+        const full = await format(before + selected + after);
+        expect(full.endsWith(after)).toBe(true);
+        expect(await format(full)).toBe(full);
+    });
+
+    it('有限行宽时起止标记仍独占一行，选区行号随展开更新', async () => {
+        jest.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({
+            get: (key: string, fallback: unknown) => key === 'clangFormatPath' ? executable : key === 'columnLimit' ? 40 : fallback,
+        } as any);
+        const before = '/** @brief 区域外 */\nvoid first(void);\n';
+        const comment = '/** @brief FileSaveParams 命令参数，字段按协议顺序排列。 */\n';
+        const input = before + comment + 'int selected=1;\nint   outside=2;\n';
+        const output = await format(input, undefined, new vscode.Range(2, 0, 4, 0));
+        expect(output.startsWith(before + '/**\n * @brief FileSaveParams\n')).toBe(true);
+        expect(output).toContain('\n */\nint selected = 1;\n');
+        expect(output.endsWith('int   outside=2;\n')).toBe(true);
+        const full = await format(input);
+        expect(await format(full)).toBe(full);
+    });
+
     it('选区保留完整函数上下文且不对齐区域外的变量', async () => {
         const input = 'int outside=1;\nlong another=2;\nvoid run() {\nint x=1;\nlong longer=2;\n}\n';
         const output = await format(input, undefined, new vscode.Range(3, 0, 5, 0));

@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.ts
 // 描述    : clang-format 通用排版与 C/C++ 定制多列对齐
-// 版本    : v2.1.2
-// 日期    : 2026/10/12
+// 版本    : v2.2.1
+// 日期    : 2026/10/14
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.2.1  2026/10/14  将独立单行 Doxygen 注释展开为多行块注释
 //  v2.1.2  2026/10/12  保留多行指定成员初始化布局及内嵌单行数组
 //  v2.0.1  2026/09/29  对齐连续简单 typedef 的类型、别名、分号和行尾注释
 //  v1.6.0  2026/09/22  通用排版交给 clang-format，保护宏续行并保留定制对齐
@@ -64,7 +65,7 @@ const NON_TYPE_KEYWORDS = new Set([
 ]);
 const C_LITERALS_AND_COMMENTS = /R"([^ ()\\\t\r\n]{0,16})\([\s\S]*?\)\1"|"(?:\\[\s\S]|[^"\\])*"|'(?:\\[^\r\n]|[^'\\\r\n])+'|\/\*[\s\S]*?(?:\*\/|$)|\/\/[^\n]*/g;
 
-/** 仅应用明确约定的多列对齐；通用空格、缩进和换行由 clang-format 完成。 */
+/** 应用定制对齐和 Doxygen 块布局；其余通用排版由 clang-format 完成。 */
 export function formatC(code: string, range?: ClangLineRange): string {
     const eol = code.includes('\r\n') ? '\r\n' : '\n';
     const protectedRegions = protectCLayoutRegions(code.replace(/\r\n/g, '\n'));
@@ -78,9 +79,39 @@ export function formatC(code: string, range?: ClangLineRange): string {
     normalized = alignAssignments(normalized);
     normalized = alignConsecutiveCalls(normalized);
     normalized = alignEnumDeclarations(normalized);
+    normalized = expandDoxygenComments(normalized);
     normalized = [...lines.slice(0, start), ...normalized.split('\n').map(line => line.trimEnd()), ...lines.slice(end)]
         .map(line => protectedRegions.blocks.get(line) ?? line).join('\n');
     return eol === '\n' ? normalized : normalized.replace(/\n/g, '\r\n');
+}
+
+function expandDoxygenComments(code: string): string {
+    return code.replace(C_LITERALS_AND_COMMENTS, (comment: string, _rawDelimiter: string, offset: number) => {
+        if (!/^\/\*(?:\*|!)(?![*!<])/.test(comment)
+            || !comment.endsWith('*/') || comment.includes('\n')) { return comment; }
+        const lineStart = code.lastIndexOf('\n', offset - 1) + 1;
+        const nextLine = code.indexOf('\n', offset + comment.length);
+        const indent = code.slice(lineStart, offset);
+        const suffix = code.slice(offset + comment.length, nextLine < 0 ? code.length : nextLine);
+        // 只展开独立注释，避免改变行尾成员注释、宏或同行声明的归属。
+        if (!/^[ \t]*$/.test(indent) || !/^[ \t]*$/.test(suffix)) { return comment; }
+        const body = comment.slice(3, -2).trim();
+        if (!body) { return comment; }
+        return `${comment.slice(0, 3)}\n${indent} * ${body}\n${indent} */`;
+    });
+}
+
+function prepareDoxygenComments(code: string, range?: ClangLineRange): { code: string; range?: ClangLineRange } {
+    const eol = code.includes('\r\n') ? '\r\n' : '\n';
+    const protectedRegions = protectCLayoutRegions(code.replace(/\r\n/g, '\n'));
+    const lines = protectedRegions.code.split('\n');
+    const start = range ? range.start - 1 : 0;
+    const end = range ? range.end : lines.length;
+    const expanded = expandDoxygenComments(lines.slice(start, end).join('\n')).split('\n');
+    const prepared = [...lines.slice(0, start), ...expanded, ...lines.slice(end)]
+        .map(line => protectedRegions.blocks.get(line) ?? line).join(eol);
+    // 先固定注释块布局，再让 clang-format 根据行宽排正文；新增行必须计入选区。
+    return { code: prepared, range: range ? { start: range.start, end: range.end + expanded.length - (end - start) } : undefined };
 }
 
 function protectCLayoutRegions(code: string): { code: string; blocks: Map<string, string> } {
@@ -672,9 +703,10 @@ export class CFormatter implements
         const version = document.version;
         const original = document.getText();
         const filename = document.fileName || (document.languageId === 'c' ? 'untitled.c' : 'untitled.cpp');
-        const initializers = protectMultilineInitializers(original);
-        const base = initializers.restore(await this.clang(initializers.code, filename, range));
-        const formatted = formatC(base, range ? affectedLineRange(original, base, range) : undefined);
+        const doxygen = prepareDoxygenComments(original, range);
+        const initializers = protectMultilineInitializers(doxygen.code);
+        const base = initializers.restore(await this.clang(initializers.code, filename, doxygen.range));
+        const formatted = formatC(base, doxygen.range ? affectedLineRange(doxygen.code, base, doxygen.range) : undefined);
         if (formatted === original || document.version !== version) { return []; }
         const lastLine = document.lineAt(document.lineCount - 1);
         const fullRange = new vscode.Range(new vscode.Position(0, 0), lastLine.range.end);
