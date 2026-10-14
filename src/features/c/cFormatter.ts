@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.ts
 // 描述    : clang-format 通用排版与 C/C++ 定制多列对齐
-// 版本    : v2.2.1
+// 版本    : v2.2.2
 // 日期    : 2026/10/14
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.2.2  2026/10/14  分离指针符号列，使指针与普通变量名称对齐
 //  v2.2.1  2026/10/14  将独立单行 Doxygen 注释展开为多行块注释
 //  v2.1.2  2026/10/12  保留多行指定成员初始化布局及内嵌单行数组
 //  v2.0.1  2026/09/29  对齐连续简单 typedef 的类型、别名、分号和行尾注释
@@ -247,7 +248,8 @@ function alignVariableDeclarations(code: string): string {
             result.push(lines[i]);
         } else {
             const maxType = Math.max(...block.map(item => item.typePrefix.length));
-            const declarations = block.map(item => `${item.pointer}${item.name}${item.arraySuffix}`);
+            const maxPointer = Math.max(...block.map(item => item.pointer.length));
+            const declarations = block.map(item => `${item.name}${item.arraySuffix}`);
             const maxDeclaration = Math.max(...declarations.map(item => item.length));
             const maxInitializer = Math.max(...block.map(item => item.initializer.length));
             const initializerWidth = maxInitializer > 0 ? maxInitializer + 1 : 0;
@@ -255,7 +257,7 @@ function alignVariableDeclarations(code: string): string {
                 const declaration = declarations[index].padEnd(maxDeclaration + 1);
                 const initializer = item.initializer.padEnd(initializerWidth);
                 const comment = item.comment ? `  ${item.comment}` : '';
-                return `${item.typePrefix.padEnd(maxType + 1)}${declaration}${initializer};${comment}`;
+                return `${item.typePrefix.padEnd(maxType + 1)}${item.pointer.padStart(maxPointer)}${declaration}${initializer};${comment}`;
             }));
         }
         i = end;

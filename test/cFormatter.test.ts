@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.test.ts
 // 描述    : C/C++ 格式化器回归测试
-// 版本    : v2.2.1
+// 版本    : v2.2.2
 // 日期    : 2026/10/14
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.2.2  2026/10/14  验证指针、数组及普通变量的名称列对齐
 //  v2.2.1  2026/10/14  验证 Doxygen 多行展开、保护边界及选区格式化
 //  v2.0.1  2026/09/29  验证 typedef 多列对齐、块注释、分组边界及重复格式化
 //  v1.6.0  2026/09/22  验证定制对齐保留宏、注释和通用排版的换行
@@ -224,9 +225,9 @@ describe('C/C++ formatter', () => {
         ].join('\n');
 
         expect(formatC(input)).toBe([
-            'uint8_t        a           = 0    ;',
+            'uint8_t         a          = 0    ;',
             'const uint32_t *long_value = NULL ;',
-            'char           name[16]           ;',
+            'char            name[16]          ;',
         ].join('\n'));
         expect(formatC(formatC(input))).toBe(formatC(input));
     });
@@ -269,7 +270,7 @@ describe('C/C++ formatter', () => {
         const expected = [
             'void run() {',
             '    const char *label = "a  =  b"      ;  // 文本',
-            '    bool       ready  = count == limit ;',
+            '    bool        ready = count == limit ;',
             '',
             '    int x     = 1  ;',
             '    int total = 20 ;',
@@ -409,6 +410,41 @@ describe('C/C++ formatter', () => {
         expect(assignments[0].indexOf(';')).toBe(assignments[1].indexOf(';'));
         expect(output).toContain('read32(BASE, OFFSET)');
         expect(output).toContain('R"tag(a " = ; // b)tag"');
+        expect(formatC(output)).toBe(output);
+    });
+
+    it.each(['\n', '\r\n'])('指针符号紧贴名称且与普通结构体成员的名称对齐（%j）', eol => {
+        const input = ['typedef struct {',
+            '    u32 position; // Position，Data + 0',
+            '    u32 total_packages; // TotalPackages，Data + 4',
+            '    u32 package_num; // PackageNum，Data + 8',
+            '    const u8 *payload; // 文件片段，借用请求缓存',
+            '    u32 payload_size; // 文件片段字节数',
+            '} PositionFileParams;'].join(eol);
+        const expected = ['typedef struct {',
+            '    u32       position       ;  // Position，Data + 0',
+            '    u32       total_packages ;  // TotalPackages，Data + 4',
+            '    u32       package_num    ;  // PackageNum，Data + 8',
+            '    const u8 *payload        ;  // 文件片段，借用请求缓存',
+            '    u32       payload_size   ;  // 文件片段字节数',
+            '} PositionFileParams;'].join(eol);
+        expect(formatC(input)).toBe(expected);
+        expect(formatC(expected)).toBe(expected);
+    });
+
+    it('多级指针、引用、指针数组与普通变量保持名称及后续列对齐', () => {
+        const input = ['char **table = NULL;', 'char *items[4];', 'int &alias = value;', 'int &&moved = value;', 'long count = 0;'].join('\n');
+        const output = formatC(input);
+        const lines = output.split('\n');
+        const names = ['table', 'items', 'alias', 'moved', 'count'];
+        const columns = lines.map((line, i) => line.indexOf(names[i]));
+        expect(new Set(columns).size).toBe(1);
+        expect(lines[0]).toContain('**table');
+        expect(lines[1]).toContain('*items[4]');
+        expect(lines[2]).toContain('&alias');
+        expect(lines[3]).toContain('&&moved');
+        expect(new Set(lines.map(line => line.indexOf(';'))).size).toBe(1);
+        expect(new Set(lines.filter(line => line.includes('=')).map(line => line.indexOf('='))).size).toBe(1);
         expect(formatC(output)).toBe(output);
     });
 

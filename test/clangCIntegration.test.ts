@@ -292,6 +292,23 @@ nativeTests('真实 clang-format 集成', () => {
         expect(await format(full)).toBe(full);
     });
 
+    it.each(['\n', '\r\n'])('真实 clang-format 后指针名称与普通成员名称对齐（%j）', async eol => {
+        const input = ['typedef struct {', '    u32 total_packages;', '    u32 package_num;',
+            '    const u8 *payload;', '    u32 payload_size;', '} FileParams;', ''].join(eol);
+        const expected = ['typedef struct {', '    u32       total_packages ;', '    u32       package_num    ;',
+            '    const u8 *payload        ;', '    u32       payload_size   ;', '} FileParams;', ''].join(eol);
+        expect(await format(input)).toBe(expected);
+        expect(await format(expected)).toBe(expected);
+    });
+
+    it('选区内的指针声明独立对齐，不调整选区外的声明', async () => {
+        const before = 'int   outside=1;\nlong   count=2;\nvoid run(void) {\n';
+        const input = before + 'const u8 *payload;\nu32 payload_size;\n}\n';
+        const output = await format(input, undefined, new vscode.Range(3, 0, 5, 0));
+        expect(output.startsWith(before)).toBe(true);
+        expect(output).toContain('    const u8 *payload      ;\n    u32       payload_size ;');
+    });
+
     it('选区保留完整函数上下文且不对齐区域外的变量', async () => {
         const input = 'int outside=1;\nlong another=2;\nvoid run() {\nint x=1;\nlong longer=2;\n}\n';
         const output = await format(input, undefined, new vscode.Range(3, 0, 5, 0));
