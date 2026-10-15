@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.test.ts
 // 描述    : C/C++ 格式化器回归测试
-// 版本    : v2.2.2
-// 日期    : 2026/10/14
+// 版本    : v2.2.3
+// 日期    : 2026/10/15
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.2.3  2026/10/15  验证修饰符、类型关键字及类型名分列对齐和分组边界
 //  v2.2.2  2026/10/14  验证指针、数组及普通变量的名称列对齐
 //  v2.2.1  2026/10/14  验证 Doxygen 多行展开、保护边界及选区格式化
 //  v2.0.1  2026/09/29  验证 typedef 多列对齐、块注释、分组边界及重复格式化
@@ -28,6 +29,49 @@
 import { formatC } from '../src/features/c/cFormatter';
 
 describe('C/C++ formatter', () => {
+    it.each(['\n', '\r\n'])('将显式结构体类型与别名类型分列对齐（%j）', eol => {
+        const input = ['static udp_queue_t udp_queue;', 'static udp_queue_t udp_reply_queue;',
+            'static struct udp_pcb *g_udp_pcb;', '// 网络核独占',
+            'static udp_msg_t g_rx_msg;', 'static udp_msg_t g_tx_msg;'].join(eol);
+        const expected = ['static        udp_queue_t  udp_queue       ;',
+            'static        udp_queue_t  udp_reply_queue ;',
+            'static struct udp_pcb     *g_udp_pcb       ;', '// 网络核独占',
+            'static udp_msg_t g_rx_msg ;', 'static udp_msg_t g_tx_msg ;'].join(eol);
+        expect(formatC(input)).toBe(expected);
+        expect(formatC(expected)).toBe(expected);
+    });
+
+    it('拆分修饰符及 union/enum/class 类型列，并保留名称和后续列对齐', () => {
+        const input = ['const union Data *data = NULL;', 'static enum State state = READY;',
+            'static class Worker &worker = current;', 'static unsigned long count = 0;'].join('\n');
+        const output = formatC(input);
+        const lines = output.split('\n');
+        const typeNames = ['Data', 'State', 'Worker', 'unsigned long'];
+        const names = ['data', 'state', 'worker', 'count'];
+        expect(new Set(lines.map((line, i) => line.indexOf(typeNames[i]))).size).toBe(1);
+        expect(new Set(lines.map((line, i) => line.indexOf(names[i]))).size).toBe(1);
+        expect(new Set(lines.map(line => line.indexOf('='))).size).toBe(1);
+        expect(new Set(lines.map(line => line.indexOf(';'))).size).toBe(1);
+        expect(output).toContain('*data');
+        expect(output).toContain('&worker');
+        expect(formatC(output)).toBe(output);
+    });
+
+    it('类型拆列不跨越缩进边界，也不拆分模板参数中的 struct', () => {
+        const input = '    struct Node *node;\nType value;\nBox<struct Item> box;\nBox<struct Item> another;';
+        const output = formatC(input);
+        expect(output).toContain('    struct Node *node;\n');
+        expect(output).toContain('Box<struct Item>');
+        expect(formatC(output)).toBe(output);
+    });
+
+    it('缺少修饰符的混合声明保留原类型布局，不添加额外缩进', () => {
+        const input = 'static struct Item *item;\nItemValue value;';
+        const expected = 'static struct Item *item  ;\nItemValue           value ;';
+        expect(formatC(input)).toBe(expected);
+        expect(formatC(expected)).toBe(expected);
+    });
+
     it.each(['\n', '\r\n'])('将截图中的 Doxygen 注释展开为标准多行格式（%j）', eol => {
         const input = '/** @brief FileSaveParams 命令参数，字段按协议顺序排列。 */' + eol;
         const expected = ['/**', ' * @brief FileSaveParams 命令参数，字段按协议顺序排列。', ' */', ''].join(eol);

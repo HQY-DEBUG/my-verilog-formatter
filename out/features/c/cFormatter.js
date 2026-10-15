@@ -2,12 +2,13 @@
 // =========================================================================
 // 文件    : cFormatter.ts
 // 描述    : clang-format 通用排版与 C/C++ 定制多列对齐
-// 版本    : v2.2.2
-// 日期    : 2026/10/14
+// 版本    : v2.2.3
+// 日期    : 2026/10/15
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.2.3  2026/10/15  分列对齐带修饰符声明的类型关键字和类型名
 //  v2.2.2  2026/10/14  分离指针符号列，使指针与普通变量名称对齐
 //  v2.2.1  2026/10/14  将独立单行 Doxygen 注释展开为多行块注释
 //  v2.1.2  2026/10/12  保留多行指定成员初始化布局及内嵌单行数组
@@ -275,7 +276,7 @@ function alignVariableDeclarations(code) {
         let end = i + 1;
         while (end < lines.length) {
             const parsed = parseDeclaration(lines[end]);
-            if (!parsed) {
+            if (!parsed || parsed.typePrefix.match(/^\s*/)?.[0] !== first.typePrefix.match(/^\s*/)?.[0]) {
                 break;
             }
             block.push(parsed);
@@ -285,7 +286,19 @@ function alignVariableDeclarations(code) {
             result.push(lines[i]);
         }
         else {
-            const maxType = Math.max(...block.map(item => item.typePrefix.length));
+            // 修饰符作为行首锚点；不在缺少修饰符的声明前补空白，以免把对齐空格误当成缩进。
+            const types = block.map(item => item.typePrefix.match(/^(\s*)((?:(?:static|extern|register|thread_local|_Thread_local|const|volatile|constexpr|constinit|inline|mutable)\s+)*)(?:(enum\s+class|enum\s+struct|struct|union|enum|class)\s+)?(.+)$/));
+            let typePrefixes = block.map(item => item.typePrefix);
+            if (types.some(type => type[3]) && types.every(type => type[2])) {
+                const specifiers = types.map(type => type[2].trim().replace(/\s+/g, ' '));
+                const tags = types.map(type => (type[3] ?? '').replace(/\s+/g, ' '));
+                const specifierWidth = Math.max(...specifiers.map(value => value.length));
+                const tagWidth = Math.max(...tags.map(value => value.length));
+                typePrefixes = types.map((type, index) => type[1]
+                    + (specifierWidth ? specifiers[index].padEnd(specifierWidth + 1) : '')
+                    + tags[index].padEnd(tagWidth + 1) + type[4]);
+            }
+            const maxType = Math.max(...typePrefixes.map(type => type.length));
             const maxPointer = Math.max(...block.map(item => item.pointer.length));
             const declarations = block.map(item => `${item.name}${item.arraySuffix}`);
             const maxDeclaration = Math.max(...declarations.map(item => item.length));
@@ -295,7 +308,7 @@ function alignVariableDeclarations(code) {
                 const declaration = declarations[index].padEnd(maxDeclaration + 1);
                 const initializer = item.initializer.padEnd(initializerWidth);
                 const comment = item.comment ? `  ${item.comment}` : '';
-                return `${item.typePrefix.padEnd(maxType + 1)}${item.pointer.padStart(maxPointer)}${declaration}${initializer};${comment}`;
+                return `${typePrefixes[index].padEnd(maxType + 1)}${item.pointer.padStart(maxPointer)}${declaration}${initializer};${comment}`;
             }));
         }
         i = end;

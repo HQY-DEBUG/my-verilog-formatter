@@ -292,6 +292,17 @@ nativeTests('真实 clang-format 集成', () => {
         expect(await format(full)).toBe(full);
     });
 
+    it.each(['\n', '\r\n'])('真实 clang-format 后拆列对齐 static/struct/类型名（%j）', async eol => {
+        const input = ['static udp_queue_t udp_queue;', 'static udp_queue_t udp_reply_queue;',
+            'static struct udp_pcb *g_udp_pcb;', ''].join(eol);
+        const expected = ['static        udp_queue_t  udp_queue       ;',
+            'static        udp_queue_t  udp_reply_queue ;',
+            'static struct udp_pcb     *g_udp_pcb       ;', ''].join(eol);
+        expect(await format(input)).toBe(expected);
+        expect(await format(expected)).toBe(expected);
+        expect(await format(input, undefined, new vscode.Range(0, 0, 3, 0))).toBe(expected);
+    });
+
     it.each(['\n', '\r\n'])('真实 clang-format 后指针名称与普通成员名称对齐（%j）', async eol => {
         const input = ['typedef struct {', '    u32 total_packages;', '    u32 package_num;',
             '    const u8 *payload;', '    u32 payload_size;', '} FileParams;', ''].join(eol);
