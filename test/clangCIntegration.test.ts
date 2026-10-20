@@ -208,6 +208,64 @@ nativeTests('真实 clang-format 集成', () => {
         expect(await format(input.replace(/\n/g, '\r\n'))).toBe(expected.replace(/\n/g, '\r\n'));
     });
 
+    it.each(['\n', '\r\n'])('展开并按列对齐超过二十项的命令表（%j）', async eol => {
+        const entries: Array<[string, number]> = [
+            ['PROTO_CMD_EXT_SET_CTRLMODE_L', 1], ['PROTO_CMD_EXT_SET_STARTADDR_L', 1],
+            ['PROTO_CMD_JUMP_L', 8], ['PROTO_CMD_MARK_L', 8], ['PROTO_CMD_MARK_ARC', 8],
+            ['PROTO_CMD_MARK_ELLIPSE', 9], ['PROTO_CMD_SCAN_L_DELAY_MODE', 5],
+            ['PROTO_CMD_SCAN_L_JUMP_SPEED', 1], ['PROTO_CMD_SCAN_L_MARK_SPEED', 1],
+            ['PROTO_CMD_SCAN_L_SCAN_DELAY', 3], ['PROTO_CMD_SCAN_L_SKY_MODE', 1],
+            ['PROTO_CMD_SCAN_L_SKY_PARAM', 4], ['PROTO_CMD_SCAN_L_SKY_LIMIT', 1],
+            ['PROTO_CMD_PROG_CONTINUE', 0], ['PROTO_CMD_PROG_LIST_JUMP', 2],
+            ['PROTO_CMD_PROG_NEXT', 0], ['PROTO_CMD_PROG_NOP', 0],
+            ['PROTO_CMD_PROG_REPEAT_START', 0], ['PROTO_CMD_PROG_REPEAT_END', 1],
+            ['PROTO_CMD_PROG_DELAY', 1], ['PROTO_CMD_PROG_END', 0],
+            ['PROTO_CMD_PROG_BREAKPOINT', 1], ['PROTO_CMD_LASL_OUT_TYPE', 1],
+            ['PROTO_CMD_LASL_AUTO_PARAM', 4], ['PROTO_CMD_LASL_ENC_SPEED', 3],
+            ['PROTO_CMD_LASL_DELAY', 2], ['PROTO_CMD_LASL_OUT_PIN', 1],
+            ['PROTO_CMD_LASL_PULSE_CFG', 2], ['PROTO_CMD_LASL_VECTOR_CTRL', 2],
+            ['PROTO_CMD_XFRL_SET_ANGLE', 3], ['PROTO_CMD_XFRL_SET_FSHIFT', 1],
+            ['PROTO_CMD_XFRL_SET_FOFFSET', 1], ['PROTO_CMD_XFRL_SET_MATRIX', 6],
+            ['PROTO_CMD_XFRL_SET_OFFSET', 6], ['PROTO_CMD_XFRL_SET_SCALE', 3],
+            ['PROTO_CMD_LACL_ON_INTERVAL', 1], ['PROTO_CMD_LACL_START_PULSE', 2],
+            ['PROTO_CMD_LACL_CTRL', 1],
+        ];
+        const header = 'static const ListCmdInfo g_cmd_info[] = {';
+        const rows = entries.map(([name, value]) => `{ ${name}, ${value}u }`);
+        const input = [header, '    ' + rows.join(', ') + ',', '};', ''].join(eol);
+        const output = await format(input, path.join(__dirname, 'example.c'));
+        const lines = output.split(eol);
+        expect(lines).toHaveLength(entries.length + 3);
+        expect(lines[0]).toBe(header);
+        expect(lines[lines.length - 2]).toBe('};');
+        const elements = lines.slice(1, -2);
+        elements.forEach((line, index) => {
+            expect(line.trim()).toMatch(new RegExp(`^\\{${entries[index][0]}, +${entries[index][1]}u\\},$`));
+        });
+        expect(new Set(elements.map(line => line.search(/\d+u/))).size).toBe(1);
+        expect(new Set(elements.map(line => line.indexOf('}'))).size).toBe(1);
+        expect(await format(output)).toBe(output);
+        const multiline = [header, ...rows.map(row => `    ${row},`), '};', ''].join(eol);
+        expect(await format(multiline)).toBe(output);
+        expect(await format(input, undefined, new vscode.Range(0, 0, 3, 0))).toBe(output);
+    });
+
+    it('结构体数组换行时保留嵌套表达式、字符串及行尾注释', async () => {
+        const input = 'const Entry entries[] = {\n{make(1, 2), "a,b"}, // 第一项\n{other(), "x"}\n};\n';
+        const expected = 'const Entry entries[] = {\n    {make(1, 2), "a,b"}, // 第一项\n    {other(), "x"}\n};\n';
+        expect(await format(input)).toBe(expected);
+        expect(await format(expected)).toBe(expected);
+        const scalars = 'const int values[] = {1, 2, 3};\n';
+        expect(await format(scalars)).toBe(scalars);
+    });
+
+    it('小型表格对齐不同宽度的字段并保持原有成员顺序', async () => {
+        const input = 'const Entry entries[] = {{CMD_LONG, 1u}, {CMD, 100u}};\n';
+        const expected = 'const Entry entries[] = {\n    {CMD_LONG, 1u  },\n    {CMD,      100u}\n};\n';
+        expect(await format(input)).toBe(expected);
+        expect(await format(expected)).toBe(expected);
+    });
+
     it.each(['\n', '\r\n'])('保留指定成员初始化的多行布局和内嵌单行数组（%j）', async eol => {
         const initializer = [
             'const NetConfig net_config = {',

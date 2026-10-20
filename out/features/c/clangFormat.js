@@ -46,6 +46,7 @@ exports.C_CLANG_STYLE = {
     IndentCaseLabels: true,
     AllowShortFunctionsOnASingleLine: 'None',
     AllowShortEnumsOnASingleLine: false,
+    AlignArrayOfStructures: 'Left',
     SkipMacroDefinitionBody: true,
 };
 function clangFormatExecutable() {
