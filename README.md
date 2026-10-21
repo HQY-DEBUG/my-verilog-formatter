@@ -13,7 +13,7 @@
 9. Tcl 编辑增强：提供过程、命名空间与变量大纲、定义跳转、代码折叠、悬停说明和粘性滚动支持。
 10. 代码折叠：通过编辑器右键菜单收起或展开当前代码块、全部代码，只改变显示状态。
 
-> 版本：v2.2.5　日期：2026/10/21
+> 版本：v2.2.6　日期：2026/10/21
 
 ---
 
@@ -431,8 +431,8 @@ npm run compile
 当前安装包面向 Windows x64，包含 MATLAB 运行组件和 Windows ripgrep。发布时上传生成的 `.vsix` 文件；修改记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ```bash
-npm run package -- --target win32-x64 --out hanxuyao-plugin-2.2.5-win32-x64.vsix
-code --install-extension hanxuyao-plugin-2.2.5-win32-x64.vsix --force
+npm run package -- --target win32-x64 --out hanxuyao-plugin-2.2.6-win32-x64.vsix
+code --install-extension hanxuyao-plugin-2.2.6-win32-x64.vsix --force
 ```
 
 ---
@@ -480,6 +480,7 @@ GitHub 自动测试、打包和发布的配置及使用方法见 [自动发布](
 
 | 版本 | 日期 | 修改内容 |
 |------|------|---------|
+| v2.2.6 | 2026/10/21 | 将原图标等比例缩至 395×855 并保存为 PNG，解除 Marketplace 尺寸限制，发布此前累计修复 |
 | v2.2.5 | 2026/10/21 | 修复 C/C++ 自动输入无候选时弹出 No suggestions.，保留正常补全及参数提示 |
 | v2.2.4 | 2026/10/20 | 结构体数组逐项换行并按字段列对齐，修复长命令表被合并为一行的问题 |
 | v2.2.3 | 2026/10/15 | 分列对齐带修饰符声明的类型关键字和类型名，保持指针、名称及后续列对齐 |
