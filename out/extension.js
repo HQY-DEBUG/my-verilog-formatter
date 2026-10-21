@@ -2,12 +2,13 @@
 // =========================================================================
 // 文件    : extension.ts
 // 描述    : VS Code 扩展入口，注册所有 Provider 和命令
-// 版本    : v2.2.0
-// 日期    : 2026/10/12
+// 版本    : v2.2.5
+// 日期    : 2026/10/21
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.2.5  2026/10/21  将 C/C++ 输入建议标记为自动触发，避免无候选空框
 //  v2.2.0  2026/10/12  注册 C 函数定义跳转与独立实现查找命令
 //  v2.1.0  2026/10/09  注册编辑器代码折叠与展开入口
 //  v2.0.0  2026/09/24  按语言拆分保存时自动格式化开关
@@ -175,7 +176,8 @@ async function activate(context) {
         }
         cSuggestTimer = setTimeout(() => {
             if (vscode.window.activeTextEditor?.document === event.document) {
-                void vscode.commands.executeCommand('editor.action.triggerSuggest');
+                // 自动输入无候选时应隐藏列表，不能按手动补全显示空提示。
+                void vscode.commands.executeCommand('editor.action.triggerSuggest', { auto: true });
             }
         }, 120);
     }));

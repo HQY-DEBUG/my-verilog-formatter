@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : extension.test.ts
 // 描述    : 扩展入口配置测试
-// 版本    : v1.4.5
-// 日期    : 2026/09/11
+// 版本    : v2.2.5
+// 日期    : 2026/10/21
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.2.5  2026/10/21  执行真实 C/C++ 输入事件逻辑，验证自动补全及参数提示
 //  v1.4.5  2026/09/11  校验版本清单与说明一致，支持后续自动发布升版
 //  v1.4.4  2026/09/11  同步 MATLAB 内置集成版本
 //  v1.4.2  2026/08/21  同步跨行控制条件单行化功能版本
@@ -27,6 +28,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import * as ts from 'typescript';
 
 describe('extension formatter languages', () => {
     it('扩展名称与 README 版本应保持同步', () => {
@@ -79,11 +81,81 @@ describe('extension formatter languages', () => {
         }
     });
 
-    it('C/C++ 输入应主动触发语言服务器建议和参数提示', () => {
-        const extensionPath = path.join(__dirname, '..', 'src', 'extension.ts');
-        const extensionText = fs.readFileSync(extensionPath, 'utf8');
-        expect(extensionText).toContain('onDidChangeTextDocument');
-        expect(extensionText).toContain("executeCommand('editor.action.triggerSuggest')");
-        expect(extensionText).toContain("executeCommand('editor.action.triggerParameterHints')");
+});
+
+describe('C/C++ 自动建议事件', () => {
+    let handler: (event: any) => void;
+    let api: any;
+    let document: any;
+
+    beforeEach(() => {
+        jest.useFakeTimers();
+        document = { languageId: 'c' };
+        api = {
+            window: { activeTextEditor: { document } },
+            workspace: { onDidChangeTextDocument: (callback: typeof handler) => { handler = callback; } },
+            commands: { executeCommand: jest.fn().mockResolvedValue(undefined) },
+        };
+        // 运行入口中的真实注册语句，避免为测试重写一份自动触发逻辑，也不启动无关服务。
+        const text = fs.readFileSync(path.join(__dirname, '..', 'src', 'extension.ts'), 'utf8');
+        const source = ts.createSourceFile('extension.ts', text, ts.ScriptTarget.ES2020, true);
+        const activate = source.statements.find(node => ts.isFunctionDeclaration(node)
+            && node.name?.text === 'activate') as ts.FunctionDeclaration;
+        const statements = activate.body!.statements;
+        const start = statements.findIndex(node => ts.isVariableStatement(node)
+            && node.declarationList.declarations.some(declaration => declaration.name.getText(source) === 'cSuggestTimer'));
+        expect(start).toBeGreaterThanOrEqual(0);
+        const registration = statements.slice(start, start + 2).map(node => node.getText(source)).join('\n');
+        const script = ts.transpileModule(registration, { compilerOptions: { target: ts.ScriptTarget.ES2020 } }).outputText;
+        new Function('vscode', 'context', 'C_LANGS', script)(api, { subscriptions: [] }, ['c', 'cpp']);
+    });
+
+    afterEach(() => { jest.clearAllTimers(); jest.useRealTimers(); });
+
+    const change = (text: string, changedDocument: any) => ({ document: changedDocument, contentChanges: [{ text }] });
+
+    it.each(['c', 'cpp'])('%s 单字符输入延迟触发自动建议，不发送手动补全命令', language => {
+        document.languageId = language;
+        handler(change('x', document));
+        jest.advanceTimersByTime(119);
+        expect(api.commands.executeCommand).not.toHaveBeenCalled();
+        jest.advanceTimersByTime(1);
+        expect(api.commands.executeCommand).toHaveBeenCalledTimes(1);
+        expect(api.commands.executeCommand).toHaveBeenCalledWith('editor.action.triggerSuggest', { auto: true });
+    });
+
+    it('快速连续输入只在最后一次输入后请求建议', () => {
+        handler(change('a', document));
+        jest.advanceTimersByTime(80);
+        handler(change('b', document));
+        jest.advanceTimersByTime(80);
+        expect(api.commands.executeCommand).not.toHaveBeenCalled();
+        jest.advanceTimersByTime(40);
+        expect(api.commands.executeCommand).toHaveBeenCalledTimes(1);
+    });
+
+    it('左括号立即请求参数提示，不变更参数提示命令', () => {
+        handler(change('(', document));
+        expect(api.commands.executeCommand).toHaveBeenCalledWith('editor.action.triggerParameterHints');
+        jest.runAllTimers();
+        expect(api.commands.executeCommand).toHaveBeenCalledTimes(1);
+    });
+
+    it('其他语言、其他文档、空变化及批量粘贴不触发建议', () => {
+        handler(change('x', { languageId: 'c' }));
+        handler({ document, contentChanges: [] });
+        handler(change('pasted_text', document));
+        handler(change(' ', document));
+        document.languageId = 'verilog';
+        handler(change('x', document));
+        jest.runAllTimers();
+        expect(api.commands.executeCommand).not.toHaveBeenCalled();
+    });
+
+    it('等待期间切换编辑器不会在新文档弹出建议', () => {
+        handler(change('x', document));
+        api.window.activeTextEditor = { document: { languageId: 'c' } };
+        jest.runAllTimers();
+        expect(api.commands.executeCommand).not.toHaveBeenCalled();
     });
 });

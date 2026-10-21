@@ -13,7 +13,7 @@
 9. Tcl 编辑增强：提供过程、命名空间与变量大纲、定义跳转、代码折叠、悬停说明和粘性滚动支持。
 10. 代码折叠：通过编辑器右键菜单收起或展开当前代码块、全部代码，只改变显示状态。
 
-> 版本：v2.2.4　日期：2026/10/20
+> 版本：v2.2.5　日期：2026/10/21
 
 ---
 
@@ -66,6 +66,8 @@ Tcl 导航自 **1.5.0** 集成到桌面入口；兼容性修复使用补丁版�
 本次还提供 Web 入口，供浏览器扩展宿主运行词语高亮和 Rainbow CSV。其限制沿用 Rainbow CSV 上游：浏览器查询使用 JavaScript，不支持 Python、本地文件 JOIN、文件头尾预览和复制回源文件。原有 MATLAB、本地编译检查等桌面功能仍需桌面版 VS Code。当前发布目标仍为 Windows x64，本次没有发布 Web 安装包。
 
 ### C / C++
+
+**自动建议：**输入字母、数字或下划线后，以自动模式请求语言服务候选；无候选时不弹出 `No suggestions.` 空框，有候选时仍正常显示。输入 `(` 仍触发参数提示，手动请求补全的行为保持不变。该模式已核对最低支持版本 [VS Code 1.95.0 的命令实现](https://github.com/microsoft/vscode/blob/1.95.0/src/vs/editor/contrib/suggest/browser/suggestController.ts#L827-L835)和[空候选处理](https://github.com/microsoft/vscode/blob/1.95.0/src/vs/editor/contrib/suggest/browser/suggestWidget.ts#L552-L559)，无需提高版本要求。
 
 **C 函数跳转：**在 `.c` / `.h` 的函数名上按 `F4`，或从命令面板执行 **C：转到函数实现**，直接定位带函数体的定义；多个候选时选择目标。也接入标准 `F12` / `Ctrl+单击` 定义查询，这些入口会合并其他语言扩展的结果。若用户已有 `F4` 快捷键配置，其优先级高于插件默认绑定，需将 C 文件的 `F4` 绑定到 `verilogFormatter.c.goToFunction`。
 
@@ -429,8 +431,8 @@ npm run compile
 当前安装包面向 Windows x64，包含 MATLAB 运行组件和 Windows ripgrep。发布时上传生成的 `.vsix` 文件；修改记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ```bash
-npm run package -- --target win32-x64 --out hanxuyao-plugin-2.2.4-win32-x64.vsix
-code --install-extension hanxuyao-plugin-2.2.4-win32-x64.vsix --force
+npm run package -- --target win32-x64 --out hanxuyao-plugin-2.2.5-win32-x64.vsix
+code --install-extension hanxuyao-plugin-2.2.5-win32-x64.vsix --force
 ```
 
 ---
@@ -478,6 +480,7 @@ GitHub 自动测试、打包和发布的配置及使用方法见 [自动发布](
 
 | 版本 | 日期 | 修改内容 |
 |------|------|---------|
+| v2.2.5 | 2026/10/21 | 修复 C/C++ 自动输入无候选时弹出 No suggestions.，保留正常补全及参数提示 |
 | v2.2.4 | 2026/10/20 | 结构体数组逐项换行并按字段列对齐，修复长命令表被合并为一行的问题 |
 | v2.2.3 | 2026/10/15 | 分列对齐带修饰符声明的类型关键字和类型名，保持指针、名称及后续列对齐 |
 | v2.2.2 | 2026/10/14 | 分离指针符号列，使指针与普通变量名称对齐，保持后续等号、分号和注释列对齐 |
