@@ -34,6 +34,27 @@ nativeTests('真实 clang-format 集成', () => {
         return edits.length ? edits[0].newText : text;
     }
 
+    it.each(['\n', '\r\n'])('完整格式化后文件末尾恰好一个换行（%j）', async eol => {
+        const body = ['int run() {', '    return 0;', '}'].join(eol);
+        const expected = body + eol;
+        for (const suffix of ['', eol, eol + '  ' + eol + eol]) {
+            expect(await format(body + suffix)).toBe(expected);
+        }
+        expect(await format(expected)).toBe(expected);
+        const filename = path.join(__dirname, 'samples', 'c-eof-style', 'example.cpp');
+        expect(await format(body, filename)).toBe(expected);
+        expect(await format(body + eol + eol, filename)).toBe(expected);
+    });
+
+    it('仅在选区包含文件末行时补末尾换行，空文件保持为空', async () => {
+        const input = 'int first=1;\nint last=2;';
+        expect(await format(input, undefined, new vscode.Range(0, 0, 1, 0)))
+            .toBe('int first = 1;\nint last=2;');
+        expect(await format(input, undefined, new vscode.Range(1, 0, 1, 11)))
+            .toBe('int first=1;\nint last = 2;\n');
+        expect(await format('')).toBe('');
+    });
+
     it('普通 C++ 布局遵循原生规则，短函数保持多行', async () => {
         const input = 'namespace sample{\nvoid run(int n){for(int i=0;i<n;++i){if(i%2==0){emit(i);}else{emit(-i);}}}\n}\n'
             + 'static void ps_led_flashing() { AlGpio_Hal_WritePin(GPIO, PL_LED_1, ~LedState); }\n';

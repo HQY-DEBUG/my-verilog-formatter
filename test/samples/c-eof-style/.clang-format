@@ -1,0 +1,4 @@
+# 验证插件约定覆盖工程中的相反文件尾设置。
+BasedOnStyle: LLVM
+InsertNewlineAtEOF: false
+KeepEmptyLinesAtEOF: true

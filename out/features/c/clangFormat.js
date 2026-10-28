@@ -47,6 +47,8 @@ exports.C_CLANG_STYLE = {
     AllowShortFunctionsOnASingleLine: 'None',
     AllowShortEnumsOnASingleLine: false,
     AlignArrayOfStructures: 'Left',
+    InsertNewlineAtEOF: true,
+    KeepEmptyLinesAtEOF: false,
     SkipMacroDefinitionBody: true,
 };
 function clangFormatExecutable() {
