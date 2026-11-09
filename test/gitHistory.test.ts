@@ -196,6 +196,16 @@ describe('文件 Git 历史', () => {
         expect((await candidates.getFileHistory(path.join(root, currentName))).commits[0].hash).toBe(latest);
     });
 
+    it('文件目录别名与 Git 返回的真实仓库路径不同时仍能查询', async () => {
+        const alias = path.join(root, 'directory-alias');
+        fs.symlinkSync(root, alias, process.platform === 'win32' ? 'junction' : 'dir');
+        try {
+            const history = await service.getFileHistory(path.join(alias, currentName));
+            expect(history.commits[0]?.hash).toBe(latest);
+            expect(history.commits[0]?.filePath).toBe(currentName);
+        } finally { fs.unlinkSync(alias); }
+    });
+
     it.each([
         ['shiftjis', [0x82, 0xa0], 'あ'], ['eucjp', [0xa4, 0xa2], 'あ'], ['cp950', [0xa4, 0xa4], '中'],
     ])('兼容 VS Code 的 %s 编码名称', async (encoding, bytes, expected) => {

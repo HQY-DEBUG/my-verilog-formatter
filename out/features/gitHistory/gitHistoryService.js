@@ -73,9 +73,12 @@ class GitHistoryService {
         if (!path.isAbsolute(filename) || !Number.isSafeInteger(limit) || limit < 1) {
             throw new Error('文件路径或历史条数无效。');
         }
-        const repositoryRoot = (await this.run(path.dirname(filename), ['rev-parse', '--show-toplevel']))
-            .toString('utf8').replace(/\r?\n$/, '');
-        const filePath = path.relative(repositoryRoot, filename).split(path.sep).join('/');
+        const directory = path.dirname(filename);
+        const rootOutput = await this.run(directory, ['rev-parse', '--show-toplevel']);
+        const prefixOutput = await this.run(directory, ['rev-parse', '--show-prefix']);
+        const repositoryRoot = rootOutput.toString('utf8').replace(/\r?\n$/, '');
+        // Git 统一解析短路径、目录联接及符号链接，避免混用路径别名计算相对路径。
+        const filePath = prefixOutput.toString('utf8').replace(/\r?\n$/, '') + path.basename(filename);
         let head;
         try {
             head = (await this.run(repositoryRoot, ['rev-parse', '--verify', '--quiet', 'HEAD'])).toString('utf8').trim();
