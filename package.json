@@ -2,7 +2,7 @@
     "name": "hanxuyao-plugin",
     "displayName": "hanxuyao-plugin",
     "description": "Verilog / SystemVerilog / C / C++ / MATLAB 开发工具，内置文件 Git 历史与版本对比、Tcl 导航、词语高亮、CSV/TSV 彩虹列及 RBQL 查询",
-    "version": "2.3.0",
+    "version": "2.4.0",
     "publisher": "hanxuyao",
     "repository": {
         "type": "git",
