@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.ts
 // 描述    : clang-format 通用排版与 C/C++ 定制多列对齐
-// 版本    : v2.2.3
-// 日期    : 2026/10/15
+// 版本    : v2.2.8
+// 日期    : 2026/11/09
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.2.8  2026/11/09  对齐 Doxygen 标签、参数名称和说明列
 //  v2.2.3  2026/10/15  分列对齐带修饰符声明的类型关键字和类型名
 //  v2.2.2  2026/10/14  分离指针符号列，使指针与普通变量名称对齐
 //  v2.2.1  2026/10/14  将独立单行 Doxygen 注释展开为多行块注释
@@ -84,7 +85,42 @@ export function formatC(code: string, range?: ClangLineRange): string {
     normalized = expandDoxygenComments(normalized);
     normalized = [...lines.slice(0, start), ...normalized.split('\n').map(line => line.trimEnd()), ...lines.slice(end)]
         .map(line => protectedRegions.blocks.get(line) ?? line).join('\n');
+    normalized = alignDoxygenFields(normalized, range);
     return eol === '\n' ? normalized : normalized.replace(/\n/g, '\r\n');
+}
+
+function alignDoxygenFields(code: string, range?: ClangLineRange): string {
+    let disabled = false;
+    return code.replace(C_LITERALS_AND_COMMENTS, (comment: string, _delimiter: string, offset: number) => {
+        if (/^(?:\/\/|\/\*)\s*clang-format off\b/.test(comment)) { disabled = true; return comment; }
+        if (/^(?:\/\/|\/\*)\s*clang-format on\b/.test(comment)) { disabled = false; return comment; }
+        if (disabled || !/^\/\*[*!]/.test(comment) || !comment.includes('\n') || !comment.endsWith('*/')
+            || /[@\\](?:code|verbatim)\b/.test(comment)) { return comment; }
+        const start = code.slice(0, offset).split('\n').length;
+        const end = start + comment.split('\n').length - 1;
+        if (range && (start < range.start || end > range.end)) { return comment; }
+        const lineStart = code.lastIndexOf('\n', offset - 1) + 1;
+        if (!/^\s*$/.test(code.slice(lineStart, offset)) || /\\\s*\n\s*$/.test(code.slice(0, lineStart))) { return comment; }
+        const lines = comment.split('\n');
+        const rows = lines.map(line => {
+            const match = line.match(/^(\s*\*\s+)([@\\](?:brief|note|return|returns|pre|post|param(?:\[(?:in|out|in,out)\])?|retval))\s+(.+)$/);
+            if (!match) { return undefined; }
+            const named = /^[@\\](?:param|retval)/.test(match[2]);
+            const fields = named ? match[3].match(/^(\S+)\s+(.+)$/) : null;
+            if (named && !fields) { return undefined; }
+            return { prefix: match[1], tag: match[2], name: fields?.[1] ?? '', description: fields?.[2] ?? match[3] };
+        });
+        const namedRows = rows.filter(row => row?.name);
+        if (namedRows.length < 2) { return comment; }
+        const tags = rows.filter((row): row is NonNullable<typeof row> => !!row);
+        const tagWidth = Math.max(...tags.map(row => row.tag.length));
+        const nameWidth = Math.max(...tags.map(row => row.name.length));
+        return lines.map((line, index) => {
+            const row = rows[index];
+            if (!row) { return line; }
+            return `${row.prefix}${row.tag.padEnd(tagWidth + 1)}${row.name.padEnd(nameWidth + 1)}${row.description}`;
+        }).join('\n');
+    });
 }
 
 function expandDoxygenComments(code: string): string {

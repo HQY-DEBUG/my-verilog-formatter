@@ -55,6 +55,17 @@ nativeTests('真实 clang-format 集成', () => {
         expect(await format('')).toBe('');
     });
 
+    it('真实格式化对齐 Doxygen 参数、返回值及说明，重复执行保持稳定', async () => {
+        const input = ['/**', ' * @brief 读取。', ' * @param[in] off 偏移。',
+            ' * @param[out] value 输出。', ' * @retval ST_SUCCESS 成功。',
+            ' * @retval FILE_CTRL_ERR_STATE 失败。', ' */', 'int read_value(int off, int *value);', ''].join('\n');
+        const output = await format(input);
+        const lines = output.split('\n');
+        const descriptions = ['读取。', '偏移。', '输出。', '成功。', '失败。'];
+        expect(new Set(descriptions.map(text => lines.find(line => line.includes(text))!.indexOf(text))).size).toBe(1);
+        expect(await format(output)).toBe(output);
+    });
+
     it('普通 C++ 布局遵循原生规则，短函数保持多行', async () => {
         const input = 'namespace sample{\nvoid run(int n){for(int i=0;i<n;++i){if(i%2==0){emit(i);}else{emit(-i);}}}\n}\n'
             + 'static void ps_led_flashing() { AlGpio_Hal_WritePin(GPIO, PL_LED_1, ~LedState); }\n';

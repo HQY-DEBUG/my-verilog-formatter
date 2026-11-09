@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.test.ts
 // 描述    : C/C++ 格式化器回归测试
-// 版本    : v2.2.3
-// 日期    : 2026/10/15
+// 版本    : v2.2.8
+// 日期    : 2026/11/09
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.2.8  2026/11/09  验证 Doxygen 参数及返回值说明列对齐
 //  v2.2.3  2026/10/15  验证修饰符、类型关键字及类型名分列对齐和分组边界
 //  v2.2.2  2026/10/14  验证指针、数组及普通变量的名称列对齐
 //  v2.2.1  2026/10/14  验证 Doxygen 多行展开、保护边界及选区格式化
@@ -29,6 +30,17 @@
 import { formatC } from '../src/features/c/cFormatter';
 
 describe('C/C++ formatter', () => {
+    it.each(['\n', '\r\n'])('Doxygen 参数、返回值和说明分别对齐（%j）', eol => {
+        const input = ['/**', ' * @brief 读取。', ' * @param[in] off 偏移。',
+            ' * @param[out] value 输出。', ' * @retval ST_SUCCESS 成功。',
+            ' * @retval FILE_CTRL_ERR_STATE 失败。', ' * @note 保留说明。', ' */'].join(eol);
+        const expected = ['/**', ' * @brief                          读取。',
+            ' * @param[in]  off                 偏移。', ' * @param[out] value               输出。',
+            ' * @retval     ST_SUCCESS          成功。', ' * @retval     FILE_CTRL_ERR_STATE 失败。',
+            ' * @note                           保留说明。', ' */'].join(eol);
+        expect(formatC(input)).toBe(expected);
+        expect(formatC(expected)).toBe(expected);
+    });
     it.each(['\n', '\r\n'])('将显式结构体类型与别名类型分列对齐（%j）', eol => {
         const input = ['static udp_queue_t udp_queue;', 'static udp_queue_t udp_reply_queue;',
             'static struct udp_pcb *g_udp_pcb;', '// 网络核独占',

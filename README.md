@@ -13,7 +13,7 @@
 9. Tcl 编辑增强：提供过程、命名空间与变量大纲、定义跳转、代码折叠、悬停说明和粘性滚动支持。
 10. 代码折叠：通过编辑器右键菜单收起或展开当前代码块、全部代码，只改变显示状态。
 
-> 版本：v2.2.7　日期：2026/10/28
+> 版本：v2.2.8　日期：2026/11/09
 
 ---
 
@@ -91,6 +91,7 @@ Tcl 导航自 **1.5.0** 集成到桌面入口；兼容性修复使用补丁版�
 - 枚举成员一行一个（`AllowShortEnumsOnASingleLine: false`），并按枚举项名称、赋值表达式、逗号和注释多列对齐枚举定义。
 - `switch` 内的 `case`、`default` 标签缩进一级（`IndentCaseLabels: true`），分支语句再缩进一级；连续 case 保持同级。
 - 独立成行的单行 Doxygen 注释 `/** … */`、`/*! … */` 展开为多行，起止标记各占一行、正文使用 ` * ` 前缀；保留正文内容和内部空格。行尾成员说明 `/**< … */`、普通注释、宏续行、原始字符串及 `clang-format off` 区域不参与此展开，已有多行注释继续沿用 clang-format 的处理。
+- 多行 Doxygen 注释中，参数和返回值名称与说明按列对齐；代码示例和禁用格式化区域保留原样。
 
 例如 `/** @brief FileSaveParams 命令参数，字段按协议顺序排列。 */` 格式化为：
 
@@ -432,8 +433,8 @@ npm run compile
 当前安装包面向 Windows x64，包含 MATLAB 运行组件和 Windows ripgrep。发布时上传生成的 `.vsix` 文件；修改记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ```bash
-npm run package -- --target win32-x64 --out hanxuyao-plugin-2.2.7-win32-x64.vsix
-code --install-extension hanxuyao-plugin-2.2.7-win32-x64.vsix --force
+npm run package -- --target win32-x64 --out hanxuyao-plugin-2.2.8-win32-x64.vsix
+code --install-extension hanxuyao-plugin-2.2.8-win32-x64.vsix --force
 ```
 
 ---
@@ -481,6 +482,7 @@ GitHub 自动测试、打包和发布的配置及使用方法见 [自动发布](
 
 | 版本 | 日期 | 修改内容 |
 |------|------|---------|
+| v2.2.8 | 2026/11/09 | 对齐 Doxygen 参数、返回值名称及说明文字 |
 | v2.2.7 | 2026/10/28 | C/C++ 格式化后保留一个文件尾换行，兼容 LF/CRLF、空文件及选区边界 |
 | v2.2.6 | 2026/10/21 | 将原图标等比例缩至 395×855 并保存为 PNG，解除 Marketplace 尺寸限制，发布此前累计修复 |
 | v2.2.5 | 2026/10/21 | 修复 C/C++ 自动输入无候选时弹出 No suggestions.，保留正常补全及参数提示 |
