@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : extension.ts
 // 描述    : VS Code 扩展入口，注册所有 Provider 和命令
-// 版本    : v2.2.5
-// 日期    : 2026/10/21
+// 版本    : v2.3.0
+// 日期    : 2026/11/09
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.3.0  2026/11/09  注册内置文件 Git 历史、只读版本查看和版本对比
 //  v2.2.5  2026/10/21  将 C/C++ 输入建议标记为自动触发，避免无候选空框
 //  v2.2.0  2026/10/12  注册 C 函数定义跳转与独立实现查找命令
 //  v2.1.0  2026/10/09  注册编辑器代码折叠与展开入口
@@ -20,6 +21,7 @@
 import * as vscode from 'vscode';
 import { shouldFormatOnSave } from './features/formatOnSave';
 import { registerFoldingCommands } from './features/foldingCommands';
+import { registerGitHistory } from './features/gitHistory/gitHistoryIntegration';
 // 2026/09/21 新增：接入 Tcl 导航组件及生命周期。
 import { activateTcl, deactivateTcl } from './features/tcl/tclIntegration';
 // 2026/09/21 新增：统一管理词语高亮、CSV 命令与资源的生命周期。
@@ -46,6 +48,7 @@ export const C_LANGS = ['c', 'cpp'];
 export const MATLAB_LANGS = ['matlab'];
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
+    registerGitHistory(context);
     registerFoldingCommands(context);
     registerCFunctionNavigation(context);
     // 2026/09/21 新增：独立启动通用编辑功能，避免 MATLAB 初始化影响高亮与 CSV。

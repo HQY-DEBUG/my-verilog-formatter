@@ -1,8 +1,8 @@
 {
     "name": "hanxuyao-plugin",
     "displayName": "hanxuyao-plugin",
-    "description": "Verilog / SystemVerilog / C / C++ / MATLAB 开发工具，内置 Tcl 导航、词语与正则高亮、CSV/TSV 彩虹列高亮及 RBQL 查询",
-    "version": "2.2.8",
+    "description": "Verilog / SystemVerilog / C / C++ / MATLAB 开发工具，内置文件 Git 历史与版本对比、Tcl 导航、词语高亮、CSV/TSV 彩虹列及 RBQL 查询",
+    "version": "2.3.0",
     "publisher": "hanxuyao",
     "repository": {
         "type": "git",
@@ -30,6 +30,7 @@
         "Linters"
     ],
     "activationEvents": [
+        "onCommand:hanxuyao.gitHistory.file",
         "onLanguage:verilog",
         "onLanguage:systemverilog",
         "onLanguage:verilog-hdl",
@@ -408,6 +409,13 @@
             ]
         },
         "menus": {
+            "editor/title": [
+                {
+                    "command": "hanxuyao.gitHistory.file",
+                    "when": "resourceScheme == file && isWorkspaceTrusted && !isWeb",
+                    "group": "navigation@30"
+                }
+            ],
             "verilogFormatter.codeFolding": [
                 {
                     "command": "verilogFormatter.fold",
@@ -515,6 +523,11 @@
             ],
             "editor/context": [
                 {
+                    "command": "hanxuyao.gitHistory.file",
+                    "when": "resourceScheme == file && isWorkspaceTrusted && !isWeb",
+                    "group": "git@10"
+                },
+                {
                     "submenu": "verilogFormatter.codeFolding",
                     "when": "foldingEnabled",
                     "group": "navigation@20"
@@ -616,6 +629,11 @@
                 }
             ],
             "explorer/context": [
+                {
+                    "command": "hanxuyao.gitHistory.file",
+                    "when": "resourceScheme == file && !explorerResourceIsFolder && isWorkspaceTrusted && !isWeb",
+                    "group": "git@10"
+                },
                 {
                     "submenu": "matlab.addPath",
                     "when": "explorerResourceIsFolder",
@@ -793,6 +811,13 @@
             ]
         },
         "commands": [
+            {
+                "command": "hanxuyao.gitHistory.file",
+                "title": "查看文件 Git 历史",
+                "category": "Git 历史",
+                "icon": "$(history)",
+                "enablement": "isWorkspaceTrusted && !isWeb"
+            },
             {
                 "command": "verilogFormatter.c.goToFunction",
                 "title": "C：转到函数实现",
