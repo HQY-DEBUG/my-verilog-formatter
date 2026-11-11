@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.test.ts
 // 描述    : C/C++ 格式化器回归测试
-// 版本    : v2.2.8
-// 日期    : 2026/11/09
+// 版本    : v2.4.1
+// 日期    : 2026/11/11
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.4.1  2026/11/11  验证单参数 Doxygen 注释整体对齐
 //  v2.2.8  2026/11/09  验证 Doxygen 参数及返回值说明列对齐
 //  v2.2.3  2026/10/15  验证修饰符、类型关键字及类型名分列对齐和分组边界
 //  v2.2.2  2026/10/14  验证指针、数组及普通变量的名称列对齐
@@ -30,6 +31,15 @@
 import { formatC } from '../src/features/c/cFormatter';
 
 describe('C/C++ formatter', () => {
+    it.each(['\n', '\r\n'])('单个参数时整个 Doxygen 注释的说明对齐（%j）', eol => {
+        const input = ['/**', ' * @brief 保存标刻速度。', ' * @param[in] speed 速度。',
+            ' * @return ST_SUCCESS 成功。', ' * @note 仅保存参数。', ' */'].join(eol);
+        const output = formatC(input);
+        const lines = output.split(eol);
+        const values = ['保存标刻速度。', '速度。', 'ST_SUCCESS 成功。', '仅保存参数。'];
+        expect(new Set(values.map((value, index) => lines[index + 1].indexOf(value))).size).toBe(1);
+        expect(formatC(output)).toBe(output);
+    });
     it.each(['\n', '\r\n'])('Doxygen 参数、返回值和说明分别对齐（%j）', eol => {
         const input = ['/**', ' * @brief 读取。', ' * @param[in] off 偏移。',
             ' * @param[out] value 输出。', ' * @retval ST_SUCCESS 成功。',

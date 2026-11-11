@@ -55,6 +55,16 @@ nativeTests('真实 clang-format 集成', () => {
         expect(await format('')).toBe('');
     });
 
+    it('真实格式化对齐单参数 Doxygen 注释并保持稳定', async () => {
+        const input = ['/**', ' * @brief 保存速度。', ' * @param[in] speed 速度。',
+            ' * @return ST_SUCCESS 成功。', ' * @note 仅保存。', ' */', 'void set_speed(int speed);', ''].join('\n');
+        const output = await format(input);
+        const lines = output.split('\n');
+        const descriptions = ['保存速度。', '速度。', 'ST_SUCCESS 成功。', '仅保存。'];
+        expect(new Set(descriptions.map((value, index) => lines[index + 1].indexOf(value))).size).toBe(1);
+        expect(await format(output)).toBe(output);
+    });
+
     it('真实格式化对齐 Doxygen 参数、返回值及说明，重复执行保持稳定', async () => {
         const input = ['/**', ' * @brief 读取。', ' * @param[in] off 偏移。',
             ' * @param[out] value 输出。', ' * @retval ST_SUCCESS 成功。',

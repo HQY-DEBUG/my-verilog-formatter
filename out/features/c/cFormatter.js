@@ -2,12 +2,13 @@
 // =========================================================================
 // 文件    : cFormatter.ts
 // 描述    : clang-format 通用排版与 C/C++ 定制多列对齐
-// 版本    : v2.2.8
-// 日期    : 2026/11/09
+// 版本    : v2.4.1
+// 日期    : 2026/11/11
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.4.1  2026/11/11  对齐仅有一个参数的 Doxygen 注释块
 //  v2.2.8  2026/11/09  对齐 Doxygen 标签、参数名称和说明列
 //  v2.2.3  2026/10/15  分列对齐带修饰符声明的类型关键字和类型名
 //  v2.2.2  2026/10/14  分离指针符号列，使指针与普通变量名称对齐
@@ -128,11 +129,10 @@ function alignDoxygenFields(code, range) {
             }
             return { prefix: match[1], tag: match[2], name: fields?.[1] ?? '', description: fields?.[2] ?? match[3] };
         });
-        const namedRows = rows.filter(row => row?.name);
-        if (namedRows.length < 2) {
+        const tags = rows.filter((row) => !!row);
+        if (tags.length < 2) {
             return comment;
         }
-        const tags = rows.filter((row) => !!row);
         const tagWidth = Math.max(...tags.map(row => row.tag.length));
         const nameWidth = Math.max(...tags.map(row => row.name.length));
         return lines.map((line, index) => {
