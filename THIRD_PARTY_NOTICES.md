@@ -2,6 +2,12 @@
 
 本插件内置下列上游组件的源码快照，版权归原作者所有。插件身份保持为 `hanxuyao.hanxuyao-plugin`，不是 MathWorks 官方发行版。
 
+## C/C++ 语义与格式化组件
+
+- [clangd 23.1.0 Windows x64](https://github.com/clangd/clangd/releases/tag/23.1.0)：LLVM 官方二进制包，Apache License 2.0 with LLVM Exceptions。固定压缩包及 SHA-256 用于可复现构建，许可证随运行资源位于 `out/clangd/clangd_23.1.0/LICENSE.TXT`。
+- [vscode-languageclient 9.0.1](https://github.com/microsoft/vscode-languageserver-node)：MIT 许可证，用于 VS Code 与 clangd 的语言服务协议通信；许可证随 npm 依赖分发。
+- [@cpp-linter/clang-format-win32-x64 23.1.3](https://github.com/cpp-linter/clang-tools-npm)：Apache License 2.0 with LLVM Exceptions，提供 Windows x64 的 clang-format，npm 依赖包含许可证和二进制来源信息。
+
 | 组件 | 版本 / 固定提交 | 许可证 |
 | --- | --- | --- |
 | [MATLAB extension for VS Code](https://github.com/mathworks/MATLAB-extension-for-vscode) | v1.3.13 / `91d25e45277983d9366bd2044f8f4bedb4107bfc` | [MIT](https://github.com/mathworks/MATLAB-extension-for-vscode/blob/91d25e45277983d9366bd2044f8f4bedb4107bfc/LICENSE) |

@@ -2,7 +2,7 @@
     "name": "hanxuyao-plugin",
     "displayName": "hanxuyao-plugin",
     "description": "Verilog / SystemVerilog / C / C++ / MATLAB 开发工具，内置文件 Git 历史与版本对比、Tcl 导航、词语高亮、CSV/TSV 彩虹列及 RBQL 查询",
-    "version": "2.4.1",
+    "version": "2.5.0",
     "publisher": "hanxuyao",
     "repository": {
         "type": "git",
@@ -820,8 +820,8 @@
             },
             {
                 "command": "verilogFormatter.c.goToFunction",
-                "title": "C：转到函数实现",
-                "enablement": "config.verilogFormatter.c.functionNavigation && resourceScheme == file && resourceExtname =~ /^\\.(c|h)$/ && editorLangId =~ /^(c|cpp)$/"
+                "title": "C/C++：转到定义",
+                "enablement": "config.verilogFormatter.c.functionNavigation && resourceScheme == file && resourceExtname =~ /^\\.(c|h|cc|cpp|cxx|hh|hpp|hxx)$/ && editorLangId =~ /^(c|cpp)$/"
             },
             {
                 "command": "verilogFormatter.fold",
@@ -1250,7 +1250,7 @@
             {
                 "command": "verilogFormatter.c.goToFunction",
                 "key": "f4",
-                "when": "editorTextFocus && config.verilogFormatter.c.functionNavigation && resourceScheme == file && resourceExtname =~ /^\\.(c|h)$/ && editorLangId =~ /^(c|cpp)$/"
+                "when": "editorTextFocus && config.verilogFormatter.c.functionNavigation && resourceScheme == file && resourceExtname =~ /^\\.(c|h|cc|cpp|cxx|hh|hpp|hxx)$/ && editorLangId =~ /^(c|cpp)$/"
             },
             {
                 "command": "verilogFormatter.formatDocument",
@@ -1316,7 +1316,7 @@
                         "type": "boolean",
                         "scope": "resource",
                         "default": true,
-                        "description": "为 .c/.h 中普通 C 函数提供定义跳转和 F4 直接查找实现，不依赖编译数据库；不解析预处理条件、C++ 重载或函数指针目标。"
+                        "description": "启用 C/C++ 的 F4 定义跳转，并为 .c/.h 中普通 C 函数提供独立的实现查找；其他符号由可用的语言服务解析。"
                     },
                     "verilogFormatter.c.columnLimit": {
                         "type": "integer",
@@ -1330,7 +1330,7 @@
                         "type": "string",
                         "scope": "machine",
                         "default": "",
-                        "description": "C/C++ 格式化：clang-format 18 或更高版本的绝对路径。留空时优先使用 Microsoft C/C++ 扩展自带程序，否则从 PATH 查找。通用样式继承工程 .clang-format，未配置时使用 LLVM 风格。"
+                        "description": "C/C++ 格式化：clang-format 18 或更高版本的绝对路径。留空时优先使用 Microsoft C/C++ 扩展自带程序，其次使用插件内置 Windows x64 版本，最后从 PATH 查找。通用样式继承工程 .clang-format，未配置时使用 LLVM 风格。"
                     },
                     "verilogFormatter.indentSize": {
                         "type": "number",
@@ -1989,13 +1989,19 @@
             }
         ],
         "configurationDefaults": {
+            "[c]": {
+                "editor.wordBasedSuggestions": "off"
+            },
+            "[cpp]": {
+                "editor.wordBasedSuggestions": "off"
+            },
             "[dynamic csv][csv][tsv][csv (semicolon)][csv (pipe)][csv (whitespace)]": {
                 "editor.semanticHighlighting.enabled": true
             }
         }
     },
     "scripts": {
-        "compile": "tsc -p ./ && node scripts/build-matlab.js && node scripts/build-editor-tools.js",
+        "compile": "tsc -p ./ && node scripts/build-matlab.js && node scripts/build-editor-tools.js && node scripts/build-clangd.js",
         "watch": "tsc -watch -p ./",
         "test": "jest",
         "package": "vsce package",
@@ -2018,25 +2024,30 @@
         "@types/jest": "^29.0.0",
         "@types/node": "^18.0.0",
         "@types/vscode": "^1.80.0",
+        "esbuild": "^0.25.0",
         "jest": "^29.0.0",
         "ts-jest": "^29.0.0",
         "typescript": "^5.0.0",
-        "esbuild": "^0.25.0"
+        "vscode-jsonrpc": "8.2.0"
     },
     "dependencies": {
         "@vscode/ripgrep": "^1.18.0",
         "@vscode/ripgrep-win32-x64": "^1.18.0",
+        "chokidar": "^3.5.3",
         "glob": "^10.5.0",
-        "chokidar": "^3.5.3"
+        "vscode-languageclient": "9.0.1"
     },
     "capabilities": {
         "untrustedWorkspaces": {
             "supported": "limited",
-            "description": "未受信任工作区可使用基础编辑、高亮及 CSV 工具，MATLAB 语言服务器和 RBQL 代码查询不会启动。",
+            "description": "未受信任工作区可使用基础编辑、高亮及 CSV 工具，C/C++ 与 MATLAB 语言服务器和 RBQL 代码查询不会启动。",
             "restrictedConfigurations": [
                 "MATLAB.installPath"
             ]
         }
     },
-    "browser": "./out/editorToolsWeb.js"
+    "browser": "./out/editorToolsWeb.js",
+    "optionalDependencies": {
+        "@cpp-linter/clang-format-win32-x64": "23.1.3"
+    }
 }

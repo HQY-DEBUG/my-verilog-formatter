@@ -2,12 +2,13 @@
 // =========================================================================
 // 文件    : extension.ts
 // 描述    : VS Code 扩展入口，注册所有 Provider 和命令
-// 版本    : v2.4.1
+// 版本    : v2.5.0
 // 日期    : 2026/11/11
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.5.0  2026/11/11  接入内置 clangd C/C++ 语义服务
 //  v2.4.1  2026/11/11  输入点号等字符时取消过期的自动补全请求
 //  v2.3.0  2026/11/09  注册内置文件 Git 历史、只读版本查看和版本对比
 //  v2.2.5  2026/10/21  将 C/C++ 输入建议标记为自动触发，避免无候选空框
@@ -66,6 +67,7 @@ const tclIntegration_1 = require("./features/tcl/tclIntegration");
 const editorToolsIntegration_1 = require("./features/editorTools/editorToolsIntegration");
 const cFormatter_1 = require("./features/c/cFormatter");
 const cDefinitionProvider_1 = require("./features/c/cDefinitionProvider");
+const clangdIntegration_1 = require("./features/c/clangdIntegration");
 const matlabIntegration_1 = require("./features/matlab/matlabIntegration");
 const matlabFormatter_1 = require("./features/matlab/matlabFormatter");
 const formatter_1 = require("./features/verilog/formatter");
@@ -87,6 +89,7 @@ async function activate(context) {
     (0, gitHistoryIntegration_1.registerGitHistory)(context);
     (0, foldingCommands_1.registerFoldingCommands)(context);
     (0, cDefinitionProvider_1.registerCFunctionNavigation)(context);
+    (0, clangdIntegration_1.registerEmbeddedClangd)(context);
     // 2026/09/21 新增：独立启动通用编辑功能，避免 MATLAB 初始化影响高亮与 CSV。
     await (0, editorToolsIntegration_1.activateEditorTools)(context);
     // 2026/09/21 新增：注册 Tcl 编辑增强，沿用原有 Tcl 语法高亮。
@@ -367,6 +370,7 @@ async function activate(context) {
     }
 }
 async function deactivate() {
+    await (0, clangdIntegration_1.deactivateEmbeddedClangd)();
     // 2026/09/21 新增：释放本插件持有的高亮与 CSV 运行时。
     await (0, editorToolsIntegration_1.deactivateEditorTools)();
     // 2026/09/21 新增：释放内置 Tcl 运行时。

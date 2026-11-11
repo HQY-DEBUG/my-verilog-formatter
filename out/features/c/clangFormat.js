@@ -67,6 +67,12 @@ function clangFormatExecutable() {
             return bundled;
         }
     }
+    if (process.platform === 'win32') {
+        const bundled = path.resolve(__dirname, '../../../node_modules/@cpp-linter/clang-format-win32-x64/bin/clang-format.exe');
+        if (fs.existsSync(bundled)) {
+            return bundled;
+        }
+    }
     return 'clang-format';
 }
 async function runClangFormat(code, filename, range) {

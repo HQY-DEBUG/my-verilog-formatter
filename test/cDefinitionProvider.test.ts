@@ -9,12 +9,18 @@ jest.mock('vscode', () => {
     const file = (name: string): any => ({ fsPath: name, path: name.replace(/\\/g, '/'), scheme: 'file',
         toString: () => name.replace(/\\/g, '/'), with: ({ path: next }: any) => file(next) });
     return { ...actual, Uri: { file },
+        Position: class extends actual.Position {
+            isEqual(other: vscode.Position) { return this.line === other.line && this.character === other.character; }
+        },
         FileSystemError: class extends Error { code = 'FileNotFound'; },
         RelativePattern: class { constructor(public base: any, public pattern: string) {} },
         workspace: { ...actual.workspace, textDocuments: [], fs: { stat: jest.fn(), readFile: jest.fn() },
-            findFiles: jest.fn(), getWorkspaceFolder: jest.fn() },
+            findFiles: jest.fn(), getWorkspaceFolder: jest.fn(), asRelativePath: (target: vscode.Uri) => target.fsPath },
         languages: { registerDefinitionProvider: jest.fn(() => ({ dispose() {} })) },
-        commands: { registerCommand: jest.fn(() => ({ dispose() {} })) },
+        commands: { registerCommand: jest.fn(() => ({ dispose() {} })), executeCommand: jest.fn() },
+        ProgressLocation: { Window: 10 },
+        window: { activeTextEditor: undefined, withProgress: jest.fn(), showQuickPick: jest.fn(),
+            showTextDocument: jest.fn(), showInformationMessage: jest.fn(), showErrorMessage: jest.fn() },
     };
 });
 
@@ -25,7 +31,7 @@ function doc(name: string, text: string): vscode.TextDocument {
     const positionAt = (offset: number) => new vscode.Position(text.slice(0, offset).split('\n').length - 1,
         offset - text.lastIndexOf('\n', offset - 1) - 1);
     const offsetAt = (pos: vscode.Position) => text.split('\n').slice(0, pos.line).reduce((sum, line) => sum + line.length + 1, 0) + pos.character;
-    return { uri: uri(name), positionAt, offsetAt,
+    return { uri: uri(name), positionAt, offsetAt, version: 1, languageId: name.endsWith('.c') ? 'c' : 'cpp',
         getText: (range?: vscode.Range) => range ? text.slice(offsetAt(range.start), offsetAt(range.end)) : text,
         getWordRangeAtPosition: (pos: vscode.Position) => {
             const offset = offsetAt(pos);
@@ -122,6 +128,22 @@ describe('C 定义跳转', () => {
         expect(result).toHaveLength(1);
     });
 
+    it.each(['MtdStatus status;', 'typedef int MtdStatus;', 'return MtdStatus;',
+        'typedef void MtdStatus(void);', 'object.MtdStatus();', 'object->MtdStatus();', 'other::MtdStatus();'])
+    ('类型、变量及成员名称不返回无关的同名 C 函数：%s', async text => {
+        add('unrelated.c', 'void MtdStatus(void) {}');
+        expect(await lookup(doc('main.c', text), 'MtdStatus')).toEqual([]);
+        expect(vscode.workspace.findFiles).not.toHaveBeenCalled();
+    });
+
+    it.each(['run();', 'run /* 调用说明 */\n ();', 'void run /* 声明说明 */\n (void);'])
+    ('普通调用与声明仍优先查找函数实现：%s', async text => {
+        add('implementation.c', 'void run(void) {}');
+        const result = await lookup(doc('main.c', text), 'run');
+        expect(result).toHaveLength(1);
+        expect(result[0].uri.toString()).toBe(uri('implementation.c').toString());
+    });
+
     it('未打开工作区时仍支持同目录配对文件', async () => {
         (vscode.workspace.getWorkspaceFolder as jest.Mock).mockReturnValue(undefined);
         add('api.c', 'void run(void) {}');
@@ -158,5 +180,131 @@ describe('C 定义跳转', () => {
             { language: 'cpp', scheme: 'file', pattern: '**/*.{c,h}' },
         ]), expect.any(CDefinitionProvider));
         expect(vscode.commands.registerCommand).toHaveBeenCalledWith('verilogFormatter.c.goToFunction', expect.any(Function));
+    });
+
+    describe('F4 定义回退', () => {
+        let editor: any;
+        let cancellation: { isCancellationRequested: boolean };
+        let runCommand: () => Promise<void>;
+        const typeLocation = new vscode.Location(uri('status.h'), new vscode.Range(3, 2, 3, 11));
+        beforeEach(() => {
+            editor = { document: doc('main.c', 'MtdStatus status;'), selection: { active: new vscode.Position(0, 2) } };
+            (vscode.window as any).activeTextEditor = editor;
+            cancellation = { isCancellationRequested: false };
+            (vscode.window.withProgress as jest.Mock).mockImplementation((_options, task) => task({}, cancellation));
+            (vscode.window.showQuickPick as jest.Mock).mockImplementation(async items => items[1]);
+            (vscode.commands.executeCommand as jest.Mock).mockReset().mockResolvedValue([typeLocation]);
+            registerCFunctionNavigation({ subscriptions: [] } as any);
+            runCommand = (vscode.commands.registerCommand as jest.Mock).mock.calls[0][1];
+        });
+
+        it.each(['main.c', 'main.cpp', 'status.hpp'])('通过定义提供者跳转 %s 中的类型', async name => {
+            editor.document = doc(name, 'MtdStatus status;');
+            await runCommand();
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('vscode.executeDefinitionProvider',
+                editor.document.uri, editor.selection.active);
+            expect(vscode.window.showTextDocument).toHaveBeenCalledWith(typeLocation.uri, { selection: typeLocation.range });
+            expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
+        });
+
+        it('优先跳到现有函数实现，不请求其他定义提供者', async () => {
+            editor.document = doc('main.c', 'void run(void) {}');
+            editor.selection.active = new vscode.Position(0, 6);
+            await runCommand();
+            expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+            expect(vscode.window.showTextDocument).toHaveBeenCalledWith(editor.document.uri,
+                { selection: new vscode.Range(new vscode.Position(0, 5), new vscode.Position(0, 8)) });
+        });
+
+        it('类型与其他文件的函数同名时，F4 及提供者汇总均不混入该函数', async () => {
+            add('unrelated.c', 'void MtdStatus(void) {}');
+            (vscode.commands.executeCommand as jest.Mock).mockImplementation(async () => {
+                const provider = (vscode.languages.registerDefinitionProvider as jest.Mock).mock.calls[0][1];
+                const independent = await provider.provideDefinition(editor.document, editor.selection.active, cancellation);
+                return [...independent, typeLocation];
+            });
+            await runCommand();
+            expect(vscode.commands.executeCommand).toHaveBeenCalledTimes(1);
+            expect(vscode.window.showQuickPick).not.toHaveBeenCalled();
+            expect(vscode.window.showTextDocument).toHaveBeenCalledWith(typeLocation.uri, { selection: typeLocation.range });
+        });
+
+        it('LocationLink 使用目标选择范围，多个定义由用户选择', async () => {
+            const link: vscode.LocationLink = { targetUri: uri('other.h'), targetRange: new vscode.Range(5, 0, 12, 1),
+                targetSelectionRange: new vscode.Range(12, 2, 12, 11) };
+            (vscode.commands.executeCommand as jest.Mock).mockResolvedValue([typeLocation, link]);
+            await runCommand();
+            expect(vscode.window.showQuickPick).toHaveBeenCalledTimes(1);
+            expect(vscode.window.showTextDocument).toHaveBeenCalledWith(link.targetUri, { selection: link.targetSelectionRange });
+        });
+
+        it('放弃候选选择时不跳转', async () => {
+            (vscode.commands.executeCommand as jest.Mock).mockResolvedValue([typeLocation, typeLocation]);
+            (vscode.window.showQuickPick as jest.Mock).mockResolvedValue(undefined);
+            await runCommand();
+            expect(vscode.window.showQuickPick).toHaveBeenCalledTimes(1);
+            expect(vscode.window.showTextDocument).not.toHaveBeenCalled();
+        });
+
+        it('LocationLink 未提供选择范围时定位到目标范围', async () => {
+            const link: vscode.LocationLink = { targetUri: uri('status.h'), targetRange: new vscode.Range(3, 0, 8, 11) };
+            (vscode.commands.executeCommand as jest.Mock).mockResolvedValue([link]);
+            await runCommand();
+            expect(vscode.window.showTextDocument).toHaveBeenCalledWith(link.targetUri, { selection: link.targetRange });
+        });
+
+        it.each(['取消', '光标变化', '文档修改', '编辑器切换'])('定义查询期间%s时丢弃结果', async change => {
+            (vscode.commands.executeCommand as jest.Mock).mockImplementation(async () => {
+                if (change === '取消') { cancellation.isCancellationRequested = true; }
+                if (change === '光标变化') { editor.selection.active = new vscode.Position(0, 10); }
+                if (change === '文档修改') { editor.document.version++; }
+                if (change === '编辑器切换') { (vscode.window as any).activeTextEditor = undefined; }
+                return [typeLocation];
+            });
+            await runCommand();
+            expect(vscode.commands.executeCommand).toHaveBeenCalledTimes(1);
+            expect(vscode.window.showTextDocument).not.toHaveBeenCalled();
+            expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
+        });
+
+        it('函数查找完成前取消时不继续请求语义定义', async () => {
+            editor.document = doc('main.c', 'run();');
+            (vscode.workspace.findFiles as jest.Mock).mockImplementation(async () => {
+                cancellation.isCancellationRequested = true;
+                return [];
+            });
+            await runCommand();
+            expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+            expect(vscode.window.showTextDocument).not.toHaveBeenCalled();
+        });
+
+        it.each(['光标变化', '文档修改', '编辑器切换'])('候选选择期间%s时不抢走焦点', async change => {
+            add('first.c', 'void run(void) {}');
+            add('second.c', 'void run(void) {}');
+            editor.document = doc('main.c', 'run();');
+            (vscode.window.showQuickPick as jest.Mock).mockImplementation(async items => {
+                if (change === '光标变化') { editor.selection.active = new vscode.Position(0, 5); }
+                if (change === '文档修改') { editor.document.version++; }
+                if (change === '编辑器切换') { (vscode.window as any).activeTextEditor = undefined; }
+                return items[0];
+            });
+            await runCommand();
+            expect(vscode.window.showQuickPick).toHaveBeenCalledTimes(1);
+            expect(vscode.window.showTextDocument).not.toHaveBeenCalled();
+        });
+
+        it.each([undefined, []])('所有提供者无结果时提示未找到定义：%j', async result => {
+            (vscode.commands.executeCommand as jest.Mock).mockResolvedValue(result);
+            await runCommand();
+            expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(expect.stringContaining('定义'));
+            expect(vscode.window.showTextDocument).not.toHaveBeenCalled();
+        });
+
+        it('定义服务错误向用户报告，不伪装成无定义', async () => {
+            (vscode.commands.executeCommand as jest.Mock).mockRejectedValue(new Error('language service failed'));
+            await runCommand();
+            expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(expect.stringContaining('language service failed'));
+            expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
+        });
     });
 });

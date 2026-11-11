@@ -77,6 +77,14 @@ describe('clang-format 进程', () => {
             .toBe(path.join(extensionPath, 'LLVM', 'bin', process.platform === 'win32' ? 'clang-format.exe' : 'clang-format'));
     });
 
+    (process.platform === 'win32' ? it : it.skip)('未启用其他 C/C++ 扩展时使用插件自带 clang-format', async () => {
+        const bundled = path.resolve('node_modules/@cpp-linter/clang-format-win32-x64/bin/clang-format.exe');
+        (fs.existsSync as jest.Mock).mockImplementation((candidate: string) => candidate === bundled);
+        processResult(null, '');
+        await runClangFormat('', 'test.cpp');
+        expect((execFile as unknown as jest.Mock).mock.calls[0][0]).toBe(bundled);
+    });
+
     it('可执行文件或配置错误向上传播，不返回局部格式化结果', async () => {
         processResult(new Error('exit 1'), 'partial', 'invalid style');
         await expect(runClangFormat('int x;', 'test.cpp')).rejects.toThrow('invalid style');

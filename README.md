@@ -14,7 +14,7 @@
 10. 代码折叠：通过编辑器右键菜单收起或展开当前代码块、全部代码，只改变显示状态。
 11. 文件 Git 历史：查看提交记录和只读历史版本，与当前文件、上一个文件版本或其他历史版本对比，无需另装扩展。
 
-> 版本：v2.4.1　日期：2026/11/11
+> 版本：v2.5.0　日期：2026/11/11
 
 ---
 
@@ -89,11 +89,15 @@ Tcl 导航自 **1.5.0** 集成到桌面入口；兼容性修复使用补丁版�
 
 **自动建议：**输入字母、数字或下划线后，以自动模式请求语言服务候选；无候选时不弹出 `No suggestions.` 空框，有候选时仍正常显示。输入 `(` 仍触发参数提示，手动请求补全的行为保持不变。该模式已核对最低支持版本 [VS Code 1.95.0 的命令实现](https://github.com/microsoft/vscode/blob/1.95.0/src/vs/editor/contrib/suggest/browser/suggestController.ts#L827-L835)和[空候选处理](https://github.com/microsoft/vscode/blob/1.95.0/src/vs/editor/contrib/suggest/browser/suggestWidget.ts#L552-L559)，无需提高版本要求。
 
-**C 函数跳转：**在 `.c` / `.h` 的函数名上按 `F4`，或从命令面板执行 **C：转到函数实现**，直接定位带函数体的定义；多个候选时选择目标。也接入标准 `F12` / `Ctrl+单击` 定义查询，这些入口会合并其他语言扩展的结果。若用户已有 `F4` 快捷键配置，其优先级高于插件默认绑定，需将 C 文件的 `F4` 绑定到 `verilogFormatter.c.goToFunction`。
+**C/C++ 语义服务：**Windows x64 安装包内置 clangd 23.1.0，受信任工作区打开 C/C++ 文件时提供类型和符号定义、结构体成员补全等功能，不需要其他 C/C++ 扩展。启用 Microsoft C/C++ 或 clangd 扩展时，本插件不重复启动内置服务；更改外部扩展启用状态后自动切换。
+
+clangd 使用工程中的 `compile_commands.json`、`.clangd` 或 `compile_flags.txt` 解析头文件和编译选项；缺少配置时使用回退选项，嵌入式 SDK 的类型和宏可能解析不完整。未受信任工作区不启动语言服务，工作区获信任后自动启动。C/C++ 默认关闭基于词语的建议，避免成员补全混入无关全局词语；可在语言设置中将 `editor.wordBasedSuggestions` 改回 `matchingDocuments`。
+
+**C/C++ 定义跳转：**在函数、类型或其他符号上按 `F4`，或从命令面板执行 **C/C++：转到定义**；也可使用 `F12` / `Ctrl+单击`。F4 优先查找普通 C 函数的实现，找不到时使用语言服务的定义结果。若用户已有 `F4` 快捷键配置，其优先级高于插件默认绑定，需将 C/C++ 文件的 `F4` 绑定到 `verilogFormatter.c.goToFunction`。
 
 优先使用当前未保存缓冲区中的实现，再查找同目录同名 `.c`，最后搜索当前文件所属工作区的 `.c` / `.h`。无需编译数据库或 SDK 头文件配置，支持 `_Noreturn`、多行参数、指针返回值及常见函数属性；忽略原型、调用、注释、字符串及宏定义，避免跳到其他 `.c` 的 `static` 函数。工作区搜索跳过常见构建目录及值为 `true` 的 `files.exclude` / `search.exclude`；已打开文件和同名 `.c` 仍可直接查找。
 
-这是普通 C 函数的文本导航，不判断 `#if` 分支是否启用，不解析宏生成的函数名、函数指针目标、C++ 成员或重载，也不替代 C/C++、clangd 的语义服务。可通过 `verilogFormatter.c.functionNavigation` 关闭本功能。不会添加新的编辑器右键菜单或禁用其他扩展。
+普通 C 函数的文本查找不判断 `#if` 分支是否启用，也不解析宏生成的函数名、函数指针目标或 C++ 重载；其他类型和符号使用 clangd 语义服务。可通过 `verilogFormatter.c.functionNavigation` 关闭 F4 和独立 C 函数查找，不会关闭 clangd 的标准定义与补全功能。
 
 支持 `.c`、`.cpp`、`.h` 文件，使用 `Ctrl+Alt+F` 或 `Shift+Alt+F` 格式化。通用空格、缩进、花括号布局和换行实际调用 `clang-format`，继承当前文件所在工程的 `.clang-format`，没有配置时采用 LLVM 风格。在此基础上保留四空格缩进和宏体布局，并应用以下定制对齐：
 
@@ -453,8 +457,8 @@ npm run compile
 当前安装包面向 Windows x64，包含 MATLAB 运行组件和 Windows ripgrep。发布时上传生成的 `.vsix` 文件；修改记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ```bash
-npm run package -- --target win32-x64 --out hanxuyao-plugin-2.4.1-win32-x64.vsix
-code --install-extension hanxuyao-plugin-2.4.1-win32-x64.vsix --force
+npm run package -- --target win32-x64 --out hanxuyao-plugin-2.5.0-win32-x64.vsix
+code --install-extension hanxuyao-plugin-2.5.0-win32-x64.vsix --force
 ```
 
 ---
@@ -502,6 +506,7 @@ GitHub 自动测试、打包和发布的配置及使用方法见 [自动发布](
 
 | 版本 | 日期 | 修改内容 |
 |------|------|---------|
+| v2.5.0 | 2026/11/11 | 内置 clangd 和 Windows x64 clang-format，支持独立 C/C++ 类型跳转、成员补全及格式化 |
 | v2.4.1 | 2026/11/11 | 修复 Doxygen 整体对齐及 return 返回值列，取消输入点号等字符前的过期补全请求 |
 | v2.4.0 | 2026/11/09 | 将文件 Git 历史升级为独立图形页签，新增提交时间线、搜索与作者筛选、详情及对比基准操作 |
 | v2.3.0 | 2026/11/09 | 内置文件 Git 历史、重命名追踪、只读版本查看及与当前文件、上一个或其他历史版本对比 |

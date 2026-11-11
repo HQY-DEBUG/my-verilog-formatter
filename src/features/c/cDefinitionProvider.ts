@@ -1,4 +1,4 @@
-// 为普通 C 函数提供独立于编译数据库的定义跳转，工作区文件按需读取并缓存。
+// 优先查找普通 C 函数实现，F4 在未找到实现时使用语言服务提供的其他定义。
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { CFunction, maskCSource, parseCFunctions } from './cFunctionParser';
@@ -56,7 +56,13 @@ export class CDefinitionProvider implements vscode.DefinitionProvider {
         if (!range) { return []; }
         const name = document.getText(range);
         const source = maskCSource(document.getText());
-        if (source.slice(document.offsetAt(range.start), document.offsetAt(range.end)) !== name) { return []; }
+        const nameStart = document.offsetAt(range.start);
+        const nameEnd = document.offsetAt(range.end);
+        if (source.slice(nameStart, nameEnd) !== name || !/^\s*\(/.test(source.slice(nameEnd))) { return []; }
+        const prefix = source.slice(0, nameStart);
+        const statementStart = Math.max(prefix.lastIndexOf(';'), prefix.lastIndexOf('{'), prefix.lastIndexOf('}')) + 1;
+        // 只独立查找普通函数调用或声明；类型、变量及成员语义交给语言服务。
+        if (/(?:\.|->|::)\s*$/.test(prefix) || /\btypedef\b/.test(prefix.slice(statementStart))) { return []; }
         // 当前编辑缓冲区优先，包括未保存的实现；不把头文件原型当作定义。
         const local = parseCFunctions(document.getText()).filter(fn => fn.name === name).map(fn => {
             const start = document.positionAt(fn.offset);
@@ -107,21 +113,30 @@ export function registerCFunctionNavigation(context: vscode.ExtensionContext): v
         vscode.languages.registerDefinitionProvider(SELECTOR, provider),
         vscode.commands.registerCommand('verilogFormatter.c.goToFunction', async () => {
             const editor = vscode.window.activeTextEditor;
-            if (!editor || !isCFile(editor.document.uri)) { return; }
-            const documentVersion = editor.document.version;
+            if (!editor || !['c', 'cpp'].includes(editor.document.languageId)) { return; }
+            const document = editor.document;
+            const documentVersion = document.version;
             const position = editor.selection.active;
-            let cancelled = false;
+            let requestToken: vscode.CancellationToken | undefined;
+            const isCurrent = () => !requestToken?.isCancellationRequested
+                && vscode.window.activeTextEditor === editor && editor.document === document
+                && document.version === documentVersion && editor.selection.active.isEqual(position);
             try {
                 const targets = await vscode.window.withProgress({ location: vscode.ProgressLocation.Window,
-                    title: '查找 C 函数实现', cancellable: true }, async (_progress, token) => {
-                    const found = await provider.provideDefinition(editor.document, position, token);
-                    cancelled = token.isCancellationRequested;
-                    return found;
+                    title: '查找 C/C++ 定义', cancellable: true }, async (_progress, token) => {
+                    requestToken = token;
+                    const found = await provider.provideDefinition(document, position, token);
+                    if (!isCurrent() || found.length) { return found; }
+                    // 定义提供者不会调用 F4 命令；保留函数实现优先，并补充类型等语义定义。
+                    const definitions = await vscode.commands.executeCommand<Array<vscode.Location | vscode.LocationLink>>(
+                        'vscode.executeDefinitionProvider', document.uri, position);
+                    return (definitions ?? []).map(definition => 'targetUri' in definition
+                        ? new vscode.Location(definition.targetUri, definition.targetSelectionRange ?? definition.targetRange)
+                        : definition);
                 });
-                if (cancelled || vscode.window.activeTextEditor !== editor || editor.document.version !== documentVersion
-                    || !editor.selection.active.isEqual(position)) { return; }
+                if (!isCurrent()) { return; }
                 if (!targets.length) {
-                    void vscode.window.showInformationMessage('未找到 C 函数实现，请确认源码位于当前工作区。');
+                    void vscode.window.showInformationMessage('未找到 C/C++ 定义，请确认源码位于当前工作区且语言服务已就绪。');
                     return;
                 }
                 let target = targets[0];
@@ -130,13 +145,13 @@ export function registerCFunctionNavigation(context: vscode.ExtensionContext): v
                         label: path.basename(location.uri.fsPath),
                         description: `${vscode.workspace.asRelativePath(location.uri)}:${location.range.start.line + 1}`,
                         location,
-                    })), { placeHolder: '找到多个 C 函数实现，请选择目标' });
-                    if (!item) { return; }
+                    })), { placeHolder: '找到多个 C/C++ 定义，请选择目标' });
+                    if (!item || !isCurrent()) { return; }
                     target = item.location;
                 }
                 await vscode.window.showTextDocument(target.uri, { selection: target.range });
             } catch (error) {
-                void vscode.window.showErrorMessage(`C 函数跳转失败：${error instanceof Error ? error.message : String(error)}`);
+                void vscode.window.showErrorMessage(`C/C++ 定义跳转失败：${error instanceof Error ? error.message : String(error)}`);
             }
         }),
     );
