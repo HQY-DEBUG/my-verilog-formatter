@@ -1,5 +1,6 @@
-// 文件：build-editor-tools.js；描述：构建词语高亮、CSV 与 Tcl 导航内置组件。
-// 版本：v1.5.0；日期：2026/09/21
+// 文件：build-editor-tools.js；描述：构建词语高亮、CSV、彩虹缩进与 Tcl 导航内置组件。
+// 版本：v2.6.0；日期：2026/11/11
+// 修改记录：v2.6.0 2026/11/11 构建彩虹缩进桌面组件并复制 MIT 许可证。
 // 修改记录：v1.5.0 2026/09/21 新增 Tcl 导航构建与许可证复制。
 // 修改记录：v1.0 2026/09/21 新增固定源码构建和运行资源复制。
 const fs = require('fs');
@@ -9,6 +10,14 @@ const esbuild = require('esbuild');
 // 2026/09/21 新增：仅从仓库固定源码构建，构建过程不下载上游或安装外部扩展。
 async function build() {
     const root = path.resolve(__dirname, '..');
+    const indentOutput = path.join(root, 'out/indent-rainbow');
+    fs.mkdirSync(indentOutput, { recursive: true });
+    await esbuild.build({
+        entryPoints: [path.join(root, 'vendor/indent-rainbow/src/extension.ts')],
+        outfile: path.join(indentOutput, 'extension.js'),
+        bundle: true, platform: 'node', format: 'cjs', target: 'node18', external: ['vscode'],
+    });
+    fs.copyFileSync(path.join(root, 'vendor/indent-rainbow/LICENSE.txt'), path.join(indentOutput, 'LICENSE.txt'));
     // 2026/09/21 新增：构建固定版本的 Tcl 导航，不引入上游开发依赖。
     const tclOutput = path.join(root, 'out/tcl-navigate');
     fs.mkdirSync(tclOutput, { recursive: true });
@@ -52,6 +61,6 @@ async function build() {
 }
 
 build().catch(error => {
-    console.error('高亮和 CSV 内置组件构建失败：', error);
+    console.error('编辑工具内置组件构建失败：', error);
     process.exitCode = 1;
 });

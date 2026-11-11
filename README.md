@@ -2,7 +2,7 @@
 
 面向 FPGA 与嵌入式开发的 VS Code 工具集，支持 Verilog / SystemVerilog、C / C++、MATLAB 和 Tcl。
 
-> 版本：v2.5.2　日期：2026/11/11
+> 版本：v2.6.0　日期：2026/11/11
 
 [快速开始](#快速开始) · [功能总览](#功能总览) · [详细功能](#详细功能) · [配置与开发](#配置与开发)
 
@@ -20,7 +20,7 @@
 | C / C++ | 内置语义服务、类型与函数跳转、成员补全和格式化 |
 | MATLAB | 智能编辑、运行调试、工作区、工程与测试工具 |
 | Tcl 与约束文件 | Tcl 导航和折叠；ADC 格式化，以及 UCF、XDC、SDC 等语法支持 |
-| 通用工具 | 文件 Git 历史与对比、代码折叠、TODO 树、词语高亮、CSV / TSV |
+| 通用工具 | 文件 Git 历史与对比、代码折叠、TODO 树、词语高亮、彩虹缩进、CSV / TSV |
 
 ## 常用设置
 
@@ -387,6 +387,34 @@ Tcl 导航自 **1.5.0** 集成到桌面入口；兼容性修复使用补丁版�
 </details>
 
 <details>
+<summary>彩虹缩进（Indent Rainbow）</summary>
+
+### 彩虹缩进
+
+内置 indent-rainbow v8.3.1 的全部 11 项设置，无需另装扩展。默认自动启用，按当前编辑器 `tabSize` 为每级缩进循环着色，默认排除纯文本；只显示标记，不修改文件内容。
+
+- `classic` 模式使用半透明背景色，`light` 模式使用可调整线宽的彩色细线。
+- 标记缩进宽度不是 `tabSize` 整数倍的行，以及完整缩进中的 Tab/空格混用；Markdown 默认跳过错误标记。
+- 支持语言白名单、排除列表、忽略错误的语言和正则规则，保留上游颜色、更新延迟及仅空白着色设置。
+- 配置修改即时生效，分屏编辑器同步更新；无效正则显示警告，未带 `g` 或匹配空字符串的正则不会导致扫描死循环。
+- 已启用原扩展 `oderwat.indent-rainbow` 时复用其运行服务；禁用原扩展并重新加载窗口后使用内置版本。
+
+在设置中搜索 `indentRainbow`，例如：
+
+```jsonc
+{
+  "indentRainbow.indicatorStyle": "light",
+  "indentRainbow.lightIndicatorStyleLineWidth": 1,
+  "indentRainbow.includedLanguages": [],
+  "indentRainbow.excludedLanguages": ["plaintext"],
+  "indentRainbow.ignoreErrorLanguages": ["markdown"],
+  "indentRainbow.colorOnWhiteSpaceOnly": true
+}
+```
+
+</details>
+
+<details>
 <summary>CSV / TSV：彩虹列与查询</summary>
 
 ### CSV / TSV（Rainbow CSV）
@@ -402,7 +430,7 @@ Tcl 导航自 **1.5.0** 集成到桌面入口；兼容性修复使用补丁版�
 
 同时启用原始 `rsbondi.highlight-words` 或 `mechatroner.rainbow-csv` 时复用其运行服务，避免重复注册。要使用本插件的内置版本，禁用对应原扩展后重新加载窗口；不需要卸载。
 
-本次还提供 Web 入口，供浏览器扩展宿主运行词语高亮和 Rainbow CSV。其限制沿用 Rainbow CSV 上游：浏览器查询使用 JavaScript，不支持 Python、本地文件 JOIN、文件头尾预览和复制回源文件。原有 MATLAB、本地编译检查等桌面功能仍需桌面版 VS Code。当前发布目标仍为 Windows x64，本次没有发布 Web 安装包。
+Web 入口供浏览器扩展宿主运行词语高亮、彩虹缩进和 Rainbow CSV。其限制沿用 Rainbow CSV 上游：浏览器查询使用 JavaScript，不支持 Python、本地文件 JOIN、文件头尾预览和复制回源文件。原有 MATLAB、本地编译检查等桌面功能仍需桌面版 VS Code。当前发布目标仍为 Windows x64，本次没有发布 Web 安装包。
 
 </details>
 
@@ -520,11 +548,11 @@ npm run compile
 当前安装包面向 Windows x64，包含 MATLAB 运行组件和 Windows ripgrep。发布时上传生成的 `.vsix` 文件；修改记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ```bash
-npm run package -- --target win32-x64 --out hanxuyao-plugin-2.5.2-win32-x64.vsix
-code --install-extension hanxuyao-plugin-2.5.2-win32-x64.vsix --force
+npm run package -- --target win32-x64 --out hanxuyao-plugin-2.6.0-win32-x64.vsix
+code --install-extension hanxuyao-plugin-2.6.0-win32-x64.vsix --force
 ```
 
-MATLAB、highlight-words、Rainbow CSV、tcl-navigate 上游源码、固定提交和本地适配说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。`npm run compile` 会构建全部内置组件；仅构建高亮、CSV 和 Tcl 组件可运行 `npm run compile:editor-tools`。
+MATLAB、highlight-words、Rainbow CSV、indent-rainbow、tcl-navigate 上游源码、固定提交和本地适配说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。`npm run compile` 会构建全部内置组件；仅构建高亮、CSV、彩虹缩进和 Tcl 组件可运行 `npm run compile:editor-tools`。
 
 ## 代码结构
 
@@ -572,6 +600,7 @@ GitHub 自动测试、打包和发布的配置及使用方法见 [自动发布](
 
 | 版本 | 日期 | 修改内容 |
 |------|------|---------|
+| v2.6.0 | 2026/11/11 | 内置彩虹缩进，保留 11 项设置，支持背景色、细线、错误与混用标记及桌面/Web 入口 |
 | v2.5.2 | 2026/11/11 | 重组插件详情页，按功能折叠完整说明并突出快速入口 |
 | v2.5.1 | 2026/11/11 | 补齐 Verilog HDL 兼容语言注册，消除语法贡献的未知语言警告 |
 | v2.5.0 | 2026/11/11 | 内置 clangd 和 Windows x64 clang-format，支持独立 C/C++ 类型跳转、成员补全及格式化 |

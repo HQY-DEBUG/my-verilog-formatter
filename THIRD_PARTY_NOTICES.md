@@ -79,3 +79,13 @@ npm test -- --runInBand
 集成全部 DocumentSymbol、Definition、FoldingRange、Hover Provider，以及缩进、注释和括号配置；大纲符号支持 VS Code 粘性滚动。已有 Tcl 语言与语法资源沿用宿主贡献，未启用原扩展时直接使用内置实现。
 
 本地适配包括：语言配置随上下文释放；取消启动提示；修复单行过程选区超出符号范围、限定名跨文件检索丢失 `::`、变量引用前缀识别、转义花括号和首行文档注释。保留上游静态解析方式，没有加入 Tcl 执行器或语言服务器；Tcl 增强目前仅注册在桌面入口。
+
+## indent-rainbow（2026/11/11）
+
+来源：[oderwat/vscode-indent-rainbow](https://github.com/oderwat/vscode-indent-rainbow)，v8.3.1，固定提交 `4c78a0c3a9be6617c96891f7a40f2ad365c845ce`，MIT 许可证，Copyright (c) 2016 Hans Raaf。
+
+源码及原始 manifest、README、许可证位于 `vendor/indent-rainbow/`。使用现有 esbuild 构建 `out/indent-rainbow/extension.js`，并复制 `out/indent-rainbow/LICENSE.txt`；Web 入口静态打包同一份源码，不增加 npm 运行依赖。
+
+保留全部 11 项 `indentRainbow.*` 设置、默认值及背景/细线两种模式；设置说明使用中文。已有启用的 `oderwat.indent-rainbow` 时复用其服务，禁用原扩展并重载后使用内置实现。
+
+本地重整运行时，在保留上游层级循环、错误优先级、Tab/空格混用及可补齐整级范围的着色行为基础上，支持配置即时生效、可见分屏和 tabSize 变化刷新；正则统一扫描全部匹配，零长度匹配推进完整 Unicode 码点，无效正则提示后跳过，空颜色数组回退默认色。停用时取消定时器，释放全部监听器和装饰器，避免宿主生命周期结束后残留任务。

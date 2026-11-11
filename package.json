@@ -1,8 +1,8 @@
 {
     "name": "hanxuyao-plugin",
     "displayName": "hanxuyao-plugin",
-    "description": "Verilog / SystemVerilog / C / C++ / MATLAB 开发工具，内置文件 Git 历史与版本对比、Tcl 导航、词语高亮、CSV/TSV 彩虹列及 RBQL 查询",
-    "version": "2.5.2",
+    "description": "Verilog / SystemVerilog / C / C++ / MATLAB 开发工具，内置文件 Git 历史与版本对比、Tcl 导航、词语高亮、彩虹缩进、CSV/TSV 彩虹列及 RBQL 查询",
+    "version": "2.6.0",
     "publisher": "hanxuyao",
     "repository": {
         "type": "git",
@@ -18,7 +18,8 @@
         "tsv",
         "highlight",
         "rbql",
-        "tcl"
+        "tcl",
+        "indent-rainbow"
     ],
     "icon": "icon.png",
     "engines": {
@@ -1847,6 +1848,100 @@
                         "default": false,
                         "order": 21,
                         "description": "启用开发调试日志，通过 Developer: Show Logs 打开 rainbow_csv_debug_channel。"
+                    }
+                }
+            },
+            {
+                "type": "object",
+                "title": "彩虹缩进（Indent Rainbow）",
+                "properties": {
+                    "indentRainbow.includedLanguages": {
+                        "type": "array",
+                        "default": [],
+                        "description": "启用彩虹缩进的语言 ID；空数组表示所有语言，再应用 excludedLanguages 排除规则。",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "indentRainbow.excludedLanguages": {
+                        "type": "array",
+                        "default": [
+                            "plaintext"
+                        ],
+                        "description": "禁用彩虹缩进的语言 ID；默认排除 plaintext，空数组表示不排除。",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "indentRainbow.ignoreErrorLanguages": {
+                        "type": "array",
+                        "default": [
+                            "markdown"
+                        ],
+                        "description": "跳过缩进错误及 Tab/空格混用标记的语言 ID；* 表示所有语言，默认 markdown。",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "indentRainbow.updateDelay": {
+                        "type": "integer",
+                        "default": 100,
+                        "description": "编辑后更新缩进着色的延迟，单位毫秒。",
+                        "minimum": 0
+                    },
+                    "indentRainbow.errorColor": {
+                        "type": "string",
+                        "default": "rgba(128,32,32,0.6)",
+                        "description": "缩进宽度不是当前 tabSize 整数倍时的背景色，支持 hex、rgb 和 rgba。"
+                    },
+                    "indentRainbow.tabmixColor": {
+                        "type": "string",
+                        "default": "rgba(128,32,96,0.6)",
+                        "description": "缩进同时包含 Tab 和空格时的背景色；空字符串关闭混用标记。"
+                    },
+                    "indentRainbow.ignoreLinePatterns": {
+                        "type": "array",
+                        "default": [
+                            "/[ \t]* [*]/g",
+                            "/[ \t]+[/]{2}/g"
+                        ],
+                        "description": "跳过匹配行的缩进错误标记；接受正则字符串或 /pattern/flags，默认忽略 C/C++ 注释。",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "indentRainbow.colors": {
+                        "type": "array",
+                        "default": [
+                            "rgba(255,255,64,0.07)",
+                            "rgba(127,255,127,0.07)",
+                            "rgba(255,127,255,0.07)",
+                            "rgba(79,236,236,0.07)"
+                        ],
+                        "description": "按层级循环使用的缩进颜色，支持 hex、rgb 和 rgba；空数组回退默认颜色。",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "indentRainbow.colorOnWhiteSpaceOnly": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "忽略缩进错误时只对空格和 Tab 着色；关闭时可将不足一级的缩进补齐到整级范围。"
+                    },
+                    "indentRainbow.indicatorStyle": {
+                        "type": "string",
+                        "default": "classic",
+                        "enum": [
+                            "classic",
+                            "light"
+                        ],
+                        "description": "classic 使用缩进背景色；light 使用彩色细线。可通过 editor.guides.indentation 调整 VS Code 自带缩进线。"
+                    },
+                    "indentRainbow.lightIndicatorStyleLineWidth": {
+                        "type": "number",
+                        "default": 1,
+                        "description": "light 模式下彩色缩进线的宽度，单位像素。",
+                        "minimum": 0.1
                     }
                 }
             }

@@ -1,5 +1,6 @@
 // 文件：editorTools.test.ts；描述：内置贡献覆盖、匹配行为、运行时共存与 RBQL 回归。
-// 版本：v1.0；日期：2026/09/21
+// 版本：v2.6.0；日期：2026/11/11
+// 修改记录：v2.6.0 2026/11/11 验证彩虹缩进运行时接入及原扩展共存。
 // 修改记录：v1.0 2026/09/21 新增词语高亮和 CSV 集成验证。
 import * as fs from 'fs';
 import * as path from 'path';
@@ -97,6 +98,7 @@ describe('上游贡献与运行资源', () => {
         expect(new Set(ids).size).toBe(ids.length);
         for (const file of [
             'editorToolsWeb.js', 'highlight-words/extension.js', 'highlight-words/LICENSE.md',
+            'indent-rainbow/extension.js', 'indent-rainbow/LICENSE.txt',
             'rainbow-csv/rbql_client.html', 'rainbow-csv/rbql_client.js', 'rainbow-csv/rbql_suggest.js',
             'rainbow-csv/dialect_select.html', 'rainbow-csv/dialect_select.js',
             'rainbow-csv/rbql_core/vscode_rbql.py', 'rainbow-csv/rbql_core/rbql/rbql_engine.py',
@@ -111,10 +113,20 @@ describe('运行时集成', () => {
     beforeEach(() => { api.extensions.getExtension.mockReset(); });
     afterEach(async () => { await deactivateEditorTools(); });
     const runtime = () => ({ activate: jest.fn(), deactivate: jest.fn() });
-    it('两个组件读取独立资源目录，共用宿主状态', async () => {
-        const highlight = runtime(), rainbow = runtime(), host = context();
-        await activateEditorTools(host, { 'highlight-words': () => highlight, 'rainbow-csv': () => rainbow });
-        for (const [name, component] of [['highlight-words', highlight], ['rainbow-csv', rainbow]] as const) {
+    it('内置彩虹缩进随编辑工具启动，停用时释放运行时', async () => {
+        const indent = runtime();
+        await activateEditorTools(context(), {
+            'highlight-words': () => runtime(), 'rainbow-csv': () => runtime(),
+            'indent-rainbow': () => indent,
+        });
+        expect(indent.activate).toHaveBeenCalledTimes(1);
+        await deactivateEditorTools();
+        expect(indent.deactivate).toHaveBeenCalledTimes(1);
+    });
+    it('三个组件读取独立资源目录，共用宿主状态', async () => {
+        const highlight = runtime(), rainbow = runtime(), indent = runtime(), host = context();
+        await activateEditorTools(host, { 'highlight-words': () => highlight, 'rainbow-csv': () => rainbow, 'indent-rainbow': () => indent });
+        for (const [name, component] of [['highlight-words', highlight], ['rainbow-csv', rainbow], ['indent-rainbow', indent]] as const) {
             const adapted = component.activate.mock.calls[0][0];
             expect(adapted.asAbsolutePath('extension.js')).toBe(path.join(root, 'out', name, 'extension.js'));
             expect(adapted.globalState).toBe(host.globalState);
@@ -123,14 +135,16 @@ describe('运行时集成', () => {
         await deactivateEditorTools();
         expect(highlight.deactivate).toHaveBeenCalledTimes(1);
         expect(rainbow.deactivate).toHaveBeenCalledTimes(1);
+        expect(indent.deactivate).toHaveBeenCalledTimes(1);
     });
     it('已有原扩展时不重复注册，也不停止原扩展', async () => {
         const original = { activate: jest.fn().mockResolvedValue(undefined), deactivate: jest.fn() };
         api.extensions.getExtension.mockReturnValue(original);
         const load = jest.fn();
-        await activateEditorTools(context(), { 'highlight-words': load, 'rainbow-csv': load });
+        await activateEditorTools(context(), { 'highlight-words': load, 'rainbow-csv': load, 'indent-rainbow': load });
         await deactivateEditorTools();
-        expect(original.activate).toHaveBeenCalledTimes(2);
+        expect(original.activate).toHaveBeenCalledTimes(3);
+        expect(api.extensions.getExtension).toHaveBeenCalledWith('oderwat.indent-rainbow');
         expect(load).not.toHaveBeenCalled();
         expect(original.deactivate).not.toHaveBeenCalled();
     });
@@ -138,7 +152,7 @@ describe('运行时集成', () => {
         const dispose = jest.fn(), rainbow = runtime();
         const errorLog = jest.spyOn(console, 'error').mockImplementation(() => {});
         const broken = { activate: (ctx: any) => { ctx.subscriptions.push({ dispose }); throw new Error('启动测试'); }, deactivate: jest.fn() };
-        await activateEditorTools(context(), { 'highlight-words': () => broken, 'rainbow-csv': () => rainbow });
+        await activateEditorTools(context(), { 'highlight-words': () => broken, 'rainbow-csv': () => rainbow, 'indent-rainbow': () => runtime() });
         expect(dispose).toHaveBeenCalledTimes(1);
         expect(broken.deactivate).toHaveBeenCalledTimes(1);
         expect(rainbow.activate).toHaveBeenCalledTimes(1);
@@ -229,6 +243,7 @@ describe('Rainbow CSV 算法与 RBQL', () => {
         const dispose = () => ({ dispose: jest.fn() });
         const hostApi = {
             ...api,
+            Disposable: class { constructor(public dispose: () => void) {} },
             SemanticTokensLegend: class { constructor(public tokenTypes: string[]) {} },
             extensions: { getExtension: () => undefined },
             commands: {
@@ -239,6 +254,7 @@ describe('Rainbow CSV 算法与 RBQL', () => {
             workspace: { ...api.workspace, isTrusted: false, onDidOpenTextDocument: dispose, onDidCloseTextDocument: dispose },
             window: {
                 ...api.window, activeTextEditor: undefined, visibleTextEditors: [],
+                onDidChangeTextEditorOptions: dispose,
                 createOutputChannel: () => ({ dispose: jest.fn(), appendLine: jest.fn() }),
                 showWarningMessage: jest.fn(),
             },

@@ -1,5 +1,6 @@
-// 文件：editorToolsIntegration.ts；描述：内置词语高亮和 CSV 的激活、资源定位及释放。
-// 版本：v1.0；日期：2026/09/21
+// 文件：editorToolsIntegration.ts；描述：内置词语高亮、CSV 和彩虹缩进的激活、资源定位及释放。
+// 版本：v2.6.0；日期：2026/11/11
+// 修改记录：v2.6.0 2026/11/11 接入彩虹缩进并复用已启用的原扩展。
 // 修改记录：v1.0 2026/09/21 新增桌面与 Web 共用的集成入口。
 import * as vscode from 'vscode';
 
@@ -15,6 +16,7 @@ export async function activateEditorTools(context: vscode.ExtensionContext, load
     for (const [name, id] of [
         ['highlight-words', 'rsbondi.highlight-words'],
         ['rainbow-csv', 'mechatroner.rainbow-csv'],
+        ['indent-rainbow', 'oderwat.indent-rainbow'],
     ]) {
         const subscriptions: vscode.Disposable[] = [];
         let runtime: EditorToolRuntime | undefined;
@@ -48,6 +50,6 @@ export async function activateEditorTools(context: vscode.ExtensionContext, load
 // 2026/09/21 新增：只停止由本插件启动的运行时，外部扩展仍由 VS Code 管理。
 export async function deactivateEditorTools(): Promise<void> {
     for (const runtime of activeRuntimes.splice(0)) {
-        try { await runtime.deactivate(); } catch (error) { console.error('高亮或 CSV 组件停止失败：', error); }
+        try { await runtime.deactivate(); } catch (error) { console.error('编辑工具组件停止失败：', error); }
     }
 }
