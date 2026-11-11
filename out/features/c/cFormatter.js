@@ -122,7 +122,8 @@ function alignDoxygenFields(code, range) {
             if (!match) {
                 return undefined;
             }
-            const named = /^[@\\](?:param|retval)/.test(match[2]);
+            const named = /^[@\\](?:param|retval)/.test(match[2])
+                || (/^[@\\]returns?$/.test(match[2]) && /^[A-Z_][A-Z0-9_]*\s+\S/.test(match[3]));
             const fields = named ? match[3].match(/^(\S+)\s+(.+)$/) : null;
             if (named && !fields) {
                 return undefined;

@@ -106,7 +106,8 @@ function alignDoxygenFields(code: string, range?: ClangLineRange): string {
         const rows = lines.map(line => {
             const match = line.match(/^(\s*\*\s+)([@\\](?:brief|note|return|returns|pre|post|param(?:\[(?:in|out|in,out)\])?|retval))\s+(.+)$/);
             if (!match) { return undefined; }
-            const named = /^[@\\](?:param|retval)/.test(match[2]);
+            const named = /^[@\\](?:param|retval)/.test(match[2])
+                || (/^[@\\]returns?$/.test(match[2]) && /^[A-Z_][A-Z0-9_]*\s+\S/.test(match[3]));
             const fields = named ? match[3].match(/^(\S+)\s+(.+)$/) : null;
             if (named && !fields) { return undefined; }
             return { prefix: match[1], tag: match[2], name: fields?.[1] ?? '', description: fields?.[2] ?? match[3] };

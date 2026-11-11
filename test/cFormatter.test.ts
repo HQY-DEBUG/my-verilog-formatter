@@ -36,8 +36,16 @@ describe('C/C++ formatter', () => {
             ' * @return ST_SUCCESS 成功。', ' * @note 仅保存参数。', ' */'].join(eol);
         const output = formatC(input);
         const lines = output.split(eol);
-        const values = ['保存标刻速度。', '速度。', 'ST_SUCCESS 成功。', '仅保存参数。'];
+        const values = ['保存标刻速度。', '速度。', '成功。', '仅保存参数。'];
         expect(new Set(values.map((value, index) => lines[index + 1].indexOf(value))).size).toBe(1);
+        expect(lines[2].indexOf('speed')).toBe(lines[3].indexOf('ST_SUCCESS'));
+        expect(formatC(output)).toBe(output);
+    });
+    it('普通 return 描述不把首个普通单词误识别为返回值', () => {
+        const input = ['/**', ' * @brief 描述', ' * @param x 输入', ' * @return result value', ' */'].join('\n');
+        const output = formatC(input);
+        const lines = output.split('\n');
+        expect(lines[3].indexOf('result value')).toBe(lines[2].indexOf('输入'));
         expect(formatC(output)).toBe(output);
     });
     it.each(['\n', '\r\n'])('Doxygen 参数、返回值和说明分别对齐（%j）', eol => {

@@ -60,8 +60,9 @@ nativeTests('真实 clang-format 集成', () => {
             ' * @return ST_SUCCESS 成功。', ' * @note 仅保存。', ' */', 'void set_speed(int speed);', ''].join('\n');
         const output = await format(input);
         const lines = output.split('\n');
-        const descriptions = ['保存速度。', '速度。', 'ST_SUCCESS 成功。', '仅保存。'];
+        const descriptions = ['保存速度。', '速度。', '成功。', '仅保存。'];
         expect(new Set(descriptions.map((value, index) => lines[index + 1].indexOf(value))).size).toBe(1);
+        expect(lines[2].indexOf('speed')).toBe(lines[3].indexOf('ST_SUCCESS'));
         expect(await format(output)).toBe(output);
     });
 
