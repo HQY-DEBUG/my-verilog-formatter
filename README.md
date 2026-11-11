@@ -14,7 +14,7 @@
 10. 代码折叠：通过编辑器右键菜单收起或展开当前代码块、全部代码，只改变显示状态。
 11. 文件 Git 历史：查看提交记录和只读历史版本，与当前文件、上一个文件版本或其他历史版本对比，无需另装扩展。
 
-> 版本：v2.5.0　日期：2026/11/11
+> 版本：v2.5.1　日期：2026/11/11
 
 ---
 
@@ -457,8 +457,8 @@ npm run compile
 当前安装包面向 Windows x64，包含 MATLAB 运行组件和 Windows ripgrep。发布时上传生成的 `.vsix` 文件；修改记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ```bash
-npm run package -- --target win32-x64 --out hanxuyao-plugin-2.5.0-win32-x64.vsix
-code --install-extension hanxuyao-plugin-2.5.0-win32-x64.vsix --force
+npm run package -- --target win32-x64 --out hanxuyao-plugin-2.5.1-win32-x64.vsix
+code --install-extension hanxuyao-plugin-2.5.1-win32-x64.vsix --force
 ```
 
 ---
@@ -506,6 +506,7 @@ GitHub 自动测试、打包和发布的配置及使用方法见 [自动发布](
 
 | 版本 | 日期 | 修改内容 |
 |------|------|---------|
+| v2.5.1 | 2026/11/11 | 补齐 Verilog HDL 兼容语言注册，消除语法贡献的未知语言警告 |
 | v2.5.0 | 2026/11/11 | 内置 clangd 和 Windows x64 clang-format，支持独立 C/C++ 类型跳转、成员补全及格式化 |
 | v2.4.1 | 2026/11/11 | 修复 Doxygen 整体对齐及 return 返回值列，取消输入点号等字符前的过期补全请求 |
 | v2.4.0 | 2026/11/09 | 将文件 Git 历史升级为独立图形页签，新增提交时间线、搜索与作者筛选、详情及对比基准操作 |

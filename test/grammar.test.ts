@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : grammar.test.ts
 // 描述    : Verilog TextMate 语法配置测试
-// 版本    : v0.1.0
-// 日期    : 2026/06/11
+// 版本    : v2.5.1
+// 日期    : 2026/11/11
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.5.1  2026/11/11  验证 Verilog 语法贡献对应已注册的语言 ID
 //  v0.1.0  2026/06/11  创建测试文件
 // =========================================================================
 
@@ -61,7 +62,7 @@ describe('Verilog TextMate grammar', () => {
         const pkgPath = path.join(__dirname, '..', 'package.json');
         const extensionPath = path.join(__dirname, '..', 'src', 'extension.ts');
         const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8')) as {
-            contributes: { grammars: Array<{ language: string }> };
+            contributes: { grammars: Array<{ language: string }>; languages: Array<{ id: string; extensions?: string[] }> };
         };
         const extensionText = fs.readFileSync(extensionPath, 'utf8');
         const match = extensionText.match(/VERILOG_LANGS\s*=\s*\[([^\]]+)\]/);
@@ -71,6 +72,10 @@ describe('Verilog TextMate grammar', () => {
 
         for (const lang of formatterLangs) {
             expect(grammarLangs).toContain(lang);
+            expect(pkg.contributes.languages.map(language => language.id)).toContain(lang);
+        }
+        for (const lang of ['verilog-hdl', 'systemverilog-hdl']) {
+            expect(pkg.contributes.languages.find(language => language.id === lang)?.extensions ?? []).toEqual([]);
         }
     });
 
