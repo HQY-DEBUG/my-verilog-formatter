@@ -1,99 +1,207 @@
 # hanxuyao-plugin
 
-面向 FPGA 与嵌入式开发者的 VS Code 开发辅助插件，支持 Verilog / SystemVerilog / C / C++ / MATLAB / Tcl，并内置词语高亮和 CSV / TSV 数据处理，主要功能包括：
+面向 FPGA 与嵌入式开发的 VS Code 工具集，支持 Verilog / SystemVerilog、C / C++、MATLAB 和 Tcl。
 
-1. 代码格式化：支持 Verilog、SystemVerilog、C、C++ 和 MATLAB 代码整理。
-2. 工程浏览：提供 Verilog 文件树与模块层级查看。
-3. 代码生成：支持模块一键例化、Testbench 生成和 Snippet 代码片段。
-4. 代码阅读：提供语法高亮、符号跳转、悬停定义和代码补全。
-5. 代码检查：支持 Verilog 语法检查以及 TODO 标签扫描与管理。
-6. MATLAB 开发：内置智能编辑、运行调试、交互终端、变量工作区、工程管理和测试支持。
-7. 词语高亮：跨编辑器多色标记词语、选区和正则表达式，支持全词匹配、忽略大小写、侧栏管理与前后跳转。
-8. CSV / TSV 数据处理：提供彩虹列高亮、分隔符识别、CSV 校验、表头与列编辑、对齐、格式复制和 RBQL 查询。
-9. Tcl 编辑增强：提供过程、命名空间与变量大纲、定义跳转、代码折叠、悬停说明和粘性滚动支持。
-10. 代码折叠：通过编辑器右键菜单收起或展开当前代码块、全部代码，只改变显示状态。
-11. 文件 Git 历史：查看提交记录和只读历史版本，与当前文件、上一个文件版本或其他历史版本对比，无需另装扩展。
+> 版本：v2.5.2　日期：2026/11/11
 
-> 版本：v2.5.1　日期：2026/11/11
+[快速开始](#快速开始) · [功能总览](#功能总览) · [详细功能](#详细功能) · [配置与开发](#配置与开发)
 
----
+## 快速开始
 
-## 功能列表
+1. 代码格式化：打开支持的文件，按 `Ctrl+Alt+F`；也可使用 VS Code 的格式化文档命令。
+2. 工程浏览：在资源管理器的 **Verilog 文件树** 查看模块层级；在文件列表或编辑器中右键查看 Git 历史。
+3. 代码生成：在 Verilog 模块中按 `Ctrl+Alt+I` 生成例化，或从命令面板生成 Testbench。
 
-### 文件 Git 历史与版本对比
+## 功能总览
 
-在资源管理器或编辑器中右键选择 **查看文件 Git 历史**，也可点击编辑器标题栏的历史图标，或在命令面板搜索“Git 历史：查看文件 Git 历史”。打开独立的历史页签，采用类似 Git History 的顶部工具栏、提交时间线和下方详情布局，跟随 VS Code 明暗主题。适用于 Git 仓库中所有类型的本地文本文件，不限于 Verilog；同一文件复用已打开的历史页签。
+| 开发场景 | 主要功能 |
+| --- | --- |
+| Verilog / SystemVerilog | 格式化、补全、语法高亮、定义跳转、文件树和一键例化 |
+| C / C++ | 内置语义服务、类型与函数跳转、成员补全和格式化 |
+| MATLAB | 智能编辑、运行调试、工作区、工程与测试工具 |
+| Tcl 与约束文件 | Tcl 导航和折叠；ADC 格式化，以及 UCF、XDC、SDC 等语法支持 |
+| 通用工具 | 文件 Git 历史与对比、代码折叠、TODO 树、词语高亮、CSV / TSV |
 
-列表沿当前分支的第一父链展示文件历史，侧分支改动通过合并版本呈现，不单独展开侧分支提交。展示提交说明、版本号、作者及日期；支持搜索已加载记录中的提交说明、作者、版本号、日期和路径，按作者筛选、清除筛选与刷新。每次显示 100 条，通过“加载更多提交”继续查看；拖动列表底部分隔边缘可调整列表高度。选中提交后在下方查看详情，使用上下方向键切换提交，双击提交也可查看历史版本：
+## 常用设置
 
-- **查看历史版本**：在只读编辑器中打开该提交时的文件。
-- **与当前文件对比**：历史版本在左、当前文件在右，包含当前编辑器尚未保存的修改。
-- **与上一个文件版本对比**：与该提交前的文件快照比较，合并提交采用第一父提交，首次添加前用空文件表示。
-- **与其他历史版本对比**：先选中一条提交，点击“选为对比基准”，再选另一条提交并点击“与基准版本对比”。基准在左、当前选中提交在右，可随时清除基准。
+在 VS Code 设置中搜索设置名，或在 `settings.json` 中修改。以下保存时格式化开关均默认关闭，互相独立。
 
-历史版本和对比结果在旁边的编辑器组中打开，历史页签继续保留，便于连续浏览。
+| 设置 | 作用 |
+| --- | --- |
+| `verilogFormatter.formatOnSave` | Verilog / SystemVerilog 保存时格式化 |
+| `verilogFormatter.c.formatOnSave` | C / C++ 保存时格式化 |
+| `verilogFormatter.matlab.formatOnSave` | MATLAB 保存时格式化 |
+| `verilogFormatter.adc.formatOnSave` | Anlogic ADC 保存时格式化 |
+| `verilogFormatter.c.columnLimit` | C / C++ 行宽，默认 `999999` |
 
-支持追踪文件重命名前的历史，各版本按当时的文件名读取；删除版本按空文件展示。查询和查看不切换分支，不覆盖工作区或暂存区。
+## 常用快捷键
 
-需要安装 Git 并信任工作区；优先使用 VS Code 的 `git.path` 配置（支持路径候选列表），否则从 PATH 查找 Git。历史文本优先识别 UTF-8 / UTF-16 的 BOM，无 BOM 时按当前文件的 `files.encoding` 设置解码，支持 GBK、Big5、Shift JIS 等运行时支持的编码；其他编码需先调整该设置，二进制文件不支持文本查看或对比。未跟踪文件、空仓库和 Git 错误均有明确提示。浏览器版不提供本地 Git 功能。
+| 快捷键 | 作用 |
+| --- | --- |
+| `Ctrl+Alt+F` | 使用本插件格式化当前文件 |
+| `Ctrl+Alt+I` | 生成 Verilog / SystemVerilog 模块例化 |
+| `F12` | 跳转到定义 |
+| `F4` | C / C++ 查找定义，普通 C 函数优先查找实现 |
+| `Ctrl+Alt+↑` / `Ctrl+Alt+↓` | 递增 / 递减选中数字 |
 
-功能参考 [Git History](https://github.com/DonJayamanne/gitHistoryVSCode)，使用本插件内置实现和 VS Code 原生差异编辑器，不需要安装 Git History 或其他扩展。
+## 环境与使用提示
 
-### 代码折叠与展开
+- 当前安装包面向 Windows x64，已包含 C / C++ 语义服务和格式化工具。
+- C / C++ 的类型解析依赖工程头文件和编译选项；建议配置 `compile_commands.json`、`.clangd` 或 `compile_flags.txt`。
+- MATLAB 运行、调试和智能编辑需要已安装的 MATLAB R2021b 或更新版本。
+- C / C++ 语义服务与文件 Git 历史需要受信任的工作区；Git 历史还需要安装 Git。
 
-在代码编辑区右键，打开 **代码折叠/展开** 子菜单，选择“折叠当前代码块”“展开当前代码块”“全部折叠”或“全部展开”。也可在命令面板搜索“代码折叠”。当前块操作针对光标所在的折叠区域，全部操作针对当前文档。
+## 详细功能
 
-直接复用 VS Code 内置命令及当前语言的折叠范围，不调用格式化器、不修改源码，不增加快捷键冲突。适用于具备折叠范围的 C/C++、Verilog/SystemVerilog、MATLAB、Tcl 等文本编辑器；折叠范围由语言扩展或 VS Code 的缩进规则决定。本功能不新增语法折叠解析器。
+展开对应项目查看完整功能、配置示例和使用限制。
 
-保留 VS Code 原有快捷键：`Ctrl+Shift+[` / `Ctrl+Shift+]` 折叠/展开当前块，`Ctrl+K Ctrl+0` / `Ctrl+K Ctrl+J` 全部折叠/展开。若右键菜单未显示，请确认 `editor.folding` 已开启；没有折叠区域的文本不会产生折叠效果。
+<details>
+<summary>Verilog / SystemVerilog：格式化、导航与代码生成</summary>
 
-### Tcl 导航与编辑（tcl-navigate）
+### Verilog
 
-内置 [tcl-navigate v1.0.0](https://github.com/lukemt/tcl-navigate) 的四类 Provider 和语言编辑配置，与本插件已有的 Tcl 语言注册、语法高亮配合使用。
+#### 🎨 代码格式化
 
-- 大纲：查看过程、命名空间、全局变量、命名空间变量及过程中的局部变量、数组；层级符号供 VS Code 粘性滚动使用。
-- 定义跳转：使用 `F12` 或 `Ctrl+单击` 跳转到过程、命名空间及变量定义，优先读取当前未保存缓冲区，找不到过程或命名空间时搜索工作区 `.tcl` 文件。
-- 悬停：显示过程参数和前置注释、变量在源码中的赋值内容、命名空间说明。
-- 折叠与编辑：支持过程、命名空间和控制块折叠，以及括号匹配、`#` 行注释与花括号块缩进。
-- 同时启用 `lukemt.tcl-navigate` 时复用原扩展，避免重复注册；禁用原扩展并重新加载窗口后使用本插件内置版本。
+快捷键 `Ctrl+Alt+F` 或 `Shift+Alt+F`（格式化文档）。
 
-Tcl 导航自 **1.5.0** 集成到桌面入口；兼容性修复使用补丁版本，新增功能升级次版本，不兼容变更升级主版本。
+| 规则 | 说明 |
+|------|------|
+| `begin` 另起一行 | `always/if/else/for ... begin` 自动拆为两行 |
+| 缩进重算 | 基于 `begin/end` 嵌套栈，统一缩进为 2 个空格 |
+| 信号声明对齐 | `reg/wire/logic` 按 类型/位宽/名称/分号 四列对齐 |
+| 端口声明对齐 | `input/output/inout` 按 方向/类型/位宽/名称/逗号 五列对齐 |
+| localparam 对齐 | 多行 `localparam` 按名称/值/注释三列对齐 |
+| 行尾注释对齐 | 连续代码块的 `//` 注释对齐到同一列 |
+| 属性前缀支持 | `(* mark_debug = "true" *)` 声明单独分组对齐 |
+| 行尾空格清除 | 格式化后自动去除每行末尾多余空格 |
+| 例化参数展开 | 将单行例化头中的具名 `#(.参数(值), …)` 拆为独立参数行，并与端口列表分别对齐；模块声明、位置参数、宏体及夹有注释的紧凑参数列表保持原有布局 |
 
-### 词语高亮（highlight-words）
+启用 Verilog/SystemVerilog 保存时自动格式化（`settings.json`）：
 
-内置 highlight-words v0.1.3 的全部 11 个命令和 4 项设置，不需要另外安装该扩展，适用于所有文本语言。
+```jsonc
+{
+  "verilogFormatter.formatOnSave": true
+}
+```
 
-- 选择文字或将光标放在词语上，执行“词语高亮：切换当前词语高亮”；再次执行可移除该词语。
-- 执行“高亮正则表达式”输入表达式，支持 `/expression/i`；普通选区按字面量匹配。
-- 支持普通、全词、忽略大小写及全词且忽略大小写四种模式，可对单个词语修改匹配选项。
-- 多个可见编辑器同步高亮；浅色和深色主题可分别配置颜色、边框或背景填充，并显示概览标尺标记。
-- “词语高亮”侧栏支持逐项删除、修改选项、上一个/下一个匹配与回绕导航，也可一次清除全部标记。
-- 保留 `highlightwords.colors`、`highlightwords.box`、`highlightwords.defaultMode`、`highlightwords.showSidebar` 设置和原始命令 ID，可继续使用已有快捷键。
+#### 💡 代码补全（IntelliSense）
 
-### CSV / TSV（Rainbow CSV）
+输入时自动弹出补全列表，或按 `Ctrl+Space` 手动触发，支持三层补全：
 
-内置 Rainbow CSV v3.24.1 的全部 24 个公开命令、21 项设置及 RBQL JavaScript/Python 引擎。
+| 层级 | 内容 | 说明 |
+|------|------|------|
+| 关键字 | `always`、`assign`、`module` 等 | 内置 50+ Verilog/SV 关键字 |
+| 当前文件符号 | 信号、端口、参数 | 来自当前文件，排序靠前 |
+| 工作区模块名 | 跨文件模块 | 显示来源文件名 |
 
-- CSV、TSV、分号、竖线、空白分隔以及动态分隔格式，支持内容自动识别、自定义多字符分隔符和 RFC 4180 多行引号字段。
-- 彩虹列高亮、列名悬停提示、光标列信息、固定表头、虚拟表头、注释行，以及最多三列跟踪与交替行背景。
-- CSVLint 检查引号和字段数；支持空格对齐、虚拟对齐、取消对齐及字段首尾空格清理，对齐时支持中文双宽字符。
-- 列多光标选择、字段前后插入、跳转到列；复制为 Excel / Sheets 可粘贴格式或 Markdown 表格。
-- 大文件头尾预览；通过右键菜单或状态栏 Query 打开 RBQL，支持 SELECT、UPDATE、WHERE、ORDER BY、GROUP BY、JOIN、结果导出及复制回源文件。
-- 保留 `rainbow_csv.*` 设置和 `rainbow-csv.*` 命令 ID。JavaScript 查询直接可用；Python 查询需要 PATH 中可用的 `python3`。RBQL 需要受信任工作区。
+每个补全项携带类型图标和声明原文，鼠标悬停可预览完整声明。
 
-同时启用原始 `rsbondi.highlight-words` 或 `mechatroner.rainbow-csv` 时复用其运行服务，避免重复注册。要使用本插件的内置版本，禁用对应原扩展后重新加载窗口；不需要卸载。
+#### ✂️ Snippet 代码片段
 
-本次还提供 Web 入口，供浏览器扩展宿主运行词语高亮和 Rainbow CSV。其限制沿用 Rainbow CSV 上游：浏览器查询使用 JavaScript，不支持 Python、本地文件 JOIN、文件头尾预览和复制回源文件。原有 MATLAB、本地编译检查等桌面功能仍需桌面版 VS Code。当前发布目标仍为 Windows x64，本次没有发布 Web 安装包。
+输入前缀后按 `Tab` 展开，支持 `Tab` 键在各占位符间跳转：
+
+| 前缀 | 展开内容 |
+|------|---------|
+| `module` | 完整 module 模板（含文件头注释） |
+| `always_ff` | 带复位的时序逻辑 always 块 |
+| `always_comb` | 组合逻辑 always 块 |
+| `alwaysclk` | 时钟上升沿 always 块 |
+| `initial` | initial 仿真块 |
+| `case` | case 语句（含 default） |
+| `ifelse` | if-else 语句 |
+| `for` | for 循环 |
+| `assign` | assign 连续赋值 |
+| `parameter` | parameter 声明 |
+| `localparam` | localparam 声明 |
+| `reg` | reg 信号声明（对齐格式） |
+| `wire` | wire 信号声明（对齐格式） |
+| `timescale` | \`timescale 指令 |
+| `fileheader` | Verilog 文件头注释模板 |
+| `fsm` | 两段式状态机完整模板 |
+
+#### 🌲 文件树
+
+资源管理器的 **Verilog 文件树** 扫描工作区中的 Verilog/SystemVerilog 文件，按模块例化关系展示层级并支持导航；扫描时会排除配置的目录。
+
+#### ⚡ 一键例化
+
+快捷键 `Ctrl+Alt+I`，自动生成当前模块的例化代码并复制到剪贴板，格式如下：
+
+```verilog
+module_name u_module_name (
+    .port_a  ( port_a  ),  // i
+    .port_b  ( port_b  ),  // o
+    .port_c  ( port_c  )   // o
+);
+```
+
+端口名、信号名、注释列自动对齐。同时支持生成 Testbench 框架（命令：`Generate Testbench`）。
+
+#### 🎨 语法高亮
+
+支持以下文件类型的语法高亮：
+
+| 扩展名 | 语言 |
+|--------|------|
+| `.v` / `.vh` | Verilog |
+| `.sv` / `.svh` | SystemVerilog |
+| `.vhd` / `.vhdl` | VHDL |
+| `.ucf` | Xilinx UCF 约束 |
+| `.xdc` | Xilinx XDC 约束 |
+| `.adc` | Anlogic ADC 引脚约束 |
+| `.sdc` | SDC 时序约束 |
+| `.tcl` | Tcl 脚本 |
+| `.do` | ModelSim DO 脚本 |
+| `.cst` | 高云 CST 约束 |
+
+Anlogic ADC 文件支持整文档或选区格式化，可自动对齐信号名及 `LOCATION`、`IOSTANDARD`、`DRIVESTRENGTH` 等属性列。
+
+#### 🔍 语法跳转 & 定义悬停
+
+- **跳转到定义**：`F4` 或 `F12`，快速跳转到模块、端口、寄存器、wire 的定义位置
+- **查看定义**：`Alt+F4`，Peek 弹窗查看定义，无需离开当前文件
+- **悬停提示**：鼠标悬停在变量或模块名上，即可查看其声明信息
+
+支持以下声明形式：
+- 多名称声明：`reg a, b, c;`
+- 带初值声明：`reg [3:0] cnt = 4'd0;`
+- 属性前缀：`(* mark_debug = "true" *) reg flag;`
+
+#### ✅ 语法检查
+
+集成 `xvlog`（Vivado 自带工具）进行 Verilog/SystemVerilog 语法检查，错误和警告直接显示在编辑器问题面板。
+
+启用方式（`settings.json`）：
+
+```jsonc
+{
+  "verilogFormatter.lintEnabled": true
+}
+```
+
+#### 🔄 UCF 转 XDC
+
+命令面板搜索 `Convert UCF to XDC`，自动将 Xilinx UCF 约束文件转换为 XDC 格式。
+
+#### 🔢 数字递增 / 递减
+
+- `Ctrl+Alt+↑`：递增选中数字
+- `Ctrl+Alt+↓`：递减选中数字
+
+</details>
+
+<details>
+<summary>C / C++：语义服务、跳转与格式化</summary>
 
 ### C / C++
 
-**自动建议：**输入字母、数字或下划线后，以自动模式请求语言服务候选；无候选时不弹出 `No suggestions.` 空框，有候选时仍正常显示。输入 `(` 仍触发参数提示，手动请求补全的行为保持不变。该模式已核对最低支持版本 [VS Code 1.95.0 的命令实现](https://github.com/microsoft/vscode/blob/1.95.0/src/vs/editor/contrib/suggest/browser/suggestController.ts#L827-L835)和[空候选处理](https://github.com/microsoft/vscode/blob/1.95.0/src/vs/editor/contrib/suggest/browser/suggestWidget.ts#L552-L559)，无需提高版本要求。
+**自动建议：** 输入字母、数字或下划线后，以自动模式请求语言服务候选；无候选时不弹出 `No suggestions.` 空框，有候选时仍正常显示。输入 `(` 仍触发参数提示，手动请求补全的行为保持不变。该模式已核对最低支持版本 [VS Code 1.95.0 的命令实现](https://github.com/microsoft/vscode/blob/1.95.0/src/vs/editor/contrib/suggest/browser/suggestController.ts#L827-L835)和[空候选处理](https://github.com/microsoft/vscode/blob/1.95.0/src/vs/editor/contrib/suggest/browser/suggestWidget.ts#L552-L559)，无需提高版本要求。
 
-**C/C++ 语义服务：**Windows x64 安装包内置 clangd 23.1.0，受信任工作区打开 C/C++ 文件时提供类型和符号定义、结构体成员补全等功能，不需要其他 C/C++ 扩展。启用 Microsoft C/C++ 或 clangd 扩展时，本插件不重复启动内置服务；更改外部扩展启用状态后自动切换。
+**C/C++ 语义服务：** Windows x64 安装包内置 clangd 23.1.0，受信任工作区打开 C/C++ 文件时提供类型和符号定义、结构体成员补全等功能，不需要其他 C/C++ 扩展。启用 Microsoft C/C++ 或 clangd 扩展时，本插件不重复启动内置服务；更改外部扩展启用状态后自动切换。
 
 clangd 使用工程中的 `compile_commands.json`、`.clangd` 或 `compile_flags.txt` 解析头文件和编译选项；缺少配置时使用回退选项，嵌入式 SDK 的类型和宏可能解析不完整。未受信任工作区不启动语言服务，工作区获信任后自动启动。C/C++ 默认关闭基于词语的建议，避免成员补全混入无关全局词语；可在语言设置中将 `editor.wordBasedSuggestions` 改回 `matchingDocuments`。
 
-**C/C++ 定义跳转：**在函数、类型或其他符号上按 `F4`，或从命令面板执行 **C/C++：转到定义**；也可使用 `F12` / `Ctrl+单击`。F4 优先查找普通 C 函数的实现，找不到时使用语言服务的定义结果。若用户已有 `F4` 快捷键配置，其优先级高于插件默认绑定，需将 C/C++ 文件的 `F4` 绑定到 `verilogFormatter.c.goToFunction`。
+**C/C++ 定义跳转：** 在函数、类型或其他符号上按 `F4`，或从命令面板执行 **C/C++：转到定义**；也可使用 `F12` / `Ctrl+单击`。F4 优先查找普通 C 函数的实现，找不到时使用语言服务的定义结果。若用户已有 `F4` 快捷键配置，其优先级高于插件默认绑定，需将 C/C++ 文件的 `F4` 绑定到 `verilogFormatter.c.goToFunction`。
 
 优先使用当前未保存缓冲区中的实现，再查找同目录同名 `.c`，最后搜索当前文件所属工作区的 `.c` / `.h`。无需编译数据库或 SDK 头文件配置，支持 `_Noreturn`、多行参数、指针返回值及常见函数属性；忽略原型、调用、注释、字符串及宏定义，避免跳到其他 `.c` 的 `static` 函数。工作区搜索跳过常见构建目录及值为 `true` 的 `files.exclude` / `search.exclude`；已打开文件和同名 `.c` 仍可直接查找。
 
@@ -114,7 +222,7 @@ clangd 使用工程中的 `compile_commands.json`、`.clangd` 或 `compile_flags
 - 按基础类型、别名、分号和行尾注释对齐连续简单 `typedef`，支持 `/**< … */`、`/* … */`、`//` 注释；不同缩进、空行或其他语句分别分组。
 - 枚举成员一行一个（`AllowShortEnumsOnASingleLine: false`），并按枚举项名称、赋值表达式、逗号和注释多列对齐枚举定义。
 - `switch` 内的 `case`、`default` 标签缩进一级（`IndentCaseLabels: true`），分支语句再缩进一级；连续 case 保持同级。
-- 独立成行的单行 Doxygen 注释 `/** … */`、`/*! … */` 展开为多行，起止标记各占一行、正文使用 ` * ` 前缀；保留正文内容和内部空格。行尾成员说明 `/**< … */`、普通注释、宏续行、原始字符串及 `clang-format off` 区域不参与此展开，已有多行注释继续沿用 clang-format 的处理。
+- 独立成行的单行 Doxygen 注释 `/** … */`、`/*! … */` 展开为多行，起止标记各占一行、正文使用 ` * ` 前缀；保留正文内容和内部空格。行尾成员说明 `/**< … */`、普通注释、宏续行、原始字符串及 `clang-format off` 区域不参与此展开，已有多行注释的参数和返回值说明按下述规则对齐。
 - 多行 Doxygen 注释中，参数和返回值名称与说明按列对齐；代码示例和禁用格式化区域保留原样。
 
 例如 `/** @brief FileSaveParams 命令参数，字段按协议顺序排列。 */` 格式化为：
@@ -127,11 +235,16 @@ clangd 使用工程中的 `compile_commands.json`、`.clangd` 或 `compile_flags
 
 函数体固定保持多行（`AllowShortFunctionsOnASingleLine: None`），已有的单行函数也会展开；调用、控制条件、函数签名、花括号和空行继续遵循 clang-format 的通用规则。行宽设置 `verilogFormatter.c.columnLimit` 默认为 `999999`，优先于工程的 `ColumnLimit`；可在 VS Code 用户或工作区设置中修改，下一次格式化即生效，设为 `0` 时取消行宽限制。其他样式仍可通过工程的 `BreakBeforeBraces` 等选项调整。后处理保留 clang-format 的换行、原始字符串、多行注释和 `clang-format off/on` 区域；定制列对齐可能增加行宽。
 
-需要 `clang-format 18+`。默认优先复用 Microsoft C/C++ 扩展自带的程序，否则从 PATH 查找；也可在用户设置 `verilogFormatter.c.clangFormatPath` 中指定可执行文件的绝对路径。该设置仅作用于当前机器。程序不可用或工程配置错误时报告失败，不应用局部结果。
+需要 `clang-format 18+`。默认优先复用 Microsoft C/C++ 扩展自带的程序，其次使用插件内置的 Windows x64 版本，再从 PATH 查找；也可在用户设置 `verilogFormatter.c.clangFormatPath` 中指定可执行文件的绝对路径。该设置仅作用于当前机器。程序不可用或工程配置错误时报告失败，不应用局部结果。
 
 选区格式化向 clang-format 提供完整文档及所选行范围，保留函数、宏和注释上下文；按 clang-format 规则可能扩展到完整语句。格式化期间继续编辑会使过期结果被丢弃。
 
 开发验证时，可设置环境变量 `CLANG_FORMAT_TEST_EXE` 为本机 clang-format 的绝对路径，然后执行 `npm test -- --runInBand`，启用真实程序集成测试；未设置时只运行独立单元测试并跳过该组集成测试。
+
+</details>
+
+<details>
+<summary>MATLAB：编辑、运行与调试</summary>
 
 ### MATLAB
 
@@ -166,155 +279,64 @@ MATLAB 设置说明、下拉选项和工作区设置分组使用中文。设置�
 - 新节内只有一个配置变量时，使用自然单空格布局，不继承前一节的对齐列宽。
 - 保留字符串中的 `%`，不将其误判为注释。
 
-### Verilog
+</details>
 
-#### 🎨 代码格式化
+<details>
+<summary>Tcl：导航、悬停与折叠</summary>
 
-快捷键 `Ctrl+Alt+F` 或 `Shift+Alt+F`（格式化文档）。
+### Tcl 导航与编辑（tcl-navigate）
 
-| 规则 | 说明 |
-|------|------|
-| `begin` 另起一行 | `always/if/else/for ... begin` 自动拆为两行 |
-| 缩进重算 | 基于 `begin/end` 嵌套栈，统一缩进为 2 个空格 |
-| 信号声明对齐 | `reg/wire/logic` 按 类型/位宽/名称/分号 四列对齐 |
-| 端口声明对齐 | `input/output/inout` 按 方向/类型/位宽/名称/逗号 五列对齐 |
-| localparam 对齐 | 多行 `localparam` 按名称/值/注释三列对齐 |
-| 行尾注释对齐 | 连续代码块的 `//` 注释对齐到同一列 |
-| 属性前缀支持 | `(* mark_debug = "true" *)` 声明单独分组对齐 |
-| 行尾空格清除 | 格式化后自动去除每行末尾多余空格 |
-| 例化参数展开 | 将单行例化头中的具名 `#(.参数(值), …)` 拆为独立参数行，并与端口列表分别对齐；模块声明、位置参数、宏体及夹有注释的紧凑参数列表保持原有布局 |
+内置 [tcl-navigate v1.0.0](https://github.com/lukemt/tcl-navigate) 的四类 Provider 和语言编辑配置，与本插件已有的 Tcl 语言注册、语法高亮配合使用。
 
-启用 Verilog/SystemVerilog 保存时自动格式化（`settings.json`）：
+- 大纲：查看过程、命名空间、全局变量、命名空间变量及过程中的局部变量、数组；层级符号供 VS Code 粘性滚动使用。
+- 定义跳转：使用 `F12` 或 `Ctrl+单击` 跳转到过程、命名空间及变量定义，优先读取当前未保存缓冲区，找不到过程或命名空间时搜索工作区 `.tcl` 文件。
+- 悬停：显示过程参数和前置注释、变量在源码中的赋值内容、命名空间说明。
+- 折叠与编辑：支持过程、命名空间和控制块折叠，以及括号匹配、`#` 行注释与花括号块缩进。
+- 同时启用 `lukemt.tcl-navigate` 时复用原扩展，避免重复注册；禁用原扩展并重新加载窗口后使用本插件内置版本。
 
-```jsonc
-{
-  "verilogFormatter.formatOnSave": true
-}
-```
+Tcl 导航自 **1.5.0** 集成到桌面入口；兼容性修复使用补丁版本，新增功能升级次版本，不兼容变更升级主版本。
 
----
+</details>
 
-#### 💡 代码补全（IntelliSense）
+<details>
+<summary>文件 Git 历史与版本对比</summary>
 
-输入时自动弹出补全列表，或按 `Ctrl+Space` 手动触发，支持三层补全：
+### 文件 Git 历史与版本对比
 
-| 层级 | 内容 | 说明 |
-|------|------|------|
-| 关键字 | `always`、`assign`、`module` 等 | 内置 50+ Verilog/SV 关键字 |
-| 当前文件符号 | 信号、端口、参数 | 来自当前文件，排序靠前 |
-| 工作区模块名 | 跨文件模块 | 显示来源文件名 |
+在资源管理器或编辑器中右键选择 **查看文件 Git 历史**，也可点击编辑器标题栏的历史图标，或在命令面板搜索“Git 历史：查看文件 Git 历史”。打开独立的历史页签，采用类似 Git History 的顶部工具栏、提交时间线和下方详情布局，跟随 VS Code 明暗主题。适用于 Git 仓库中所有类型的本地文本文件，不限于 Verilog；同一文件复用已打开的历史页签。
 
-每个补全项携带类型图标和声明原文，鼠标悬停可预览完整声明。
+列表沿当前分支的第一父链展示文件历史，侧分支改动通过合并版本呈现，不单独展开侧分支提交。展示提交说明、版本号、作者及日期；支持搜索已加载记录中的提交说明、作者、版本号、日期和路径，按作者筛选、清除筛选与刷新。每次显示 100 条，通过“加载更多提交”继续查看；拖动列表底部分隔边缘可调整列表高度。选中提交后在下方查看详情，使用上下方向键切换提交，双击提交也可查看历史版本：
 
----
+- **查看历史版本**：在只读编辑器中打开该提交时的文件。
+- **与当前文件对比**：历史版本在左、当前文件在右，包含当前编辑器尚未保存的修改。
+- **与上一个文件版本对比**：与该提交前的文件快照比较，合并提交采用第一父提交，首次添加前用空文件表示。
+- **与其他历史版本对比**：先选中一条提交，点击“选为对比基准”，再选另一条提交并点击“与基准版本对比”。基准在左、当前选中提交在右，可随时清除基准。
 
-#### ✂️ Snippet 代码片段
+历史版本和对比结果在旁边的编辑器组中打开，历史页签继续保留，便于连续浏览。
 
-输入前缀后按 `Tab` 展开，支持 `Tab` 键在各占位符间跳转：
+支持追踪文件重命名前的历史，各版本按当时的文件名读取；删除版本按空文件展示。查询和查看不切换分支，不覆盖工作区或暂存区。
 
-| 前缀 | 展开内容 |
-|------|---------|
-| `module` | 完整 module 模板（含文件头注释） |
-| `always_ff` | 带复位的时序逻辑 always 块 |
-| `always_comb` | 组合逻辑 always 块 |
-| `alwaysclk` | 时钟上升沿 always 块 |
-| `initial` | initial 仿真块 |
-| `case` | case 语句（含 default） |
-| `ifelse` | if-else 语句 |
-| `for` | for 循环 |
-| `assign` | assign 连续赋值 |
-| `parameter` | parameter 声明 |
-| `localparam` | localparam 声明 |
-| `reg` | reg 信号声明（对齐格式） |
-| `wire` | wire 信号声明（对齐格式） |
-| `timescale` | \`timescale 指令 |
-| `fileheader` | Verilog 文件头注释模板 |
-| `fsm` | 两段式状态机完整模板 |
+需要安装 Git 并信任工作区；优先使用 VS Code 的 `git.path` 配置（支持路径候选列表），否则从 PATH 查找 Git。历史文本优先识别 UTF-8 / UTF-16 的 BOM，无 BOM 时按当前文件的 `files.encoding` 设置解码，支持 GBK、Big5、Shift JIS 等运行时支持的编码；其他编码需先调整该设置，二进制文件不支持文本查看或对比。未跟踪文件、空仓库和 Git 错误均有明确提示。浏览器版不提供本地 Git 功能。
 
----
+功能参考 [Git History](https://github.com/DonJayamanne/gitHistoryVSCode)，使用本插件内置实现和 VS Code 原生差异编辑器，不需要安装 Git History 或其他扩展。
 
-#### 🌲 文件树
+</details>
 
-在侧边栏 **Verilog Files** 面板中以树状结构展示工作区内所有 Verilog/SystemVerilog 文件，并解析模块例化层次关系，方便快速定位和导航。
+<details>
+<summary>代码折叠与展开</summary>
 
----
+### 代码折叠与展开
 
-#### ⚡ 一键例化
+在代码编辑区右键，打开 **代码折叠/展开** 子菜单，选择“折叠当前代码块”“展开当前代码块”“全部折叠”或“全部展开”。也可在命令面板搜索“代码折叠”。当前块操作针对光标所在的折叠区域，全部操作针对当前文档。
 
-快捷键 `Ctrl+Alt+I`，自动生成当前模块的例化代码并复制到剪贴板，格式如下：
+直接复用 VS Code 内置命令及当前语言的折叠范围，不调用格式化器、不修改源码，不增加快捷键冲突。适用于具备折叠范围的 C/C++、Verilog/SystemVerilog、MATLAB、Tcl 等文本编辑器；折叠范围由语言扩展或 VS Code 的缩进规则决定。本功能不新增语法折叠解析器。
 
-```verilog
-module_name u_module_name (
-    .port_a  ( port_a  ),  // i
-    .port_b  ( port_b  ),  // o
-    .port_c  ( port_c  )   // o
-);
-```
+保留 VS Code 原有快捷键：`Ctrl+Shift+[` / `Ctrl+Shift+]` 折叠/展开当前块，`Ctrl+K Ctrl+0` / `Ctrl+K Ctrl+J` 全部折叠/展开。若右键菜单未显示，请确认 `editor.folding` 已开启；没有折叠区域的文本不会产生折叠效果。
 
-端口名、信号名、注释列自动对齐。同时支持生成 Testbench 框架（命令：`Generate Testbench`）。
+</details>
 
----
-
-#### 🎨 语法高亮
-
-支持以下文件类型的语法高亮：
-
-| 扩展名 | 语言 |
-|--------|------|
-| `.v` / `.vh` | Verilog |
-| `.sv` / `.svh` | SystemVerilog |
-| `.vhd` / `.vhdl` | VHDL |
-| `.ucf` | Xilinx UCF 约束 |
-| `.xdc` | Xilinx XDC 约束 |
-| `.adc` | Anlogic ADC 引脚约束 |
-| `.sdc` | SDC 时序约束 |
-| `.tcl` | Tcl 脚本 |
-| `.do` | ModelSim DO 脚本 |
-| `.cst` | 高云 CST 约束 |
-
-Anlogic ADC 文件支持整文档或选区格式化，可自动对齐信号名及 `LOCATION`、`IOSTANDARD`、`DRIVESTRENGTH` 等属性列。
-
----
-
-#### 🔍 语法跳转 & 定义悬停
-
-- **跳转到定义**：`F4` 或 `F12`，快速跳转到模块、端口、寄存器、wire 的定义位置
-- **查看定义**：`Alt+F4`，Peek 弹窗查看定义，无需离开当前文件
-- **悬停提示**：鼠标悬停在变量或模块名上，即可查看其声明信息
-
-支持以下声明形式：
-- 多名称声明：`reg a, b, c;`
-- 带初值声明：`reg [3:0] cnt = 4'd0;`
-- 属性前缀：`(* mark_debug = "true" *) reg flag;`
-
----
-
-#### ✅ 语法检查
-
-集成 `xvlog`（Vivado 自带工具）进行 Verilog/SystemVerilog 语法检查，错误和警告直接显示在编辑器问题面板。
-
-启用方式（`settings.json`）：
-
-```jsonc
-{
-  "verilogFormatter.lintEnabled": true
-}
-```
-
----
-
-#### 🔄 UCF 转 XDC
-
-命令面板搜索 `Convert UCF to XDC`，自动将 Xilinx UCF 约束文件转换为 XDC 格式。
-
----
-
-#### 🔢 数字递增 / 递减
-
-- `Ctrl+Alt+↑`：递增选中数字
-- `Ctrl+Alt+↓`：递减选中数字
-
----
+<details>
+<summary>TODO 标签与树视图</summary>
 
 ### TODO
 
@@ -334,25 +356,60 @@ Anlogic ADC 文件支持整文档或选区格式化，可自动对齐信号名�
 
 右键菜单：隐藏此文件/文件夹、重置路径过滤。
 
----
-
 #### 🎨 行内高亮
 
 打开文件时自动高亮 TODO 标签，各标签颜色可在配置中自定义。
-
----
 
 #### 🔍 前后导航
 
 命令面板搜索 `TODO: 跳到下一个` / `TODO: 跳到上一个`，在当前文件内的 TODO 条目间快速跳转。
 
----
-
 #### 🏷️ 标签管理
 
 命令面板搜索 `TODO: 添加标签` / `TODO: 删除标签`，动态管理扫描的标签关键字，无需手动编辑 `settings.json`。
 
----
+</details>
+
+<details>
+<summary>词语与正则高亮</summary>
+
+### 词语高亮（highlight-words）
+
+内置 highlight-words v0.1.3 的全部 11 个命令和 4 项设置，不需要另外安装该扩展，适用于所有文本语言。
+
+- 选择文字或将光标放在词语上，执行“词语高亮：切换当前词语高亮”；再次执行可移除该词语。
+- 执行“高亮正则表达式”输入表达式，支持 `/expression/i`；普通选区按字面量匹配。
+- 支持普通、全词、忽略大小写及全词且忽略大小写四种模式，可对单个词语修改匹配选项。
+- 多个可见编辑器同步高亮；浅色和深色主题可分别配置颜色、边框或背景填充，并显示概览标尺标记。
+- “词语高亮”侧栏支持逐项删除、修改选项、上一个/下一个匹配与回绕导航，也可一次清除全部标记。
+- 保留 `highlightwords.colors`、`highlightwords.box`、`highlightwords.defaultMode`、`highlightwords.showSidebar` 设置和原始命令 ID，可继续使用已有快捷键。
+
+</details>
+
+<details>
+<summary>CSV / TSV：彩虹列与查询</summary>
+
+### CSV / TSV（Rainbow CSV）
+
+内置 Rainbow CSV v3.24.1 的全部 24 个公开命令、21 项设置及 RBQL JavaScript/Python 引擎。
+
+- CSV、TSV、分号、竖线、空白分隔以及动态分隔格式，支持内容自动识别、自定义多字符分隔符和 RFC 4180 多行引号字段。
+- 彩虹列高亮、列名悬停提示、光标列信息、固定表头、虚拟表头、注释行，以及最多三列跟踪与交替行背景。
+- CSVLint 检查引号和字段数；支持空格对齐、虚拟对齐、取消对齐及字段首尾空格清理，对齐时支持中文双宽字符。
+- 列多光标选择、字段前后插入、跳转到列；复制为 Excel / Sheets 可粘贴格式或 Markdown 表格。
+- 大文件头尾预览；通过右键菜单或状态栏 Query 打开 RBQL，支持 SELECT、UPDATE、WHERE、ORDER BY、GROUP BY、JOIN、结果导出及复制回源文件。
+- 保留 `rainbow_csv.*` 设置和 `rainbow-csv.*` 命令 ID。JavaScript 查询直接可用；Python 查询需要 PATH 中可用的 `python3`。RBQL 需要受信任工作区。
+
+同时启用原始 `rsbondi.highlight-words` 或 `mechatroner.rainbow-csv` 时复用其运行服务，避免重复注册。要使用本插件的内置版本，禁用对应原扩展后重新加载窗口；不需要卸载。
+
+本次还提供 Web 入口，供浏览器扩展宿主运行词语高亮和 Rainbow CSV。其限制沿用 Rainbow CSV 上游：浏览器查询使用 JavaScript，不支持 Python、本地文件 JOIN、文件头尾预览和复制回源文件。原有 MATLAB、本地编译检查等桌面功能仍需桌面版 VS Code。当前发布目标仍为 Windows x64，本次没有发布 Web 安装包。
+
+</details>
+
+## 配置与开发
+
+<details>
+<summary>基础格式化与 TODO 配置</summary>
 
 ## 配置项
 
@@ -389,7 +446,7 @@ Anlogic ADC 文件支持整文档或选区格式化，可自动对齐信号名�
 
 四个保存开关互相独立，均支持用户和工作区设置，下一次保存即生效。VS Code 自带的 `editor.formatOnSave` 另行配置。
 
-**从 1.x 升级：**原 `verilogFormatter.formatOnSave` 仅保留为 Verilog/SystemVerilog 开关，不再同时开启 C/C++、MATLAB 和 ADC。如果以前依赖总开关开启这些语言，需要分别开启对应的新设置；新增开关默认关闭。
+**从 1.x 升级：** 原 `verilogFormatter.formatOnSave` 仅保留为 Verilog/SystemVerilog 开关，不再同时开启 C/C++、MATLAB 和 ADC。如果以前依赖总开关开启这些语言，需要分别开启对应的新设置；新增开关默认关闭。
 
 ### TODO 配置
 
@@ -416,7 +473,10 @@ Anlogic ADC 文件支持整文档或选区格式化，可自动对齐信号名�
 }
 ```
 
----
+</details>
+
+<details>
+<summary>完整快捷键表</summary>
 
 ## 快捷键汇总
 
@@ -431,7 +491,10 @@ Anlogic ADC 文件支持整文档或选区格式化，可自动对齐信号名�
 | `Ctrl+Alt+↑` | 递增选中数字 |
 | `Ctrl+Alt+↓` | 递减选中数字 |
 
----
+</details>
+
+<details>
+<summary>开发、调试、打包与代码结构</summary>
 
 ## 开发
 
@@ -457,11 +520,9 @@ npm run compile
 当前安装包面向 Windows x64，包含 MATLAB 运行组件和 Windows ripgrep。发布时上传生成的 `.vsix` 文件；修改记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ```bash
-npm run package -- --target win32-x64 --out hanxuyao-plugin-2.5.1-win32-x64.vsix
-code --install-extension hanxuyao-plugin-2.5.1-win32-x64.vsix --force
+npm run package -- --target win32-x64 --out hanxuyao-plugin-2.5.2-win32-x64.vsix
+code --install-extension hanxuyao-plugin-2.5.2-win32-x64.vsix --force
 ```
-
----
 
 MATLAB、highlight-words、Rainbow CSV、tcl-navigate 上游源码、固定提交和本地适配说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。`npm run compile` 会构建全部内置组件；仅构建高亮、CSV 和 Tcl 组件可运行 `npm run compile:editor-tools`。
 
@@ -498,14 +559,20 @@ hanxuyao-plugin/
 └── tsconfig.json                  # TypeScript 编译配置
 ```
 
----
+GitHub 自动测试、打包和发布的配置及使用方法见 [自动发布](docs/自动发布.md)。
+
+</details>
 
 ## 修改记录
 
-GitHub 自动测试、打包和发布的配置及使用方法见 [自动发布](docs/自动发布.md)。
+近期更新见 [更新日志](CHANGELOG.md)。
+
+<details>
+<summary>查看全部版本记录</summary>
 
 | 版本 | 日期 | 修改内容 |
 |------|------|---------|
+| v2.5.2 | 2026/11/11 | 重组插件详情页，按功能折叠完整说明并突出快速入口 |
 | v2.5.1 | 2026/11/11 | 补齐 Verilog HDL 兼容语言注册，消除语法贡献的未知语言警告 |
 | v2.5.0 | 2026/11/11 | 内置 clangd 和 Windows x64 clang-format，支持独立 C/C++ 类型跳转、成员补全及格式化 |
 | v2.4.1 | 2026/11/11 | 修复 Doxygen 整体对齐及 return 返回值列，取消输入点号等字符前的过期补全请求 |
@@ -557,3 +624,5 @@ GitHub 自动测试、打包和发布的配置及使用方法见 [自动发布](
 | v0.2.0 | 2026/05/27 | 新增代码补全、Snippet、保存时自动格式化；修复全部语言注释快捷键 |
 | v0.2.0 | 2026/05/25 | 新增文件树、例化、语法高亮、跳转、悬停、语法检查、UCF转XDC、数字递增等功能；添加插件图标 |
 | v0.1.0 | 2026/05/25 | 创建项目，实现代码格式化核心功能 |
+
+</details>
