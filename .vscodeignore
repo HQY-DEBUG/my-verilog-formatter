@@ -15,4 +15,6 @@ tsconfig.json
 
 vendor/**
 scripts/**
+out/clangd-smoke-workspace*/**
+out/clangd-extension-probe/**
 **/*.map
