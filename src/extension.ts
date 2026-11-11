@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : extension.ts
 // 描述    : VS Code 扩展入口，注册所有 Provider 和命令
-// 版本    : v2.3.0
-// 日期    : 2026/11/09
+// 版本    : v2.4.1
+// 日期    : 2026/11/11
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.4.1  2026/11/11  输入点号等字符时取消过期的自动补全请求
 //  v2.3.0  2026/11/09  注册内置文件 Git 历史、只读版本查看和版本对比
 //  v2.2.5  2026/10/21  将 C/C++ 输入建议标记为自动触发，避免无候选空框
 //  v2.2.0  2026/10/12  注册 C 函数定义跳转与独立实现查找命令
@@ -143,13 +144,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
                 || event.contentChanges.length === 0) { return; }
 
             const insertedText = event.contentChanges[event.contentChanges.length - 1].text;
+            if (cSuggestTimer) {
+                clearTimeout(cSuggestTimer);
+                cSuggestTimer = undefined;
+            }
             if (insertedText === '(') {
                 void vscode.commands.executeCommand('editor.action.triggerParameterHints');
                 return;
             }
             if (!/^[A-Za-z0-9_]$/.test(insertedText)) { return; }
 
-            if (cSuggestTimer) { clearTimeout(cSuggestTimer); }
             cSuggestTimer = setTimeout(() => {
                 if (vscode.window.activeTextEditor?.document === event.document) {
                     // 自动输入无候选时应隐藏列表，不能按手动补全显示空提示。

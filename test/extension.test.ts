@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : extension.test.ts
 // 描述    : 扩展入口配置测试
-// 版本    : v2.2.5
-// 日期    : 2026/10/21
+// 版本    : v2.4.1
+// 日期    : 2026/11/11
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.4.1  2026/11/11  验证特殊字符输入取消延迟补全请求
 //  v2.2.5  2026/10/21  执行真实 C/C++ 输入事件逻辑，验证自动补全及参数提示
 //  v1.4.5  2026/09/11  校验版本清单与说明一致，支持后续自动发布升版
 //  v1.4.4  2026/09/11  同步 MATLAB 内置集成版本
@@ -132,6 +133,15 @@ describe('C/C++ 自动建议事件', () => {
         expect(api.commands.executeCommand).not.toHaveBeenCalled();
         jest.advanceTimersByTime(40);
         expect(api.commands.executeCommand).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(['.', '>', '(', ' ', '粘贴内容', ''])('输入 %j 后不再执行之前延迟的建议请求', text => {
+        handler(change('x', document));
+        jest.advanceTimersByTime(50);
+        handler(change(text, document));
+        jest.runAllTimers();
+        expect(api.commands.executeCommand).not.toHaveBeenCalledWith('editor.action.triggerSuggest', { auto: true });
+        if (text === '(') { expect(api.commands.executeCommand).toHaveBeenCalledWith('editor.action.triggerParameterHints'); }
     });
 
     it('左括号立即请求参数提示，不变更参数提示命令', () => {
