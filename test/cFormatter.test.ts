@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.test.ts
 // 描述    : C/C++ 格式化器回归测试
-// 版本    : v2.4.1
-// 日期    : 2026/11/11
+// 版本    : v2.6.1
+// 日期    : 2026/11/12
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.6.1  2026/11/12  验证结构体数组成员缩进及保护边界
 //  v2.4.1  2026/11/11  验证单参数 Doxygen 注释整体对齐
 //  v2.2.8  2026/11/09  验证 Doxygen 参数及返回值说明列对齐
 //  v2.2.3  2026/10/15  验证修饰符、类型关键字及类型名分列对齐和分组边界
@@ -31,6 +32,145 @@
 import { formatC } from '../src/features/c/cFormatter';
 
 describe('C/C++ formatter', () => {
+    it('只调整选区内结构体数组成员的多余一格缩进', () => {
+        const input = ['const DmaConfig cfg[] = {', '    {', '     .First = 1,',
+            '     .Second = 2,', '     }', '};'].join('\n');
+        const expected = ['const DmaConfig cfg[] = {', '    {', '        .First = 1,',
+            '     .Second = 2,', '     }', '};'].join('\n');
+        expect(formatC(input, { start: 3, end: 3 })).toBe(expected);
+    });
+
+    it('修正多个数组元素的直接成员缩进，保留嵌套值和字符串', () => {
+        const input = ['const Config cfg[] = {', '    {', '     .values = {1, 2},',
+            '     .inner = {', '         .member = 1,', '     },',
+            '     .text = "{ }",', '     },', '    {', '     .values = {3, 4},',
+            '     .text = "// {",', '     }', '};'].join('\n');
+        const expected = ['const Config cfg[] = {', '    {', '        .values = {1, 2},',
+            '        .inner = {', '         .member = 1,', '     },',
+            '        .text = "{ }",', '    },', '    {', '        .values = {3, 4},',
+            '        .text = "// {",', '    }', '};'].join('\n');
+        expect(formatC(input)).toBe(expected);
+        expect(formatC(expected)).toBe(expected);
+    });
+
+    it('最后一个成员是无尾逗号的宏值时仍修正缩进', () => {
+        const input = ['S a[] = {', '    {', '     .id = DMA_ID,',
+            '     .mode = DEFAULT_MODE // mode', '     }', '};'].join('\n');
+        const expected = ['S a[] = {', '    {', '        .id = DMA_ID,',
+            '        .mode = DEFAULT_MODE // mode', '    }', '};'].join('\n');
+        expect(formatC(input)).toBe(expected);
+        expect(formatC(expected)).toBe(expected);
+    });
+
+    it('不调整禁用格式化区域、宏续行及原始字符串内的初始化示例', () => {
+        const input = ['// clang-format off', 'const Config cfg[] = {', '    {', '     .value = 1,',
+            '     }', '};', '// clang-format on', '#define CONFIG \\',
+            '    { \\', '     .value = 1, \\', '     }',
+            'const char *text = R"tag(const Config cfg[] = {', '    {', '     .value = 1,', '     }', '};)tag";'].join('\n');
+        expect(formatC(input)).toBe(input);
+    });
+
+    it('单行宏中的数组形式不会影响后续代码的缩进', () => {
+        for (const directive of ['#define BEGIN [1] = {', '%:define BEGIN [1] = {']) {
+            const input = [directive, '    {', '     .member = 1,', '     }', '};'].join('\n');
+            expect(formatC(input)).toBe(input);
+        }
+    });
+
+    it('结束括号之前的注释与字面量不会被删除', () => {
+        for (const prefix of [' /**/', '  "x"']) {
+            const input = ['const Config cfg[] = {', '    {', '     .value = 1,', prefix + '}', '};'].join('\n');
+            const output = formatC(input);
+            expect(output).toContain(prefix + '}');
+        }
+    });
+
+    it('首个成员之前存在多行注释时仍修正成员和结束括号', () => {
+        const input = ['const Config cfg[] = {', '    {', '     /* 设备', '        说明 */',
+            '     .value = 1,', '     }', '};'].join('\n');
+        const expected = ['const Config cfg[] = {', '    {', '     /* 设备', '        说明 */',
+            '        .value = 1,', '    }', '};'].join('\n');
+        expect(formatC(input)).toBe(expected);
+        expect(formatC(expected)).toBe(expected);
+    });
+
+    it('条件编译下的成员分别保持一层缩进', () => {
+        const input = ['const Config cfg[] = {', '    {', '#if FEATURE', '     .value = 1,',
+            '#else', '     .value = 2,', '#endif', '     }', '};'].join('\n');
+        const expected = ['const Config cfg[] = {', '    {', '#if FEATURE', '        .value = 1,',
+            '#else', '        .value = 2,', '#endif', '    }', '};'].join('\n');
+        expect(formatC(input)).toBe(expected);
+        expect(formatC(expected)).toBe(expected);
+    });
+
+    it('数组结束括号处于禁用格式化区域时不跨越到后续声明', () => {
+        const input = ['S arr[] = {', '    {', '     .a = 1,', '     },', '// clang-format off',
+            '};', '// clang-format on', 'S obj =', '    {', '     .x = 1,', '     };'].join('\n');
+        expect(formatC(input)).toBe(input);
+    });
+
+    it('条件分支提供不同左花括号时不跨越到后续声明', () => {
+        const input = ['S arr[] = {', '#if FLAG', '    {', '#else', '    {', '#endif',
+            '     .a = 1,', '     },', '};', 'S obj =', '    {', '     .x = 1,', '     };'].join('\n');
+        expect(formatC(input)).toBe(input);
+    });
+
+    it('C++ 数字分隔符与字符字面量不影响数组括号匹配', () => {
+        const input = ['S arr[] = {', '    {', "     .a = calc(1'000, '{'),", '     },', '};',
+            'S obj =', '    {', '     .x = 1,', '     };'].join('\n');
+        const expected = ['S arr[] = {', '    {', "        .a = calc(1'000, '{'),", '    },', '};',
+            'S obj =', '    {', '     .x = 1,', '     };'].join('\n');
+        expect(formatC(input)).toBe(expected);
+        expect(formatC(expected)).toBe(expected);
+    });
+
+    it('C++ UTF-8 字符字面量不被当作数字分隔符', () => {
+        const input = ['S arr[] = {', '    {', "     .a = calc(u8'A', '{'),", '     },', '};',
+            'S obj =', '    {', '     .x = 1,', '     };'].join('\n');
+        const expected = ['S arr[] = {', '    {', "        .a = calc(u8'A', '{'),", '    },', '};',
+            'S obj =', '    {', '     .x = 1,', '     };'].join('\n');
+        expect(formatC(input)).toBe(expected);
+        expect(formatC(expected)).toBe(expected);
+    });
+
+    it('数字样式的原始字符串分隔符与字符字面量后缀保持不变', () => {
+        const input = ['S arr[] = {', '    {', `     .a = calc(R"1'2({x})1'2", '1'_tag, '{'),`,
+            '     },', '};', 'S obj =', '    {', '     .x = 1,', '     };'].join('\n');
+        const expected = ['S arr[] = {', '    {', `        .a = calc(R"1'2({x})1'2", '1'_tag, '{'),`,
+            '    },', '};', 'S obj =', '    {', '     .x = 1,', '     };'].join('\n');
+        expect(formatC(input)).toBe(expected);
+        expect(formatC(expected)).toBe(expected);
+    });
+
+    it('含反斜杠续行或宏结束符时不跨越数组到后续声明', () => {
+        for (const continuation of ['     // comment \\', '     END_TABLE']) {
+            const input = ['S arr[] = {', '    {', '     .a = 1,', continuation, '     },',
+                '};', 'S obj =', '    {', '     .x = 1,', '     };'].join('\n');
+            expect(formatC(input)).toBe(input);
+        }
+        const macroEnd = ['#define END_TABLE };', 'S arr[] = {', '    {', '     .a = 1,', '     },',
+            'END_TABLE', 'S obj =', '    {', '     .x = 1,', '     };'].join('\n');
+        expect(formatC(macroEnd)).toBe(macroEnd);
+        const macroEndWithSemicolon = ['#define END_TABLE }', 'void setup(void) {', '    S arr[] = {',
+            '        {', '         .a = 1,', '         },', '    END_TABLE;', '    S obj =',
+            '        {', '         .x = 1,', '         };', '}'].join('\n');
+        expect(formatC(macroEndWithSemicolon)).toBe(macroEndWithSemicolon);
+        const inlineMacroEnd = ['#define END_ROW }', 'void setup(void) {', '    S arr[] = {',
+            '        {', '         .a = 1, END_ROW', '    };', '    S obj =',
+            '        {', '         .x = 1,', '         };', '}'].join('\n');
+        expect(formatC(inlineMacroEnd)).toBe(inlineMacroEnd);
+    });
+
+    it('成员右值可能由宏提供左花括号时不猜测嵌套层级', () => {
+        const input = ['typedef struct { int y; } Inner;', 'typedef struct { Inner member; int z; } S;',
+            '#define OPEN {', 'S a[] = {', '    {', '     .member = OPEN', '     .y = 1,',
+            '     },', '     .z = 2,', '     }', '};'].join('\n');
+        expect(formatC(input)).toBe(input);
+        const noFollowingMember = ['#define OPEN {', 'S a[] = {', '    {', '     .member = OPEN',
+            '     .y = 1,', '     },', '     }', '};'].join('\n');
+        expect(formatC(noFollowingMember)).toBe(noFollowingMember);
+    });
+
     it.each(['\n', '\r\n'])('单个参数时整个 Doxygen 注释的说明对齐（%j）', eol => {
         const input = ['/**', ' * @brief 保存标刻速度。', ' * @param[in] speed 速度。',
             ' * @return ST_SUCCESS 成功。', ' * @note 仅保存参数。', ' */'].join(eol);

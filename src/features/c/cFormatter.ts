@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.ts
 // 描述    : clang-format 通用排版与 C/C++ 定制多列对齐
-// 版本    : v2.4.1
-// 日期    : 2026/11/11
+// 版本    : v2.6.1
+// 日期    : 2026/11/12
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.6.1  2026/11/12  修正结构体数组指定成员和右花括号缩进
 //  v2.4.1  2026/11/11  对齐仅有一个参数的 Doxygen 注释块
 //  v2.2.8  2026/11/09  对齐 Doxygen 标签、参数名称和说明列
 //  v2.2.3  2026/10/15  分列对齐带修饰符声明的类型关键字和类型名
@@ -84,10 +85,144 @@ export function formatC(code: string, range?: ClangLineRange): string {
     normalized = alignConsecutiveCalls(normalized);
     normalized = alignEnumDeclarations(normalized);
     normalized = expandDoxygenComments(normalized);
-    normalized = [...lines.slice(0, start), ...normalized.split('\n').map(line => line.trimEnd()), ...lines.slice(end)]
-        .map(line => protectedRegions.blocks.get(line) ?? line).join('\n');
+    normalized = [...lines.slice(0, start), ...normalized.split('\n').map(line => line.trimEnd()), ...lines.slice(end)].join('\n');
+    normalized = indentArrayDesignators(normalized, protectedRegions.blocks, range);
+    normalized = normalized.split('\n').map(line => protectedRegions.blocks.get(line) ?? line).join('\n');
     normalized = alignDoxygenFields(normalized, range);
     return eol === '\n' ? normalized : normalized.replace(/\n/g, '\r\n');
+}
+
+function indentArrayDesignators(code: string, protectedBlocks: ReadonlyMap<string, string>, range?: ClangLineRange): string {
+    // clang-format 的数组列对齐可能将独占行的元素内容和右花括号缩进到左花括号后一格。
+    const lines = code.split('\n');
+    const originalLines = lines.map(line => protectedBlocks.get(line) ?? line);
+    // 优先识别注释和字面量，再仅遮蔽数字 token 中的分隔符，避免把 u8'A' 等字符字面量误判为数字。
+    const tokens = new RegExp(`${C_LITERALS_AND_COMMENTS.source}|((?<![A-Za-z_0-9])(?:[0-9]|\\.[0-9])(?:[A-Za-z_0-9.]|'(?=[A-Za-z_0-9]))*)`, 'g');
+    const scanInput = originalLines.join('\n').replace(tokens, (match: string, _delimiter: string, number: string | undefined) =>
+        number === undefined ? match : number.replace(/'/g, ' '));
+    const lexical = maskCLiteralsAndComments(scanInput).split('\n');
+    const barriers = new Set<number>();
+    const possibleMacros = new Set<number>();
+    const conditionals: Array<{ directives: number[]; hasBraces: boolean }> = [];
+    let continued = false;
+    for (let line = 0; line < lines.length; line++) {
+        const text = lexical[line];
+        const splice = /(?:\\|\?\?\/)[ \t]*$/.test(originalLines[line]);
+        if (continued || splice) { barriers.add(line); }
+        continued = splice;
+        if (protectedBlocks.has(lines[line])
+            && (/[{}]/.test(text) || /(?:\/\/|\/\*)\s*clang-format\s+(?:off|on)\b/.test(originalLines[line]))) {
+            barriers.add(line);
+        }
+        if (/<%|%>|\?\?<|\?\?>|\?\?=/.test(text)) { barriers.add(line); }
+        const directive = text.match(/^[ \t]*(?:#|%:)[ \t]*(if|ifdef|ifndef|elif|else|endif)\b/);
+        if (directive) {
+            const keyword = directive[1];
+            if (keyword === 'if' || keyword === 'ifdef' || keyword === 'ifndef') {
+                conditionals.push({ directives: [line], hasBraces: false });
+            } else if (conditionals.length) {
+                const current = conditionals[conditionals.length - 1];
+                current.directives.push(line);
+                if (keyword === 'endif') {
+                    conditionals.pop();
+                    if (current.hasBraces) { current.directives.forEach(index => barriers.add(index)); }
+                }
+            } else {
+                barriers.add(line);
+            }
+        } else if (/^[ \t]*(?:#|%:)/.test(text)) {
+            barriers.add(line);
+        } else if (/[{}]/.test(text)) {
+            conditionals.forEach(conditional => { conditional.hasBraces = true; });
+        }
+        // 独占行的宏可能生成未出现在源码中的花括号，不能跨越它推断数组边界。
+        if (/^[ \t]*[A-Za-z_]\w*/.test(text)) { possibleMacros.add(line); }
+    }
+    conditionals.forEach(conditional => conditional.directives.forEach(index => barriers.add(index)));
+    const masked = lexical.map((line, index) => protectedBlocks.has(lines[index]) || /^[ \t]*(?:#|%:)/.test(line)
+        || barriers.has(index) ? ' '.repeat(line.length) : line).join('\n');
+    const lineStarts = [0];
+    for (let i = 0; i < masked.length; i++) {
+        if (masked[i] === '\n') { lineStarts.push(i + 1); }
+    }
+    const lineAt = (offset: number): number => {
+        let low = 0;
+        let high = lineStarts.length;
+        while (low + 1 < high) {
+            const middle = Math.floor((low + high) / 2);
+            if (lineStarts[middle] <= offset) { low = middle; } else { high = middle; }
+        }
+        return low;
+    };
+    const selected = (line: number): boolean => !range || (line + 1 >= range.start && line + 1 <= range.end);
+    const arrays = /\[[^\[\]\n]*\]\s*=\s*\{/g;
+    let match: RegExpExecArray | null;
+    while ((match = arrays.exec(masked)) !== null) {
+        const outer = match.index + match[0].length - 1;
+        const firstLine = lineAt(match.index);
+        let currentLine = lineAt(outer);
+        let crossedBarrier = false;
+        for (let line = firstLine; line <= currentLine; line++) {
+            if (barriers.has(line)) { crossedBarrier = true; break; }
+        }
+        if (crossedBarrier) { arrays.lastIndex = outer + 1; continue; }
+        let depth = 1;
+        let element = -1;
+        let end = outer + 1;
+        const changes = new Map<number, string>();
+        for (; end < masked.length && depth > 0; end++) {
+            if (currentLine + 1 < lineStarts.length && end === lineStarts[currentLine + 1]) {
+                currentLine++;
+                if (barriers.has(currentLine) || possibleMacros.has(currentLine)
+                    || (depth === 1 && /^[ \t]*\.[A-Za-z_]\w*[ \t]*=/.test(lexical[currentLine]))) {
+                    crossedBarrier = true;
+                    break;
+                }
+            }
+            if (masked[end] === '{') {
+                if (depth === 1) { element = end; }
+                depth++;
+            } else if (masked[end] === '}') {
+                depth--;
+                if (depth !== 1 || element < 0) { continue; }
+                const first = lineAt(element);
+                const last = lineAt(end);
+                const prefix = masked.slice(lineStarts[first], element);
+                const beforeClose = masked.slice(lineStarts[last], end);
+                if (first === last || !/^ *(?:\[[^\]\n]*\]\s*=\s*)?$/.test(prefix)
+                    || !/^ *$/.test(beforeClose) || !/^\s*\.[A-Za-z_]\w*\s*=/.test(masked.slice(element + 1, end))) {
+                    element = -1;
+                    continue;
+                }
+                const indent = (prefix.match(/^ */) ?? [''])[0].length;
+                let innerDepth = 1;
+                for (let line = first + 1; line < last; line++) {
+                    const lineEnd = line + 1 < lineStarts.length ? lineStarts[line + 1] - 1 : masked.length;
+                    const text = masked.slice(lineStarts[line], lineEnd);
+                    if (innerDepth === 1 && selected(line) && /^ *\.[A-Za-z_]\w*\s*=/.test(text)
+                        && /^ *\.[A-Za-z_]\w*\s*=/.test(lines[line])
+                        && /^ */.exec(lines[line])![0].length === indent + 1) {
+                        changes.set(line, ' '.repeat(indent + 4) + lines[line].slice(indent + 1));
+                    }
+                    for (const char of text) {
+                        if (char === '{') { innerDepth++; }
+                        else if (char === '}') { innerDepth--; }
+                    }
+                }
+                if (selected(last) && beforeClose.length === indent + 1
+                    && /^ *$/.test(lines[last].slice(0, beforeClose.length))) {
+                    changes.set(last, ' '.repeat(indent) + lines[last].slice(indent + 1));
+                }
+                element = -1;
+            }
+        }
+        // 只接受完整数组声明的闭合，避免把宏展开的内部花括号误认为数组终点。
+        if (!crossedBarrier && depth === 0 && /^\s*;/.test(masked.slice(end))) {
+            for (const [line, value] of changes) { lines[line] = value; }
+        }
+        arrays.lastIndex = end;
+    }
+    return lines.join('\n');
 }
 
 function alignDoxygenFields(code: string, range?: ClangLineRange): string {

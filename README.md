@@ -2,7 +2,7 @@
 
 面向 FPGA 与嵌入式开发的 VS Code 工具集，支持 Verilog / SystemVerilog、C / C++、MATLAB 和 Tcl。
 
-> 版本：v2.6.0　日期：2026/11/11
+> 版本：v2.6.1　日期：2026/11/12
 
 [快速开始](#快速开始) · [功能总览](#功能总览) · [详细功能](#详细功能) · [配置与开发](#配置与开发)
 
@@ -216,6 +216,7 @@ clangd 使用工程中的 `compile_commands.json`、`.clangd` 或 `compile_flags
 - 保留多行宏的续行、反斜杠和原有宏体布局；注释中的括号（如 Doxygen `@{`）由 clang-format 按注释解析。
 - 保留已分行的 `= { .成员 = … }` 指定成员初始化布局，外层成员逐行排列，内嵌的小数组可继续保持一行；原有单行初始化仍按通用规则处理。
 - 结构体数组采用 `AlignArrayOfStructures: Left`：同列数的表格元素每项一行，按字段列左对齐，避免长命令表合并为一行；普通一维数组保持通用规则。
+- 修正结构体数组多行指定成员多出一格的缩进：成员相对元素左花括号缩进四格，元素右花括号与其左花括号对齐；宏或复杂条件编译使括号边界无法确认时保留原有布局。
 - 完整格式化时，非空 C/C++ 文件末尾保留一个换行，编辑器中显示一个空白行；缺少时补齐，多余空行收为一个，沿用 LF/CRLF。选区未包含文件末尾时不调整文件尾，空文件保持为空。
 - 按参数列对齐连续同名函数调用的逗号、右括号和行尾注释，保留嵌套表达式；函数名、参数数量、缩进或分组边界变化时分别对齐。
 - 按类型、变量名、分号和注释多列对齐结构体成员。
@@ -548,8 +549,8 @@ npm run compile
 当前安装包面向 Windows x64，包含 MATLAB 运行组件和 Windows ripgrep。发布时上传生成的 `.vsix` 文件；修改记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ```bash
-npm run package -- --target win32-x64 --out hanxuyao-plugin-2.6.0-win32-x64.vsix
-code --install-extension hanxuyao-plugin-2.6.0-win32-x64.vsix --force
+npm run package -- --target win32-x64 --out hanxuyao-plugin-2.6.1-win32-x64.vsix
+code --install-extension hanxuyao-plugin-2.6.1-win32-x64.vsix --force
 ```
 
 MATLAB、highlight-words、Rainbow CSV、indent-rainbow、tcl-navigate 上游源码、固定提交和本地适配说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。`npm run compile` 会构建全部内置组件；仅构建高亮、CSV、彩虹缩进和 Tcl 组件可运行 `npm run compile:editor-tools`。
@@ -600,6 +601,7 @@ GitHub 自动测试、打包和发布的配置及使用方法见 [自动发布](
 
 | 版本 | 日期 | 修改内容 |
 |------|------|---------|
+| v2.6.1 | 2026/11/12 | 修正结构体数组指定成员与元素右花括号的多余缩进 |
 | v2.6.0 | 2026/11/11 | 内置彩虹缩进，保留 11 项设置，支持背景色、细线、错误与混用标记及桌面/Web 入口 |
 | v2.5.2 | 2026/11/11 | 重组插件详情页，按功能折叠完整说明并突出快速入口 |
 | v2.5.1 | 2026/11/11 | 补齐 Verilog HDL 兼容语言注册，消除语法贡献的未知语言警告 |

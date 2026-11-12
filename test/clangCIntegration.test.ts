@@ -309,6 +309,41 @@ nativeTests('真实 clang-format 集成', () => {
         expect(await format(expected)).toBe(expected);
     });
 
+    it.each(['\n', '\r\n'])('结构体数组的指定成员缩进八格，元素右花括号缩进四格（%j）', async eol => {
+        const input = [
+            'static const DmaConfig dma_hw_config[] = {', '    {',
+            '     .DeviceId               = AXI_DMA_0_DEVICE_ID,',
+            '     .BaseAddress            = AXI_DMA_0_BASEADDR,',
+            '     .Mm2sMemoryMapDataWidth = 64,', '     }', '};', '',
+        ].join(eol);
+        const expected = [
+            'static const DmaConfig dma_hw_config[] = {', '    {',
+            '        .DeviceId               = AXI_DMA_0_DEVICE_ID,',
+            '        .BaseAddress            = AXI_DMA_0_BASEADDR,',
+            '        .Mm2sMemoryMapDataWidth = 64,', '    }', '};', '',
+        ].join(eol);
+        const filename = path.join(__dirname, 'samples', 'c-array-designator', 'example.c');
+        expect(await format(input, filename)).toBe(expected);
+        expect(await format(expected, filename)).toBe(expected);
+    });
+
+    it.each([
+        ['禁用格式化区域', ['S arr[] = {', '    {', '     .a = 1,', '     },', '// clang-format off',
+            '};', '// clang-format on', 'S obj =', '    {', '     .x = 1,', '     };', ''].join('\n')],
+        ['条件分支中的花括号', ['S arr[] = {', '#if FLAG', '    {', '#else', '    {', '#endif',
+            '     .a = 1,', '     },', '};', 'S obj =', '    {', '     .x = 1,', '     };', ''].join('\n')],
+        ['C++ 数字分隔符', ['S arr[] = {', '    {', "     .a = calc(1'000, '{'),", '     },', '};',
+            'S obj =', '    {', '     .x = 1,', '     };', ''].join('\n')],
+    ])('真实格式化不因%s错误调整后续独立声明', async (_name, input) => {
+        const filename = path.join(__dirname, 'samples', 'c-array-designator', 'example.cpp');
+        const output = await format(input, filename);
+        const originalStart = input.indexOf('S obj');
+        const outputStart = output.indexOf('S obj');
+        expect(originalStart).toBeGreaterThanOrEqual(0);
+        expect(outputStart).toBeGreaterThanOrEqual(0);
+        expect(output.slice(outputStart)).toBe(input.slice(originalStart));
+    });
+
     it.each(['\n', '\r\n'])('保留指定成员初始化的多行布局和内嵌单行数组（%j）', async eol => {
         const initializer = [
             'const NetConfig net_config = {',
