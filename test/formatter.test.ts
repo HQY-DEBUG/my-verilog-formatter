@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : formatter.test.ts
 // 描述    : VerilogFormatter 单元测试
-// 版本    : v2.0.3
-// 日期    : 2026/10/08
+// 版本    : v2.7.1
+// 日期    : 2026/11/13
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.7.1  2026/11/13  多信号定义不参与对齐
 //  v2.0.3  2026/10/08  验证紧凑例化参数展开、嵌套表达式及重复格式化
 //  v0.1.0  2026/05/25  创建测试文件
 // =========================================================================
@@ -60,6 +61,41 @@ describe('VerilogFormatter', () => {
         // 分号列应对齐（每行分号位置相同）
         const semicolonCols = lines.map(l => l.indexOf(';'));
         expect(new Set(semicolonCols).size).toBe(1);
+    });
+
+    test('多个信号定义不参与声明及行尾注释对齐', () => {
+        const input = [
+            'wire [7:0] data; // 数据',
+            'reg a, very_long_name, c; // 多个信号',
+            'reg flag; // 标志',
+        ].join('\n');
+        const expected = [
+            'wire    [7:0]   data    ; // 数据',
+            'reg a, very_long_name, c; // 多个信号',
+            'reg             flag    ; // 标志',
+        ].join('\n');
+
+        const result = fmt['format'](input, defaultCfg);
+        expect(result).toBe(expected);
+        expect(fmt['format'](result, defaultCfg)).toBe(expected);
+    });
+
+    test('初始化表达式中的逗号不视为多个定义', () => {
+        const input = 'wire [7:0] value = {4\'b0, 4\'b1};\nwire flag;';
+        const result = fmt['format'](input, defaultCfg).split('\n');
+        expect(result[0].indexOf(';')).toBe(result[1].indexOf(';'));
+    });
+
+    test('多个带初值的定义不影响相邻信号对齐', () => {
+        const input = [
+            'wire first;',
+            'wire a = func(1, 2), long_name = 0; // 初始化',
+            'wire second;',
+        ].join('\n');
+        const result = fmt['format'](input, defaultCfg).split('\n');
+        expect(result[1]).toBe('wire a = func(1, 2), long_name = 0; // 初始化');
+        expect(result[0].indexOf(';')).toBe(result[2].indexOf(';'));
+        expect(result[0].indexOf(';')).toBeLessThan(result[1].indexOf(';'));
     });
 
     test('带 unpacked array 维度的信号声明参与对齐', () => {

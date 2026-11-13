@@ -2,12 +2,13 @@
 // =========================================================================
 // 文件    : formatter.ts
 // 描述    : Verilog 格式化核心逻辑
-// 版本    : v2.0.3
-// 日期    : 2026/10/08
+// 版本    : v2.7.1
+// 日期    : 2026/11/13
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.7.1  2026/11/13  多信号定义不参与对齐
 //  v2.0.3  2026/10/08  展开紧凑例化参数，忽略字符串和注释中的括号
 //  v0.2.0  2026/05/25  根据代码风格规范实现各格式化规则
 //  v0.1.0  2026/05/25  创建文件，搭建基础框架
@@ -642,16 +643,16 @@ class VerilogFormatter {
     // ---- 对齐信号声明（reg / wire / logic / integer）----//
     // 格式：[属性]  类型    [signed]  [位宽]   名称[= 初值]    ;   // 注释
     alignSignalDeclarations(code) {
-        // 支持综合属性前缀、signed/unsigned、多名称声明、带初值；空行/注释行不断开 block
+        // 支持综合属性前缀、signed/unsigned、带初值；空行、注释和多定义行不断开 block
         // 但只合并 attr 结构相同的信号行（都有属性 or 都没有属性），避免跨组错乱
         const RE = /^(\s*)(\(\*[^*]*\*\)\s*)?(reg|wire|logic|integer)\b\s*(signed|unsigned)?\s*(\[[^\]]*\])?\s*(\w+(?:\s*\[[^\]]+\])?(?:\s*,\s*\w+(?:\s*\[[^\]]+\])?)*)\s*(=\s*[^;\/]+)?\s*;?\s*(\/\/.*)?$/;
         const ATTR_RE = /^\s*\(\*/;
-        const isGap = (l) => l.trim() === '' || /^\s*\/\//.test(l);
+        const isGap = (l) => l.trim() === '' || /^\s*\/\//.test(l) || this.isMultiSignalDeclaration(l);
         const lines = code.split('\n');
         const result = [];
         let i = 0;
         while (i < lines.length) {
-            if (!RE.test(lines[i])) {
+            if (!RE.test(lines[i]) || this.isMultiSignalDeclaration(lines[i])) {
                 result.push(lines[i++]);
                 continue;
             }
@@ -659,7 +660,7 @@ class VerilogFormatter {
             const block = [];
             while (i < lines.length) {
                 // 连续行也须 attr 结构一致，attr 与非 attr 不合并到同一 block
-                if (RE.test(lines[i]) && ATTR_RE.test(lines[i]) === hasAttr) {
+                if (RE.test(lines[i]) && !this.isMultiSignalDeclaration(lines[i]) && ATTR_RE.test(lines[i]) === hasAttr) {
                     block.push(lines[i++]);
                 }
                 else if (isGap(lines[i])) {
@@ -687,7 +688,7 @@ class VerilogFormatter {
     }
     formatSignalBlock(lines, RE) {
         const parsed = lines.map(line => {
-            const m = line.match(RE);
+            const m = this.isMultiSignalDeclaration(line) ? null : line.match(RE);
             if (!m) {
                 return { indent: '', attr: '', type: '', sign: '', width: '', name: line, comment: '' };
             }
@@ -708,7 +709,7 @@ class VerilogFormatter {
         const maxType = Math.max(...parsed.map(p => p.type.length));
         const maxSign = Math.max(...parsed.map(p => p.sign.length));
         const maxWidth = Math.max(...parsed.map(p => p.width.length));
-        const maxName = Math.max(...parsed.map(p => p.name.length));
+        const maxName = Math.max(...parsed.filter(p => p.type).map(p => p.name.length));
         return parsed.map(p => {
             if (!p.type) {
                 return p.name;
@@ -726,6 +727,28 @@ class VerilogFormatter {
                 : '';
             return `${p.indent}${attrPad}${typePad}${signPad}${widthPad}${namePad};${cmt}`;
         });
+    }
+    isMultiSignalDeclaration(line) {
+        if (!/^\s*(?:\(\*[^*]*\*\)\s*)?(?:reg|wire|logic|integer)\b/.test(line)) {
+            return false;
+        }
+        const code = this.maskVerilogNonCode(line);
+        let depth = 0;
+        for (const char of code) {
+            if ('([{'.includes(char)) {
+                depth++;
+            }
+            else if (')]}'.includes(char)) {
+                depth--;
+            }
+            else if (char === ';' && depth === 0) {
+                break;
+            }
+            else if (char === ',' && depth === 0) {
+                return true;
+            }
+        }
+        return false;
     }
     maskVerilogNonCode(code) {
         // 保留字符位置，仅让结构扫描忽略字符串、注释和转义标识符中的括号与逗号。
@@ -983,7 +1006,7 @@ class VerilogFormatter {
     // 判断一行是否有行尾注释（行本身不是注释行）
     hasTrailingComment(line) {
         const s = line.trim();
-        if (!s || s.startsWith('//') || s.startsWith('/*') || s.startsWith('*')) {
+        if (!s || s.startsWith('//') || s.startsWith('/*') || s.startsWith('*') || this.isMultiSignalDeclaration(line)) {
             return false;
         }
         return /\S.*\/\//.test(line);
