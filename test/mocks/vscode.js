@@ -74,7 +74,7 @@ module.exports = {
             this.children = [];
         }
     },
-    SymbolKind: { Module: 1, Field: 2, Constant: 3, Variable: 4, Object: 5 },
+    SymbolKind: { Module: 1, Field: 2, Constant: 3, Variable: 4, Object: 5, Namespace: 6 },
     EventEmitter: class EventEmitter {
         constructor() { this._listeners = []; }
         get event() { return (cb) => this._listeners.push(cb); }

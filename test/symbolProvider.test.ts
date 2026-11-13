@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : symbolProvider.test.ts
 // 描述    : Verilog 大纲符号测试
-// 版本    : v0.1.0
-// 日期    : 2026/06/17
+// 版本    : v2.7.0
+// 日期    : 2026/11/13
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.7.0  2026/11/13  验证声明类型分组及跳转位置
 //  v0.1.0  2026/06/17  创建测试文件
 // =========================================================================
 
@@ -20,6 +21,22 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 describe('VerilogDocumentSymbolProvider', () => {
+    it('按声明类型分组并保留跳转位置，各模块独立', () => {
+        const text = [
+            'module top;', 'input clk;', 'parameter WIDTH = 8;',
+            'wire a, b;', 'reg count;', 'logic ready;', 'integer index;',
+            'wire later;', 'child u_child (.clk(clk));', 'endmodule',
+            'module second;', 'wire other;', 'endmodule',
+        ].join('\n');
+        const symbols = new VerilogDocumentSymbolProvider().provideDocumentSymbols({ getText: () => text } as any);
+        const groups = symbols[0].children;
+        expect(groups.map(sym => sym.name)).toEqual(['port', 'parameter', 'wire', 'reg', 'logic', 'integer', 'u_child  (child)']);
+        expect(groups[2].children.map(sym => [sym.name, sym.detail, sym.selectionRange.start.line]))
+            .toEqual([['a', 'wire', 3], ['b', 'wire', 3], ['later', 'wire', 7]]);
+        expect(groups[2].range.end.line).toBe(7);
+        expect(groups[3].children.map(sym => [sym.name, sym.detail])).toEqual([['count', 'reg']]);
+        expect(symbols[1].children[0].children.map(sym => sym.name)).toEqual(['other']);
+    });
     it('大纲 Provider 应覆盖所有 Verilog 语言 id', () => {
         const sourcePath = path.join(__dirname, '..', 'src', 'features', 'verilog', 'symbolProvider.ts');
         const sourceText = fs.readFileSync(sourcePath, 'utf8');
@@ -132,7 +149,7 @@ describe('VerilogDocumentSymbolProvider', () => {
         const symbols = new VerilogDocumentSymbolProvider().provideDocumentSymbols({ getText: () => text } as any);
         expect(symbols[0].children.filter(sym => sym.detail === 'instantiation').map(sym => sym.name))
             .toEqual(['real_ila  (ila_0)']);
-        expect(symbols[1].children.map(sym => sym.name)).toEqual(['other_signal']);
+        expect(symbols[1].children[0].children.map(sym => sym.name)).toEqual(['other_signal']);
     });
 });
 

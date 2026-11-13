@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : symbolProvider.ts
 // 描述    : 工作区符号索引；DefinitionProvider + HoverProvider
-// 版本    : v0.1.0
-// 日期    : 2026/05/25
+// 版本    : v2.7.0
+// 日期    : 2026/11/13
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.7.0  2026/11/13  按声明类型分组大纲符号
 //  v0.1.0  2026/05/25  创建文件
 // =========================================================================
 
@@ -353,6 +354,20 @@ export class VerilogDocumentSymbolProvider implements vscode.DocumentSymbolProvi
         };
         const result : vscode.DocumentSymbol[] = [];
         let   mod    : vscode.DocumentSymbol | null = null;
+        let groups = new Map<string, vscode.DocumentSymbol>();
+
+        const addDeclaration = (category: string, name: string, kind: vscode.SymbolKind, range: vscode.Range): void => {
+            if (!mod) { return; }
+            let group = groups.get(category);
+            if (!group) {
+                group = new vscode.DocumentSymbol(category, '', vscode.SymbolKind.Namespace, range, range);
+                groups.set(category, group);
+                mod.children.push(group);
+            } else {
+                group.range = new vscode.Range(group.range.start, range.end);
+            }
+            group.children.push(new vscode.DocumentSymbol(name, category, kind, range, range));
+        };
 
         for (let i = 0; i < lines.length; i++) {
             const line    = lines[i].replace(/\r$/, '');
@@ -363,6 +378,7 @@ export class VerilogDocumentSymbolProvider implements vscode.DocumentSymbolProvi
             const modM = trimmed.match(/^module\s+(\w+)/);
             if (modM) {
                 mod = new vscode.DocumentSymbol(modM[1], 'module', vscode.SymbolKind.Module, range, range);
+                groups = new Map();
                 result.push(mod);
                 continue;
             }
@@ -379,28 +395,23 @@ export class VerilogDocumentSymbolProvider implements vscode.DocumentSymbolProvi
             // parameter / localparam
             const paramM = trimmed.match(/^(?:localparam|parameter)\b\s*(?:\[[^\]]*\]\s*)?(\w+)\s*[=,]/);
             if (paramM) {
-                mod.children.push(new vscode.DocumentSymbol(
-                    paramM[1], 'parameter', vscode.SymbolKind.Constant, range, range,
-                ));
+                addDeclaration('parameter', paramM[1], vscode.SymbolKind.Constant, range);
                 continue;
             }
 
             // 端口声明
             if (/^\s*(?:\(\*[^*]*\*\)\s*)?(?:input|output|inout)\b/.test(line)) {
                 for (const name of extractPortNamesFromLine(line)) {
-                    mod.children.push(new vscode.DocumentSymbol(
-                        name, 'port', vscode.SymbolKind.Field, range, range,
-                    ));
+                    addDeclaration('port', name, vscode.SymbolKind.Field, range);
                 }
                 continue;
             }
 
             // 信号声明
-            if (/^\s*(?:\(\*[^*]*\*\)\s*)?(?:reg|wire|logic|integer)\b/.test(line)) {
+            const signalMatch = line.match(/^\s*(?:\(\*[^*]*\*\)\s*)?(reg|wire|logic|integer)\b/);
+            if (signalMatch) {
                 for (const name of extractSignalNamesFromLine(line)) {
-                    mod.children.push(new vscode.DocumentSymbol(
-                        name, 'signal', vscode.SymbolKind.Variable, range, range,
-                    ));
+                    addDeclaration(signalMatch[1], name, vscode.SymbolKind.Variable, range);
                 }
                 continue;
             }

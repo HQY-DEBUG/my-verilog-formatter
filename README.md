@@ -2,7 +2,7 @@
 
 面向 FPGA 与嵌入式开发的 VS Code 工具集，支持 Verilog / SystemVerilog、C / C++、MATLAB 和 Tcl。
 
-> 版本：v2.6.1　日期：2026/11/12
+> 版本：v2.7.0　日期：2026/11/13
 
 [快速开始](#快速开始) · [功能总览](#功能总览) · [详细功能](#详细功能) · [配置与开发](#配置与开发)
 
@@ -549,8 +549,8 @@ npm run compile
 当前安装包面向 Windows x64，包含 MATLAB 运行组件和 Windows ripgrep。发布时上传生成的 `.vsix` 文件；修改记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ```bash
-npm run package -- --target win32-x64 --out hanxuyao-plugin-2.6.1-win32-x64.vsix
-code --install-extension hanxuyao-plugin-2.6.1-win32-x64.vsix --force
+npm run package -- --target win32-x64 --out hanxuyao-plugin-2.7.0-win32-x64.vsix
+code --install-extension hanxuyao-plugin-2.7.0-win32-x64.vsix --force
 ```
 
 MATLAB、highlight-words、Rainbow CSV、indent-rainbow、tcl-navigate 上游源码、固定提交和本地适配说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。`npm run compile` 会构建全部内置组件；仅构建高亮、CSV、彩虹缩进和 Tcl 组件可运行 `npm run compile:editor-tools`。
@@ -601,6 +601,7 @@ GitHub 自动测试、打包和发布的配置及使用方法见 [自动发布](
 
 | 版本 | 日期 | 修改内容 |
 |------|------|---------|
+| v2.7.0 | 2026/11/13 | 大纲按声明类型分组并支持折叠 |
 | v2.6.1 | 2026/11/12 | 修正结构体数组指定成员与元素右花括号的多余缩进 |
 | v2.6.0 | 2026/11/11 | 内置彩虹缩进，保留 11 项设置，支持背景色、细线、错误与混用标记及桌面/Web 入口 |
 | v2.5.2 | 2026/11/11 | 重组插件详情页，按功能折叠完整说明并突出快速入口 |
