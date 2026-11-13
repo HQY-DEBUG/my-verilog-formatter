@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : formatter.test.ts
 // 描述    : VerilogFormatter 单元测试
-// 版本    : v2.7.1
+// 版本    : v2.7.2
 // 日期    : 2026/11/13
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.7.2  2026/11/13  多信号定义按连续区段分别对齐
 //  v2.7.1  2026/11/13  多信号定义不参与对齐
 //  v2.0.3  2026/10/08  验证紧凑例化参数展开、嵌套表达式及重复格式化
 //  v0.1.0  2026/05/25  创建测试文件
@@ -96,6 +97,30 @@ describe('VerilogFormatter', () => {
         expect(result[1]).toBe('wire a = func(1, 2), long_name = 0; // 初始化');
         expect(result[0].indexOf(';')).toBe(result[2].indexOf(';'));
         expect(result[0].indexOf(';')).toBeLessThan(result[1].indexOf(';'));
+    });
+
+    test('连续多定义声明分别按区段对齐，不影响单定义行', () => {
+        const input = [
+            'wire data; // 数据',
+            'reg long_signal_name, long_signal_delay, long_signal_last; // 第一组',
+            'reg trig, trig_d; // 第一组',
+            'reg flag;',
+            '',
+            '// 下一组',
+            'reg [19:0] x, y; // 第二组',
+            'wire sync_x, sync_y; // 第二组',
+            'wire ready;',
+        ].join('\n');
+        const result = fmt['format'](input, defaultCfg);
+        const lines = result.split('\n');
+        expect(lines[1].indexOf(';')).toBe(lines[2].indexOf(';'));
+        expect(lines[1].indexOf('//')).toBe(lines[2].indexOf('//'));
+        expect(lines[6].indexOf(';')).toBe(lines[7].indexOf(';'));
+        expect(lines[6].indexOf('//')).toBe(lines[7].indexOf('//'));
+        expect(lines[1].indexOf(';')).toBeGreaterThan(lines[6].indexOf(';'));
+        expect(lines[0].indexOf(';')).toBe(lines[3].indexOf(';'));
+        expect(lines[3].indexOf(';')).toBe(lines[8].indexOf(';'));
+        expect(fmt['format'](result, defaultCfg)).toBe(result);
     });
 
     test('带 unpacked array 维度的信号声明参与对齐', () => {

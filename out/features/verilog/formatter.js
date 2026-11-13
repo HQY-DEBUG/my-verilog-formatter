@@ -2,12 +2,13 @@
 // =========================================================================
 // 文件    : formatter.ts
 // 描述    : Verilog 格式化核心逻辑
-// 版本    : v2.7.1
+// 版本    : v2.7.2
 // 日期    : 2026/11/13
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.7.2  2026/11/13  多信号定义按连续区段分别对齐
 //  v2.7.1  2026/11/13  多信号定义不参与对齐
 //  v2.0.3  2026/10/08  展开紧凑例化参数，忽略字符串和注释中的括号
 //  v0.2.0  2026/05/25  根据代码风格规范实现各格式化规则
@@ -684,11 +685,24 @@ class VerilogFormatter {
             }
             result.push(...this.formatSignalBlock(block, RE));
         }
-        return result.join('\n');
+        const grouped = [];
+        let index = 0;
+        while (index < result.length) {
+            if (!RE.test(result[index]) || !this.isMultiSignalDeclaration(result[index])) {
+                grouped.push(result[index++]);
+                continue;
+            }
+            const block = [];
+            while (index < result.length && RE.test(result[index]) && this.isMultiSignalDeclaration(result[index])) {
+                block.push(result[index++]);
+            }
+            grouped.push(...(block.length > 1 ? this.formatSignalBlock(block, RE, true) : block));
+        }
+        return grouped.join('\n');
     }
-    formatSignalBlock(lines, RE) {
+    formatSignalBlock(lines, RE, includeMulti = false) {
         const parsed = lines.map(line => {
-            const m = this.isMultiSignalDeclaration(line) ? null : line.match(RE);
+            const m = !includeMulti && this.isMultiSignalDeclaration(line) ? null : line.match(RE);
             if (!m) {
                 return { indent: '', attr: '', type: '', sign: '', width: '', name: line, comment: '' };
             }
