@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : formatter.test.ts
 // 描述    : VerilogFormatter 单元测试
-// 版本    : v2.7.2
-// 日期    : 2026/11/13
+// 版本    : v2.7.3
+// 日期    : 2026/11/14
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.7.3  2026/11/14  修正同行 end else if 的拆行和缩进
 //  v2.7.2  2026/11/13  多信号定义按连续区段分别对齐
 //  v2.7.1  2026/11/13  多信号定义不参与对齐
 //  v2.0.3  2026/10/08  验证紧凑例化参数展开、嵌套表达式及重复格式化
@@ -914,6 +915,26 @@ describe('VerilogFormatter', () => {
         ].join('\n');
 
         expect(fmt['format'](input, defaultCfg)).toBe(expected);
+    });
+
+    test.each([
+        ['end else if (div_cnt == 4)', 'begin'],
+        ['end else if (div_cnt == 4) begin // 分支', null],
+    ])('同行 end else if 应拆行并与对应 if 对齐：%s', (branch, nextLine) => {
+        const input = [
+            'always @(posedge clk)', 'begin', 'if (sync_cmd)', 'begin',
+            'clk_div <= 0;', branch, ...(nextLine ? [nextLine] : []),
+            'clk_div <= 1;', 'end', 'else', 'begin', 'clk_div <= 0;', 'end', 'end',
+        ].join('\n');
+        const expected = [
+            'always @(posedge clk)', '  begin', '    if (sync_cmd)', '      begin',
+            '        clk_div <= 0;', '      end', '    else if (div_cnt == 4)',
+            `      begin${nextLine ? '' : ' // 分支'}`, '        clk_div <= 1;',
+            '      end', '    else', '      begin', '        clk_div <= 0;', '      end', '  end',
+        ].join('\n');
+        const result = fmt.format(input, defaultCfg);
+        expect(result).toBe(expected);
+        expect(fmt.format(result, defaultCfg)).toBe(expected);
     });
 
     test('end 后的 else if 应与对应的外层 if 对齐', () => {

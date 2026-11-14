@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : formatter.ts
 // 描述    : Verilog 格式化核心逻辑
-// 版本    : v2.7.2
-// 日期    : 2026/11/13
+// 版本    : v2.7.3
+// 日期    : 2026/11/14
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.7.3  2026/11/14  修正同行 end else if 的拆行和缩进
 //  v2.7.2  2026/11/13  多信号定义按连续区段分别对齐
 //  v2.7.1  2026/11/13  多信号定义不参与对齐
 //  v2.0.3  2026/10/08  展开紧凑例化参数，忽略字符串和注释中的括号
@@ -122,6 +123,21 @@ export class VerilogFormatter
             const stripped = line.trim();
             // 去掉行尾注释后分析结构
             const noComment = stripped.replace(/\/\/.*$/, '').trimEnd();
+
+            // 同行的 end 和 else if 必须分别进入缩进状态机。
+            const endElseIf = noComment.match(/^end\s+(else\s+if\b.*)$/);
+            if (endElseIf) {
+                const comment = stripped.slice(noComment.length);
+                const branch = endElseIf[1];
+                const branchBegin = branch.match(/^(.*?)\s+begin(\s*:\s*\w+)?\s*$/);
+                result.push(indent + 'end');
+                if (branchBegin) {
+                    result.push(indent + branchBegin[1], indent + 'begin' + (branchBegin[2] ?? '') + comment);
+                } else {
+                    result.push(indent + branch + comment);
+                }
+                continue;
+            }
 
             // "end else begin [: label]" → end / else / begin [: label]（三行）
             const endElseBegin = noComment.match(/^end\s+else\s+begin(\s*:\s*\w+)?\s*$/);
