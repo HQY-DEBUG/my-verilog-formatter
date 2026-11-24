@@ -69,7 +69,7 @@ const CONTROL_KEYWORDS = new Set(['if', 'for', 'while', 'switch', 'catch']);
 const NON_TYPE_KEYWORDS = new Set([
     'break', 'case', 'continue', 'delete', 'else', 'goto', 'new', 'return', 'throw', 'using',
 ]);
-const C_LITERALS_AND_COMMENTS = /R"([^ ()\\\t\r\n]{0,16})\([\s\S]*?\)\1"|"(?:\\[\s\S]|[^"\\])*"|'(?:\\[^\r\n]|[^'\\\r\n])+'|\/\*[\s\S]*?(?:\*\/|$)|\/\/[^\n]*/g;
+const C_LITERALS_AND_COMMENTS = /R"([^ ()\\\t\r\n]{0,16})\([\s\S]*?\)\1"|"(?:\\[\s\S]|[^"\\])*"|'(?:\\[^\r\n]|[^'\\\r\n])+'|\/\*[\s\S]*?(?:\*\/|$)|\/\/(?:\\[ \t]*\r?\n|[^\n])*/g;
 
 /** 应用定制对齐和 Doxygen 块布局；其余通用排版由 clang-format 完成。 */
 export function formatC(code: string, range?: ClangLineRange): string {
@@ -97,11 +97,7 @@ function indentArrayDesignators(code: string, protectedBlocks: ReadonlyMap<strin
     // clang-format 的数组列对齐可能将独占行的元素内容和右花括号缩进到左花括号后一格。
     const lines = code.split('\n');
     const originalLines = lines.map(line => protectedBlocks.get(line) ?? line);
-    // 优先识别注释和字面量，再仅遮蔽数字 token 中的分隔符，避免把 u8'A' 等字符字面量误判为数字。
-    const tokens = new RegExp(`${C_LITERALS_AND_COMMENTS.source}|((?<![A-Za-z_0-9])(?:[0-9]|\\.[0-9])(?:[A-Za-z_0-9.]|'(?=[A-Za-z_0-9]))*)`, 'g');
-    const scanInput = originalLines.join('\n').replace(tokens, (match: string, _delimiter: string, number: string | undefined) =>
-        number === undefined ? match : number.replace(/'/g, ' '));
-    const lexical = maskCLiteralsAndComments(scanInput).split('\n');
+    const lexical = maskCInitializerTokens(originalLines.join('\n')).split('\n');
     const barriers = new Set<number>();
     const possibleMacros = new Set<number>();
     const conditionals: Array<{ directives: number[]; hasBraces: boolean }> = [];
@@ -400,7 +396,7 @@ function alignTypedefDeclarations(code: string): string {
 
 function alignVariableDeclarations(code: string): string {
     const lines = code.split('\n');
-    const maskedLines = maskCLiteralsAndComments(code).split('\n');
+    const maskedLines = maskCInitializerTokens(code).split('\n');
     const result: string[] = [];
 
     for (let i = 0; i < lines.length;) {
@@ -459,6 +455,13 @@ function maskCLiteralsAndComments(code: string): string {
         C_LITERALS_AND_COMMENTS,
         literal => literal.replace(/[^\n]/g, ' '),
     );
+}
+
+function maskCInitializerTokens(code: string): string {
+    // 先识别完整数字，避免把 C++ 数字分隔符和后续引号误配成字符字面量。
+    const tokens = new RegExp(`${C_LITERALS_AND_COMMENTS.source}|((?<![A-Za-z_0-9])(?:[0-9]|\\.[0-9])(?:[A-Za-z_0-9.]|'(?=[A-Za-z_0-9]))*)`, 'g');
+    return code.replace(tokens, (match: string, _delimiter: string, number: string | undefined) =>
+        number === undefined ? match.replace(/[^\n]/g, ' ') : match);
 }
 
 function alignAssignments(code: string): string {

@@ -446,6 +446,23 @@ describe('C/C++ formatter', () => {
         expect(formatC(output)).toBe(output);
     });
 
+    it('数字分隔符不会遮住多变量声明之间的逗号', () => {
+        for (const declaration of [
+            "static u32 first = 1'000, second = 2'000;",
+            "static u32 first[] = {1'000, 2}, second[] = {3'000, 4};",
+        ]) {
+            const input = ['static bool ready;', declaration, 'static int trailing;'].join('\n');
+            expect(formatC(input)).toBe(input);
+        }
+    });
+
+    it('跳过行注释续行内看似数组的声明', () => {
+        const input = ['static bool ready; // 说明 \\', 'static u32 values[2] = {1, 2};',
+            'static int trailing;'].join('\n');
+        expect(formatC(input)).toBe(input);
+        expect(formatC(input, { start: 2, end: 3 })).toBe(input);
+    });
+
     it('对齐连续的变量定义', () => {
         const input = [
             'uint8_t a = 0;',
