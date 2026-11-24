@@ -77,6 +77,22 @@ nativeTests('真实 clang-format 集成', () => {
         expect(await format(output)).toBe(output);
     });
 
+    it.each(['example.c', 'example.cpp'])('将 bool 和带花括号初始值的数组纳入同一声明组（%s）', async file => {
+        const input = [
+            'static u32 g_last_id;',
+            'static bool g_has_source_error;',
+            'static u32 g_axis_code[2] = {SCANHEAD_QUERY_POSITION, SCANHEAD_QUERY_POSITION};',
+            'static int32 g_output_xy[2];', '',
+        ].join('\n');
+        const filename = path.join(__dirname, file);
+        const output = await format(input, filename);
+        const lines = output.trimEnd().split('\n');
+        expect(lines.map(line => line.indexOf('g_'))).toEqual([13, 13, 13, 13]);
+        expect(new Set(lines.map(line => line.indexOf(';'))).size).toBe(1);
+        expect(lines[2]).toContain('{SCANHEAD_QUERY_POSITION, SCANHEAD_QUERY_POSITION}');
+        expect(await format(output, filename)).toBe(output);
+    });
+
     it('普通 C++ 布局遵循原生规则，短函数保持多行', async () => {
         const input = 'namespace sample{\nvoid run(int n){for(int i=0;i<n;++i){if(i%2==0){emit(i);}else{emit(-i);}}}\n}\n'
             + 'static void ps_led_flashing() { AlGpio_Hal_WritePin(GPIO, PL_LED_1, ~LedState); }\n';

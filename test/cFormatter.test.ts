@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.test.ts
 // 描述    : C/C++ 格式化器回归测试
-// 版本    : v2.6.1
-// 日期    : 2026/11/12
+// 版本    : v2.7.4
+// 日期    : 2026/11/24
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.7.4  2026/11/24  验证初始化列表内部逗号与多变量声明边界
 //  v2.6.1  2026/11/12  验证结构体数组成员缩进及保护边界
 //  v2.4.1  2026/11/11  验证单参数 Doxygen 注释整体对齐
 //  v2.2.8  2026/11/09  验证 Doxygen 参数及返回值说明列对齐
@@ -428,6 +429,20 @@ describe('C/C++ formatter', () => {
         expect(output).toContain('\n/* GBE error code define */\ntypedef enum {\n');
         expect(output).toContain('\n    AL_GBE_ERR_CONFIG');
         expect(output).toContain('\n} AL_GBE_ErrorCodeEnum;');
+        expect(formatC(output)).toBe(output);
+    });
+
+    it('区分花括号初始值的内部逗号和分隔声明的逗号', () => {
+        const array = 'static const Pair entries[2] = {{"https://a,b", 1}, {"c,d", 2}}; // 表';
+        const boundary = 'static Pair first = {"a", 1}, second = {"b", 2};';
+        const input = ['static bool ready;', array, boundary, 'static int trailing;'].join('\n');
+        const output = formatC(input);
+        const lines = output.split('\n');
+        expect(lines[0].indexOf('ready')).toBe(lines[1].indexOf('entries'));
+        expect(lines[0].indexOf(';')).toBe(lines[1].indexOf(';'));
+        expect(lines[1]).toContain('{{"https://a,b", 1}, {"c,d", 2}}');
+        expect(lines[1]).toMatch(/;\s+\/\/ 表$/);
+        expect(lines.slice(2)).toEqual([boundary, 'static int trailing;']);
         expect(formatC(output)).toBe(output);
     });
 

@@ -2,7 +2,7 @@
 
 面向 FPGA 与嵌入式开发的 VS Code 工具集，支持 Verilog / SystemVerilog、C / C++、MATLAB 和 Tcl。
 
-> 版本：v2.7.3　日期：2026/11/14
+> 版本：v2.7.4　日期：2026/11/24
 
 [快速开始](#快速开始) · [功能总览](#功能总览) · [详细功能](#详细功能) · [配置与开发](#配置与开发)
 
@@ -210,6 +210,7 @@ clangd 使用工程中的 `compile_commands.json`、`.clangd` 或 `compile_flags
 支持 `.c`、`.cpp`、`.h` 文件，使用 `Ctrl+Alt+F` 或 `Shift+Alt+F` 格式化。通用空格、缩进、花括号布局和换行实际调用 `clang-format`，继承当前文件所在工程的 `.clang-format`，没有配置时采用 LLVM 风格。在此基础上保留四空格缩进和宏体布局，并应用以下定制对齐：
 
 - 按完整类型、变量名、等号、初始值、分号和行尾注释多列对齐连续变量定义，支持 `uint32_t`、`static bool` 等混合类型。指针及引用符号单独占列并紧贴名称，使 `*payload` 中的 `payload` 与普通变量名首字符对齐，兼容多级指针与指针数组。
+- 带单行花括号初始值的数组声明也参与连续变量对齐，例如 `int values[2] = {1, 2};`。
 - 连续声明均带 `static`、`const` 等修饰符且出现 `struct`、`union`、`enum` 或 `class` 时，进一步拆分修饰符、类型关键字和类型名列；按缩进、空行和注释分组，其他声明组保留既有类型布局。
 - 对齐函数内连续赋值的左值、等号、右侧表达式、分号和行尾注释，支持数组元素及成员赋值；空行、其他语句和缩进层级变化会开始新组。
 - 按宏名、宏值和行尾注释对齐连续 `#define`，带注释和无注释的宏共同计算列宽。
@@ -549,8 +550,8 @@ npm run compile
 当前安装包面向 Windows x64，包含 MATLAB 运行组件和 Windows ripgrep。发布时上传生成的 `.vsix` 文件；修改记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ```bash
-npm run package -- --target win32-x64 --out hanxuyao-plugin-2.7.3-win32-x64.vsix
-code --install-extension hanxuyao-plugin-2.7.3-win32-x64.vsix --force
+npm run package -- --target win32-x64 --out hanxuyao-plugin-2.7.4-win32-x64.vsix
+code --install-extension hanxuyao-plugin-2.7.4-win32-x64.vsix --force
 ```
 
 MATLAB、highlight-words、Rainbow CSV、indent-rainbow、tcl-navigate 上游源码、固定提交和本地适配说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。`npm run compile` 会构建全部内置组件；仅构建高亮、CSV、彩虹缩进和 Tcl 组件可运行 `npm run compile:editor-tools`。
@@ -601,6 +602,7 @@ GitHub 自动测试、打包和发布的配置及使用方法见 [自动发布](
 
 | 版本 | 日期 | 修改内容 |
 |------|------|---------|
+| v2.7.4 | 2026/11/24 | 修正 C/C++ 带花括号初始值的数组打断连续变量对齐的问题 |
 | v2.7.3 | 2026/11/14 | 修正同行 end else if 的拆行和缩进 |
 | v2.7.2 | 2026/11/13 | 多信号定义按连续区段分别对齐 |
 | v2.7.1 | 2026/11/13 | 多信号定义不参与声明和注释对齐 |

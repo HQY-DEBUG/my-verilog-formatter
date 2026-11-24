@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.ts
 // 描述    : clang-format 通用排版与 C/C++ 定制多列对齐
-// 版本    : v2.6.1
-// 日期    : 2026/11/12
+// 版本    : v2.7.4
+// 日期    : 2026/11/24
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.7.4  2026/11/24  将单行花括号初始值纳入连续变量声明对齐
 //  v2.6.1  2026/11/12  修正结构体数组指定成员和右花括号缩进
 //  v2.4.1  2026/11/11  对齐仅有一个参数的 Doxygen 注释块
 //  v2.2.8  2026/11/09  对齐 Doxygen 标签、参数名称和说明列
@@ -399,10 +400,11 @@ function alignTypedefDeclarations(code: string): string {
 
 function alignVariableDeclarations(code: string): string {
     const lines = code.split('\n');
+    const maskedLines = maskCLiteralsAndComments(code).split('\n');
     const result: string[] = [];
 
     for (let i = 0; i < lines.length;) {
-        const first = parseDeclaration(lines[i]);
+        const first = parseDeclaration(lines[i], maskedLines[i]);
         if (!first) {
             result.push(lines[i++]);
             continue;
@@ -411,7 +413,7 @@ function alignVariableDeclarations(code: string): string {
         const block: DeclarationLine[] = [first];
         let end = i + 1;
         while (end < lines.length) {
-            const parsed = parseDeclaration(lines[end]);
+            const parsed = parseDeclaration(lines[end], maskedLines[end]);
             if (!parsed || parsed.typePrefix.match(/^\s*/)?.[0] !== first.typePrefix.match(/^\s*/)?.[0]) { break; }
             block.push(parsed);
             end++;
@@ -753,30 +755,46 @@ function parseEnumMember(line: string): EnumMemberLine | undefined {
     };
 }
 
-function parseDeclaration(line: string): DeclarationLine | undefined {
+function parseDeclaration(line: string, maskedLine: string): DeclarationLine | undefined {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('//')) {
         return undefined;
     }
 
-    const commentIndex = line.indexOf('//');
-    const comment = commentIndex >= 0 ? line.slice(commentIndex).trim() : '';
-    const statement = (commentIndex >= 0 ? line.slice(0, commentIndex) : line).trimEnd();
-    const trimmedStatement = statement.trim();
-    if (!trimmedStatement.endsWith(';')
-        || /^[{}]/.test(trimmedStatement)
-        || trimmedStatement.includes('(')
-        || trimmedStatement.includes(',')
-        || /^(?:typedef|using)\b/.test(trimmedStatement)) {
+    const semicolon = maskedLine.lastIndexOf(';');
+    if (semicolon < 0 || maskedLine.slice(semicolon + 1).trim() || /^[{}]/.test(trimmed)
+        || /^(?:typedef|using)\b/.test(trimmed)) {
         return undefined;
     }
-    const semicolon = statement.lastIndexOf(';');
-    if (semicolon < 0) { return undefined; }
+    const comment = line.slice(semicolon + 1).trim();
+    if (comment && !comment.startsWith('//')) { return undefined; }
 
-    const body = statement.slice(0, semicolon);
-    const equal = body.search(/(?<![=!<>])=(?!=)/);
-    const declarator = (equal >= 0 ? body.slice(0, equal) : body).trimEnd();
-    const initializer = equal >= 0 ? `= ${body.slice(equal + 1).trim()}` : '';
+    const statement = maskedLine.slice(0, semicolon);
+    const equal = statement.search(/(?<![=!<>])=(?!=)/);
+    const declaratorEnd = equal >= 0 ? equal : semicolon;
+    if (/[(),;]/.test(statement.slice(0, declaratorEnd))) { return undefined; }
+
+    let initializer = '';
+    if (equal >= 0) {
+        const value = statement.slice(equal + 1).trim();
+        if (value.startsWith('{')) {
+            // 逗号可以位于初始值内部。外层花括号提前闭合时，后面的内容可能是另一个声明。
+            let depth = 0;
+            for (let i = 0; i < value.length; i++) {
+                if (value[i] === '{') {
+                    depth++;
+                } else if (value[i] === '}') {
+                    depth--;
+                    if (depth === 0 && i !== value.length - 1) { return undefined; }
+                }
+            }
+            if (depth !== 0) { return undefined; }
+        } else if (/[(),;{}]/.test(value)) {
+            return undefined;
+        }
+        initializer = `= ${line.slice(equal + 1, semicolon).trim()}`;
+    }
+    const declarator = line.slice(0, declaratorEnd).trimEnd();
     const match = declarator.match(/^(\s*)(.*?)([A-Za-z_]\w*)(\s*(?:\[[^\]]*\]\s*)*)$/);
     if (!match) { return undefined; }
 
