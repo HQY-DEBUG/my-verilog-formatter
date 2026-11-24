@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.test.ts
 // 描述    : C/C++ 格式化器回归测试
-// 版本    : v2.7.4
+// 版本    : v2.7.5
 // 日期    : 2026/11/24
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.7.5  2026/11/24  验证控制语句空行的选区和保护边界
 //  v2.7.4  2026/11/24  验证初始化列表内部逗号与多变量声明边界
 //  v2.6.1  2026/11/12  验证结构体数组成员缩进及保护边界
 //  v2.4.1  2026/11/11  验证单参数 Doxygen 注释整体对齐
@@ -33,6 +34,35 @@
 import { formatC } from '../src/features/c/cFormatter';
 
 describe('C/C++ formatter', () => {
+    it('选区格式化只给完整选中的控制语句补尾空行', () => {
+        const input = ['void run() {', '    if (ready)', '        work();', '    first();',
+            '    for (;;) {', '        break;', '    }', '    second();', '}', ''].join('\n');
+        expect(formatC(input, { start: 2, end: 4 })).toBe(input.replace('        work();\n', '        work();\n\n'));
+        expect(formatC(input, { start: 2, end: 3 })).toBe(input);
+    });
+
+    it('宏和禁用格式化区域中的 if 与 for 保留布局', () => {
+        const guarded = ['#define UPDATE() \\', '    if (ready) { \\', '        work(); \\', '    } \\', '    next();',
+            '// clang-format off', 'void run() {', '    if (ready)', '        work();', '    next();', '}',
+            '// clang-format on', ''].join('\n');
+        expect(formatC(guarded)).toBe(guarded);
+    });
+
+    it('C++ 属性后的花括号仍是控制语句体', () => {
+        const input = ['void run() {', '    if (ready) [[likely]] {', '        work();', '    }',
+            '    finish();', '    next();', '}', ''].join('\n');
+        expect(formatC(input)).toBe(input.replace('    }\n    finish();', '    }\n\n    finish();'));
+    });
+
+    it('识别带标签的语句体，并在宏隐藏结束位置时避免错误插行', () => {
+        const trailing = ['    finish();', '    next();', '}', ''].join('\n');
+        const labelled = ['void run() {', '    if (ready)', '        label: {', '            work();',
+            '        }', trailing].join('\n');
+        expect(formatC(labelled)).toBe(labelled.replace('        }\n    finish();', '        }\n\n    finish();'));
+        const macro = ['#define STOP() { return; }', 'void run() {', '    if (ready)', '        STOP()', trailing].join('\n');
+        expect(formatC(macro)).toBe(macro);
+    });
+
     it('只调整选区内结构体数组成员的多余一格缩进', () => {
         const input = ['const DmaConfig cfg[] = {', '    {', '     .First = 1,',
             '     .Second = 2,', '     }', '};'].join('\n');
@@ -555,6 +585,7 @@ describe('C/C++ formatter', () => {
             '    if (validate_parameter_values(values) != 0) {',
             '        return -1;',
             '    }',
+            '',
             '    apply_parameter_values(values);',
             '}',
         ].join('\n');
@@ -584,6 +615,7 @@ describe('C/C++ formatter', () => {
             'void run() {',
             '    if (ready)',
             '        values[LONG_INDEX] = read32(BASE);',
+            '',
             '    x      = read32(BASE)   ;',
             '    longer = read32(OFFSET) ;',
             '',
@@ -829,7 +861,7 @@ describe('C/C++ formatter', () => {
             '    */',
             '}',
         ].join('\n');
-        expect(formatC(input)).toBe(input);
+        expect(formatC(input)).toBe(input.replace('        write_reg(LONG, value);\n', '        write_reg(LONG, value);\n\n'));
     });
 
     it('对齐通用排版后的参数，并跳过模板实参和一行多条语句', () => {

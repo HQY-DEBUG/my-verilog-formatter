@@ -1,12 +1,13 @@
 // =========================================================================
 // 文件    : cFormatter.ts
 // 描述    : clang-format 通用排版与 C/C++ 定制多列对齐
-// 版本    : v2.7.4
+// 版本    : v2.7.5
 // 日期    : 2026/11/24
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.7.5  2026/11/24  在完整 if 和 for 后补齐同层语句前的空行
 //  v2.7.4  2026/11/24  将单行花括号初始值纳入连续变量声明对齐
 //  v2.6.1  2026/11/12  修正结构体数组指定成员和右花括号缩进
 //  v2.4.1  2026/11/11  对齐仅有一个参数的 Doxygen 注释块
@@ -86,11 +87,120 @@ export function formatC(code: string, range?: ClangLineRange): string {
     normalized = alignConsecutiveCalls(normalized);
     normalized = alignEnumDeclarations(normalized);
     normalized = expandDoxygenComments(normalized);
-    normalized = [...lines.slice(0, start), ...normalized.split('\n').map(line => line.trimEnd()), ...lines.slice(end)].join('\n');
+    const formattedLines = normalized.split('\n').map(line => line.trimEnd());
+    const formattedRange = range ? { start: range.start, end: start + formattedLines.length } : undefined;
+    normalized = [...lines.slice(0, start), ...formattedLines, ...lines.slice(end)].join('\n');
     normalized = indentArrayDesignators(normalized, protectedRegions.blocks, range);
-    normalized = normalized.split('\n').map(line => protectedRegions.blocks.get(line) ?? line).join('\n');
+    const protectedLayout = normalized.split('\n');
+    normalized = protectedLayout.map(line => protectedRegions.blocks.get(line) ?? line).join('\n');
     normalized = alignDoxygenFields(normalized, range);
+    normalized = spaceAfterControls(normalized, protectedLayout, protectedRegions.blocks, formattedRange);
     return eol === '\n' ? normalized : normalized.replace(/\n/g, '\r\n');
+}
+
+function spaceAfterControls(code: string, protectedLayout: string[], protectedBlocks: ReadonlyMap<string, string>,
+    range?: ClangLineRange): string {
+    if (!/^[ \t]*(?:if|for)\b/m.test(code)) { return code; }
+    const lines = code.split('\n');
+    const lexical = maskCInitializerTokens(code).split('\n');
+    const tokens: Array<{ text: string; line: number }> = [];
+    const pairs = new Map<number, number>();
+    const openings = new Map([['(', ')'], ['[', ']'], ['{', '}']]);
+    const stack: number[] = [];
+    for (let line = 0; line < lines.length; line++) {
+        const guarded = protectedBlocks.has(protectedLayout[line]);
+        if (/^\s*(?:#|%:)/.test(lexical[line]) || (guarded && (lexical[line].trim()
+            || /(?:\/\/|\/\*)\s*clang-format\s+(?:off|on)\b/.test(lines[line])))) {
+            // 宏、预处理指令和被保护的代码可能改变括号边界。
+            tokens.push({ text: '#', line });
+            stack.length = 0;
+            continue;
+        }
+        for (const match of lexical[line].matchAll(/[A-Za-z_]\w*|[^\s]/g)) {
+            const text = match[0];
+            const index = tokens.length;
+            tokens.push({ text, line });
+            if (openings.has(text)) {
+                stack.push(index);
+            } else if (text === ')' || text === ']' || text === '}') {
+                const opening = stack.pop();
+                if (opening !== undefined && openings.get(tokens[opening].text) === text) {
+                    pairs.set(opening, index);
+                } else {
+                    stack.length = 0;
+                }
+            }
+        }
+    }
+
+    const token = (index: number): string | undefined => tokens[index]?.text;
+    const indent = (line: number): string => /^[ \t]*/.exec(lines[line])![0];
+    const statementEnds = new Map<number, number | undefined>();
+    const endOfStatement = (index: number): number | undefined => {
+        if (!statementEnds.has(index)) { statementEnds.set(index, scanStatement(index)); }
+        return statementEnds.get(index);
+    };
+    function scanStatement(index: number): number | undefined {
+        const kind = token(index);
+        // 属性和标签能出现在真正的语句体前面。
+        if (kind === '[' && token(index + 1) === '[') {
+            const attributeEnd = pairs.get(index);
+            return attributeEnd === undefined ? undefined : endOfStatement(attributeEnd + 1);
+        }
+        if (kind && /^[A-Za-z_]\w*$/.test(kind) && token(index + 1) === ':' && token(index + 2) !== ':') {
+            return endOfStatement(index + 2);
+        }
+        if (kind === '{') { return pairs.get(index); }
+        if (kind === 'try') { return undefined; }
+        if (kind === 'do') {
+            const body = endOfStatement(index + 1);
+            if (body === undefined || token(body + 1) !== 'while' || token(body + 2) !== '(') { return undefined; }
+            const condition = pairs.get(body + 2);
+            return condition !== undefined && token(condition + 1) === ';' ? condition + 1 : undefined;
+        }
+        if (kind === 'if' || kind === 'for' || kind === 'while' || kind === 'switch') {
+            let head = index + 1;
+            if (kind === 'if' && token(head) === 'constexpr') { head++; }
+            if (token(head) !== '(') { return undefined; }
+            const condition = pairs.get(head);
+            if (condition === undefined) { return undefined; }
+            const body = endOfStatement(condition + 1);
+            if (kind === 'if' && body !== undefined && token(body + 1) === 'else') {
+                return endOfStatement(body + 2);
+            }
+            return body;
+        }
+        for (let cursor = index; cursor < tokens.length; cursor++) {
+            const { text, line } = tokens[cursor];
+            if (text === ';') { return cursor; }
+            if (text === '#' || text === '}' || text === 'else' || text === 'if' || text === 'for') { return undefined; }
+            // 宏可能在展开时提供分号，不能用更外层下一条语句的分号补齐它。
+            if (cursor > index && line !== tokens[cursor - 1].line && indent(line).length <= indent(tokens[index].line).length) {
+                return undefined;
+            }
+            if (!openings.has(text)) { continue; }
+            const end = pairs.get(cursor);
+            if (end === undefined) { return undefined; }
+            cursor = end;
+        }
+        return undefined;
+    }
+
+    const blankAfter = new Set<number>();
+    const stops = new Set(['#', '}', 'else', 'case', 'default', 'catch']);
+    for (let i = 0; i < tokens.length; i++) {
+        const start = tokens[i];
+        if ((start.text !== 'if' && start.text !== 'for') || tokens[i - 1]?.line === start.line) { continue; }
+        if (range && start.line + 1 < range.start) { continue; }
+        const end = endOfStatement(i);
+        if (end === undefined) { continue; }
+        const lastLine = tokens[end].line;
+        const next = tokens[end + 1];
+        if (!next || next.line <= lastLine || stops.has(next.text) || indent(next.line) !== indent(start.line)
+            || (range && next.line + 1 > range.end) || !lines[lastLine + 1].trim()) { continue; }
+        blankAfter.add(lastLine);
+    }
+    return lines.map((line, index) => blankAfter.has(index) ? line + '\n' : line).join('\n');
 }
 
 function indentArrayDesignators(code: string, protectedBlocks: ReadonlyMap<string, string>, range?: ClangLineRange): string {

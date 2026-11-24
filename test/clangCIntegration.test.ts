@@ -93,6 +93,46 @@ nativeTests('真实 clang-format 集成', () => {
         expect(await format(output, filename)).toBe(output);
     });
 
+    it.each(['\n', '\r\n'])('完整 if 和 for 与同层下一条语句之间留一空行（%j）', async eol => {
+        const input = [
+            'void update(bool enabled, int slot) {',
+            '    if (enabled) {', '        begin();', '    }',
+            '    if (slot % 2 != 0)', '        return;',
+            '    for (int i = 0; i < 2; ++i) {', '        if (i == slot)', '            save(i);', '    }',
+            '    finish();', '}', '',
+        ].join(eol);
+        const output = await format(input);
+        const expected = input
+            .replace(`    }${eol}    if`, `    }${eol}${eol}    if`)
+            .replace(`        return;${eol}    for`, `        return;${eol}${eol}    for`)
+            .replace(`    }${eol}    finish`, `    }${eol}${eol}    finish`);
+        expect(output).toBe(expected);
+        expect(await format(output)).toBe(output);
+    });
+
+    it('只在整个 if/else 链结束后留空行，注释跟随下一条语句', async () => {
+        const input = [
+            'void update(bool enabled, bool ready) {',
+            '    if (enabled) {', '        begin();', '    } // 结束首个分支',
+            '    else if (ready)', '        save(1);', '    else', '        save(2);',
+            '    // 提交改动', '    finish();', '}', '',
+        ].join('\n');
+        const output = await format(input);
+        expect(output).toBe(input.replace('        save(2);\n    //', '        save(2);\n\n    //'));
+        expect(await format(output)).toBe(output);
+    });
+
+    it('for 的无花括号循环体包含完整的 if/else 时只留一个尾空行', async () => {
+        const input = [
+            'void update(int limit) {', '    for (int i = 0; i < limit; ++i)',
+            '        if (i % 2 == 0)', '            save(i);', '        else', '            skip(i);',
+            '    finish();', '}', '',
+        ].join('\n');
+        const expected = input.replace('            skip(i);\n    finish();', '            skip(i);\n\n    finish();');
+        expect(await format(input)).toBe(expected);
+        expect(await format(expected)).toBe(expected);
+    });
+
     it('普通 C++ 布局遵循原生规则，短函数保持多行', async () => {
         const input = 'namespace sample{\nvoid run(int n){for(int i=0;i<n;++i){if(i%2==0){emit(i);}else{emit(-i);}}}\n}\n'
             + 'static void ps_led_flashing() { AlGpio_Hal_WritePin(GPIO, PL_LED_1, ~LedState); }\n';
@@ -146,6 +186,7 @@ nativeTests('真实 clang-format 集成', () => {
             '        case AL_GBE_EVENT_TX_BUFFER_UNAVAILABLE:',
             '            if (AlGbe_Hal_ReleaseTxPacket(hdl) != ST_SUCCESS)',
             '                g_gbe_error = 1;',
+            '',
             '            break;',
             '        default:', '            ++g_gbe_other_event;', '            break;', '    }', '}', '',
         ].join(eol);
