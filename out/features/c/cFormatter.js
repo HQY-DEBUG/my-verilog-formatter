@@ -2,12 +2,13 @@
 // =========================================================================
 // 文件    : cFormatter.ts
 // 描述    : clang-format 通用排版与 C/C++ 定制多列对齐
-// 版本    : v2.7.5
+// 版本    : v2.7.6
 // 日期    : 2026/11/24
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.7.6  2026/11/24  将较长的独立数组初始化逐项拆行
 //  v2.7.5  2026/11/24  在完整 if 和 for 后补齐同层语句前的空行
 //  v2.7.4  2026/11/24  将单行花括号初始值纳入连续变量声明对齐
 //  v2.6.1  2026/11/12  修正结构体数组指定成员和右花括号缩进
@@ -688,6 +689,115 @@ function maskCInitializerTokens(code) {
     const tokens = new RegExp(`${C_LITERALS_AND_COMMENTS.source}|((?<![A-Za-z_0-9])(?:[0-9]|\\.[0-9])(?:[A-Za-z_0-9.]|'(?=[A-Za-z_0-9]))*)`, 'g');
     return code.replace(tokens, (match, _delimiter, number) => number === undefined ? match.replace(/[^\n]/g, ' ') : match);
 }
+function wrapArrayInitializers(code, range) {
+    // 只识别有数组后缀的单个声明，不拆分结构体成员或函数参数里的列表。
+    const arrays = /^([ \t]*)(?:[A-Za-z_]\w*(?:::[A-Za-z_]\w*)*[ \t]+)+[* \t]*[A-Za-z_]\w*(?:[ \t]*\[[^\[\]\n]*\])+[ \t]*=\s*\{/gm;
+    if (!arrays.test(code)) {
+        return code;
+    }
+    const eol = code.includes('\r\n') ? '\r\n' : '\n';
+    const protectedRegions = protectCLayoutRegions(code.replace(/\r\n/g, '\n'));
+    const source = protectedRegions.code;
+    const masked = maskCInitializerTokens(source);
+    const pairs = new Map([['(', ')'], ['[', ']'], ['{', '}']]);
+    let result = '';
+    let copied = 0;
+    arrays.lastIndex = 0;
+    for (const match of masked.matchAll(arrays)) {
+        const start = match.index;
+        if (start < copied) {
+            continue;
+        }
+        const indent = match[1];
+        const firstWord = /^\w+/.exec(match[0].slice(indent.length))[0];
+        if (firstWord === 'co_return' || NON_TYPE_KEYWORDS.has(firstWord)
+            || source.slice(start, start + indent.length) !== indent) {
+            continue;
+        }
+        const previousLine = source.slice(source.lastIndexOf('\n', start - 2) + 1, start);
+        if (/(?:\\|\?\?\/)[ \t]*\n$/.test(previousLine)) {
+            continue;
+        }
+        const open = start + match[0].length - 1;
+        const stack = ['}'];
+        const elements = [];
+        let elementStart = open + 1;
+        let hasDesignator = false;
+        let trailingComma = false;
+        let close = open + 1;
+        for (; close < masked.length; close++) {
+            const char = masked[close];
+            if (char === '#' || (stack.length === 1 && (char === ';' || char === '<'))) {
+                break;
+            }
+            if (stack.length === 1 && (char === ',' || char === '}')) {
+                const item = source.slice(elementStart, close).trim();
+                const shape = masked.slice(elementStart, close).trim();
+                if ((!item && char === ',') || item.includes('\n') || shape.startsWith('{')) {
+                    break;
+                }
+                if (item) {
+                    elements.push(item);
+                }
+                hasDesignator || (hasDesignator = /^\[[^\]]+\]\s*=/.test(shape));
+                trailingComma = char === '}' && !item && elements.length > 0;
+                elementStart = close + 1;
+            }
+            const partner = pairs.get(char);
+            if (partner) {
+                stack.push(partner);
+            }
+            else if (char === ')' || char === ']' || char === '}') {
+                if (stack[stack.length - 1] !== char) {
+                    break;
+                }
+                stack.pop();
+                if (!stack.length) {
+                    break;
+                }
+            }
+        }
+        if (stack.length || elements.length < 2) {
+            continue;
+        }
+        const ending = /^[ \t]*;/.exec(source.slice(close + 1));
+        if (!ending) {
+            continue;
+        }
+        const end = close + 1 + ending[0].length;
+        const nextLine = source.indexOf('\n', end);
+        if (masked.slice(end, nextLine < 0 ? masked.length : nextLine).trim()) {
+            continue;
+        }
+        const body = source.slice(open + 1, close);
+        // 行注释可能盖住移到行末的逗号，遇到这种列表让 clang-format 保留原布局。
+        if (body.includes('//') || /(?:\\|\?\?\/)[ \t]*\n/.test(source.slice(start, end))
+            || /^[ \t]*(?:%:|\?\?=)/m.test(masked.slice(open + 1, close))) {
+            continue;
+        }
+        const head = source.slice(start, open + 1);
+        const compactWidth = indent.length + head.trim().replace(/\s+/g, ' ').length
+            + elements.join(', ').length + (trailingComma ? 5 : 4);
+        if (!hasDesignator && compactWidth <= 80) {
+            continue;
+        }
+        if (range && (source.slice(0, start).split('\n').length < range.start
+            || source.slice(0, end).split('\n').length > range.end)) {
+            continue;
+        }
+        const rows = elements.map((element, index) => {
+            const comma = index < elements.length - 1 || trailingComma ? ',' : '';
+            return `${indent}    ${element}${comma}`;
+        });
+        result += source.slice(copied, start) + [head, ...rows, `${indent}};`].join('\n');
+        copied = end;
+    }
+    if (copied === 0) {
+        return code;
+    }
+    result += source.slice(copied);
+    return result.split('\n').map(line => protectedRegions.blocks.get(line) ?? line).join(eol);
+}
 function alignAssignments(code) {
     const lines = code.split('\n');
     const maskedLines = maskCLiteralsAndComments(code).split('\n');
@@ -1172,7 +1282,8 @@ class CFormatter {
         const doxygen = prepareDoxygenComments(original, range);
         const initializers = protectMultilineInitializers(doxygen.code);
         const base = initializers.restore(await this.clang(initializers.code, filename, doxygen.range));
-        const formatted = formatC(base, doxygen.range ? affectedLineRange(doxygen.code, base, doxygen.range) : undefined);
+        const aligned = formatC(base, doxygen.range ? affectedLineRange(doxygen.code, base, doxygen.range) : undefined);
+        const formatted = wrapArrayInitializers(aligned, doxygen.range ? affectedLineRange(doxygen.code, aligned, doxygen.range) : undefined);
         if (formatted === original || document.version !== version) {
             return [];
         }

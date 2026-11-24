@@ -81,7 +81,7 @@ nativeTests('真实 clang-format 集成', () => {
         const input = [
             'static u32 g_last_id;',
             'static bool g_has_source_error;',
-            'static u32 g_axis_code[2] = {SCANHEAD_QUERY_POSITION, SCANHEAD_QUERY_POSITION};',
+            'static u32 g_axis_code[2] = {QUERY_X, QUERY_Y};',
             'static int32 g_output_xy[2];', '',
         ].join('\n');
         const filename = path.join(__dirname, file);
@@ -89,8 +89,32 @@ nativeTests('真实 clang-format 集成', () => {
         const lines = output.trimEnd().split('\n');
         expect(lines.map(line => line.indexOf('g_'))).toEqual([13, 13, 13, 13]);
         expect(new Set(lines.map(line => line.indexOf(';'))).size).toBe(1);
-        expect(lines[2]).toContain('{SCANHEAD_QUERY_POSITION, SCANHEAD_QUERY_POSITION}');
+        expect(lines[2]).toContain('{QUERY_X, QUERY_Y}');
         expect(await format(output, filename)).toBe(output);
+    });
+
+    it.each(['\n', '\r\n'])('将截图中的长数组初始化逐项拆行并保留注释（%j）', async eol => {
+        const input = 'static u32 g_axis_code[2] = {SCANHEAD_QUREY_POSITION, SCANHEAD_QUREY_POSITION}; // 查询码' + eol;
+        const expected = ['static u32 g_axis_code[2] = {', '    SCANHEAD_QUREY_POSITION,',
+            '    SCANHEAD_QUREY_POSITION', '}; // 查询码', ''].join(eol);
+        const filename = path.join(__dirname, 'example.c');
+        expect(await format(input, filename)).toBe(expected);
+        expect(await format(expected, filename)).toBe(expected);
+    });
+
+    it('拆分实际下标指定的数组，保留调用中的逗号、尾逗号及选区之外的数组', async () => {
+        const declaration = 'int values[] = {[0] = value(1, 2), [4] = 10,};\n';
+        const outside = 'int outside[] = {[0] = 1, [1] = 2};\n';
+        const expected = 'int values[] = {\n    [0] = value(1, 2),\n    [4] = 10,\n};\n';
+        const filename = path.join(__dirname, 'example.c');
+        expect(await format(declaration + outside, filename, new vscode.Range(0, 0, 1, 0))).toBe(expected + outside);
+        expect(await format(expected, filename)).toBe(expected);
+    });
+
+    it('数组项目内有行注释时沿用 clang-format 的布局', async () => {
+        const input = 'int values[] = {first_query_position_constant // 查询一\n, second_query_position_constant};\n';
+        const filename = path.join(__dirname, 'example.c');
+        expect(await format(input, filename)).toBe(await runClangFormat(input, filename));
     });
 
     it.each(['\n', '\r\n'])('完整 if 和 for 与同层下一条语句之间留一空行（%j）', async eol => {

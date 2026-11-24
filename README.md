@@ -2,7 +2,7 @@
 
 面向 FPGA 与嵌入式开发的 VS Code 工具集，支持 Verilog / SystemVerilog、C / C++、MATLAB 和 Tcl。
 
-> 版本：v2.7.5　日期：2026/11/24
+> 版本：v2.7.6　日期：2026/11/24
 
 [快速开始](#快速开始) · [功能总览](#功能总览) · [详细功能](#详细功能) · [配置与开发](#配置与开发)
 
@@ -216,7 +216,8 @@ clangd 使用工程中的 `compile_commands.json`、`.clangd` 或 `compile_flags
 - 按宏名、宏值和行尾注释对齐连续 `#define`，带注释和无注释的宏共同计算列宽。
 - 保留多行宏的续行、反斜杠和原有宏体布局；注释中的括号（如 Doxygen `@{`）由 clang-format 按注释解析。
 - 保留已分行的 `= { .成员 = … }` 指定成员初始化布局，外层成员逐行排列，内嵌的小数组可继续保持一行；原有单行初始化仍按通用规则处理。
-- 结构体数组采用 `AlignArrayOfStructures: Left`：同列数的表格元素每项一行，按字段列左对齐，避免长命令表合并为一行；普通一维数组保持通用规则。
+- 结构体数组采用 `AlignArrayOfStructures: Left`：同列数的表格元素每项一行，按字段列左对齐，避免长命令表合并为一行。
+- 普通数组声明有多个初始值且紧凑排版超过 80 列时，每项单独一行。带实际下标指定的多项列表也逐项排版，短的普通数组仍按通用样式处理。计算列数时忽略声明对齐填充和行尾注释。
 - 修正结构体数组多行指定成员多出一格的缩进：成员相对元素左花括号缩进四格，元素右花括号与其左花括号对齐；宏或复杂条件编译使括号边界无法确认时保留原有布局。
 - 完整格式化时，非空 C/C++ 文件末尾保留一个换行，编辑器中显示一个空白行；缺少时补齐，多余空行收为一个，沿用 LF/CRLF。选区未包含文件末尾时不调整文件尾，空文件保持为空。
 - 完整的 `if` 或 `for` 与同层下一条语句之间留一个空行，带花括号和单语句体都适用。`if` 有 `else` 时，空行放在整个分支链结束后。
@@ -551,8 +552,8 @@ npm run compile
 当前安装包面向 Windows x64，包含 MATLAB 运行组件和 Windows ripgrep。发布时上传生成的 `.vsix` 文件；修改记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ```bash
-npm run package -- --target win32-x64 --out hanxuyao-plugin-2.7.5-win32-x64.vsix
-code --install-extension hanxuyao-plugin-2.7.5-win32-x64.vsix --force
+npm run package -- --target win32-x64 --out hanxuyao-plugin-2.7.6-win32-x64.vsix
+code --install-extension hanxuyao-plugin-2.7.6-win32-x64.vsix --force
 ```
 
 MATLAB、highlight-words、Rainbow CSV、indent-rainbow、tcl-navigate 上游源码、固定提交和本地适配说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。`npm run compile` 会构建全部内置组件；仅构建高亮、CSV、彩虹缩进和 Tcl 组件可运行 `npm run compile:editor-tools`。
@@ -603,6 +604,7 @@ GitHub 自动测试、打包和发布的配置及使用方法见 [自动发布](
 
 | 版本 | 日期 | 修改内容 |
 |------|------|---------|
+| v2.7.6 | 2026/11/24 | 将 C/C++ 较长数组初始化逐项拆行并保留末尾注释 |
 | v2.7.5 | 2026/11/24 | 在 C/C++ 的完整 if 和 for 与同层下一条语句之间留空行 |
 | v2.7.4 | 2026/11/24 | 修正 C/C++ 带花括号初始值的数组打断连续变量对齐的问题 |
 | v2.7.3 | 2026/11/14 | 修正同行 end else if 的拆行和缩进 |
