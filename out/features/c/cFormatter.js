@@ -2,12 +2,13 @@
 // =========================================================================
 // 文件    : cFormatter.ts
 // 描述    : clang-format 通用排版与 C/C++ 定制多列对齐
-// 版本    : v2.7.6
-// 日期    : 2026/11/24
+// 版本    : v2.7.7
+// 日期    : 2026/11/26
 //
 // 修改记录（最新版本在最前）:
 //  ver      date        modification
 // ------   ----------  ---------------------------------------------------
+//  v2.7.7  2026/11/26  修正多行数组声明旁的变量名和分号对齐
 //  v2.7.6  2026/11/24  将较长的独立数组初始化逐项拆行
 //  v2.7.5  2026/11/24  在完整 if 和 for 后补齐同层语句前的空行
 //  v2.7.4  2026/11/24  将单行花括号初始值纳入连续变量声明对齐
@@ -71,6 +72,7 @@ exports.CFormatter = void 0;
 exports.formatC = formatC;
 const vscode = __importStar(require("vscode"));
 const clangFormat_1 = require("./clangFormat");
+const ARRAY_INITIALIZER_START = /^([ \t]*)(?:[A-Za-z_]\w*(?:::[A-Za-z_]\w*)*[ \t]+)+[* \t]*[A-Za-z_]\w*(?:[ \t]*\[[^\[\]\n]*\])+[ \t]*=\s*\{/gm;
 const CONTROL_KEYWORDS = new Set(['if', 'for', 'while', 'switch', 'catch']);
 const NON_TYPE_KEYWORDS = new Set([
     'break', 'case', 'continue', 'delete', 'else', 'goto', 'new', 'return', 'throw', 'using',
@@ -629,28 +631,51 @@ function alignTypedefDeclarations(code) {
 }
 function alignVariableDeclarations(code) {
     const lines = code.split('\n');
-    const maskedLines = maskCInitializerTokens(code).split('\n');
-    const result = [];
+    const masked = maskCInitializerTokens(code);
+    const maskedLines = masked.split('\n');
+    const wrappedArrays = new Map();
+    let offset = 0;
+    let line = 0;
+    for (const { start, open, end } of findArrayInitializerWraps(code, masked)) {
+        while (offset < start) {
+            offset += lines[line++].length + 1;
+        }
+        const equal = masked.lastIndexOf('=', open);
+        const declaration = parseDeclaration(`${code.slice(start, equal)};`, `${masked.slice(start, equal)};`);
+        if (!declaration) {
+            continue;
+        }
+        const lastLine = line + code.slice(start, end).split('\n').length - 1;
+        wrappedArrays.set(line, {
+            ...declaration, firstLine: line, lastLine,
+            wrappedInitializer: lines[line].slice(equal - start),
+        });
+    }
+    const declarationAt = (index) => {
+        const array = wrappedArrays.get(index);
+        if (array) {
+            return array;
+        }
+        const declaration = parseDeclaration(lines[index], maskedLines[index]);
+        return declaration && { ...declaration, firstLine: index, lastLine: index };
+    };
     for (let i = 0; i < lines.length;) {
-        const first = parseDeclaration(lines[i], maskedLines[i]);
+        const first = declarationAt(i);
         if (!first) {
-            result.push(lines[i++]);
+            i++;
             continue;
         }
         const block = [first];
-        let end = i + 1;
+        let end = first.lastLine + 1;
         while (end < lines.length) {
-            const parsed = parseDeclaration(lines[end], maskedLines[end]);
+            const parsed = declarationAt(end);
             if (!parsed || parsed.typePrefix.match(/^\s*/)?.[0] !== first.typePrefix.match(/^\s*/)?.[0]) {
                 break;
             }
             block.push(parsed);
-            end++;
+            end = parsed.lastLine + 1;
         }
-        if (block.length === 1) {
-            result.push(lines[i]);
-        }
-        else {
+        if (block.length > 1) {
             // 修饰符作为行首锚点；不在缺少修饰符的声明前补空白，以免把对齐空格误当成缩进。
             const types = block.map(item => item.typePrefix.match(/^(\s*)((?:(?:static|extern|register|thread_local|_Thread_local|const|volatile|constexpr|constinit|inline|mutable)\s+)*)(?:(enum\s+class|enum\s+struct|struct|union|enum|class)\s+)?(.+)$/));
             let typePrefixes = block.map(item => item.typePrefix);
@@ -667,18 +692,24 @@ function alignVariableDeclarations(code) {
             const maxPointer = Math.max(...block.map(item => item.pointer.length));
             const declarations = block.map(item => `${item.name}${item.arraySuffix}`);
             const maxDeclaration = Math.max(...declarations.map(item => item.length));
+            // 待拆数组只用声明头参与对齐，初始化体不会撑宽单行声明的分号列。
             const maxInitializer = Math.max(...block.map(item => item.initializer.length));
             const initializerWidth = maxInitializer > 0 ? maxInitializer + 1 : 0;
-            result.push(...block.map((item, index) => {
-                const declaration = declarations[index].padEnd(maxDeclaration + 1);
+            block.forEach((item, index) => {
+                const prefix = `${typePrefixes[index].padEnd(maxType + 1)}${item.pointer.padStart(maxPointer)}`
+                    + declarations[index].padEnd(maxDeclaration + 1);
+                if (item.wrappedInitializer !== undefined) {
+                    lines[item.firstLine] = prefix + item.wrappedInitializer;
+                    return;
+                }
                 const initializer = item.initializer.padEnd(initializerWidth);
                 const comment = item.comment ? `  ${item.comment}` : '';
-                return `${typePrefixes[index].padEnd(maxType + 1)}${item.pointer.padStart(maxPointer)}${declaration}${initializer};${comment}`;
-            }));
+                lines[item.firstLine] = `${prefix}${initializer};${comment}`;
+            });
         }
         i = end;
     }
-    return result.join('\n');
+    return lines.join('\n');
 }
 function maskCLiteralsAndComments(code) {
     // 遮蔽字面量和注释但保留字符位置，避免把其中的等号、分号和跨行内容当作语句。
@@ -689,23 +720,13 @@ function maskCInitializerTokens(code) {
     const tokens = new RegExp(`${C_LITERALS_AND_COMMENTS.source}|((?<![A-Za-z_0-9])(?:[0-9]|\\.[0-9])(?:[A-Za-z_0-9.]|'(?=[A-Za-z_0-9]))*)`, 'g');
     return code.replace(tokens, (match, _delimiter, number) => number === undefined ? match.replace(/[^\n]/g, ' ') : match);
 }
-function wrapArrayInitializers(code, range) {
+function* findArrayInitializerWraps(source, masked) {
     // 只识别有数组后缀的单个声明，不拆分结构体成员或函数参数里的列表。
-    const arrays = /^([ \t]*)(?:[A-Za-z_]\w*(?:::[A-Za-z_]\w*)*[ \t]+)+[* \t]*[A-Za-z_]\w*(?:[ \t]*\[[^\[\]\n]*\])+[ \t]*=\s*\{/gm;
-    if (!arrays.test(code)) {
-        return code;
-    }
-    const eol = code.includes('\r\n') ? '\r\n' : '\n';
-    const protectedRegions = protectCLayoutRegions(code.replace(/\r\n/g, '\n'));
-    const source = protectedRegions.code;
-    const masked = maskCInitializerTokens(source);
     const pairs = new Map([['(', ')'], ['[', ']'], ['{', '}']]);
-    let result = '';
-    let copied = 0;
-    arrays.lastIndex = 0;
-    for (const match of masked.matchAll(arrays)) {
+    let lastEnd = 0;
+    for (const match of masked.matchAll(ARRAY_INITIALIZER_START)) {
         const start = match.index;
-        if (start < copied) {
+        if (start < lastEnd) {
             continue;
         }
         const indent = match[1];
@@ -781,6 +802,20 @@ function wrapArrayInitializers(code, range) {
         if (!hasDesignator && compactWidth <= 80) {
             continue;
         }
+        yield { start, open, end, indent, head, elements, trailingComma };
+        lastEnd = end;
+    }
+}
+function wrapArrayInitializers(code, range) {
+    if (code.search(ARRAY_INITIALIZER_START) < 0) {
+        return code;
+    }
+    const eol = code.includes('\r\n') ? '\r\n' : '\n';
+    const protectedRegions = protectCLayoutRegions(code.replace(/\r\n/g, '\n'));
+    const source = protectedRegions.code;
+    let result = '';
+    let copied = 0;
+    for (const { start, end, indent, head, elements, trailingComma } of findArrayInitializerWraps(source, maskCInitializerTokens(source))) {
         if (range && (source.slice(0, start).split('\n').length < range.start
             || source.slice(0, end).split('\n').length > range.end)) {
             continue;

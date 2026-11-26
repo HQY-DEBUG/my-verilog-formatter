@@ -102,6 +102,32 @@ nativeTests('真实 clang-format 集成', () => {
         expect(await format(expected, filename)).toBe(expected);
     });
 
+    it.each(['', ','])('长数组保持声明名称对齐，单行分号靠近变量（尾逗号 %j）', async trailingComma => {
+        const array = [
+            'static u32 g_axis_code[2] = {',
+            '    SCANHEAD_QUREY_POSITION,',
+            `    SCANHEAD_QUREY_POSITION${trailingComma}`,
+            '}; // 查询码',
+        ];
+        const input = [
+            'static SampleSession g_sample;',
+            'static SampleStream g_tx;',
+            'static bool g_has_list_error;',
+            ...array,
+            'static int32 g_output_xy[2]; // 采样坐标',
+            '',
+        ].join('\n');
+        const filename = path.join(__dirname, 'example.c');
+        const output = await format(input, filename);
+        const lines = output.split('\n');
+        const declarations = [lines[0], lines[1], lines[2], lines[7]];
+        expect([...declarations, lines[3]].map(line => line.indexOf('g_'))).toEqual([21, 21, 21, 21, 21]);
+        expect(declarations.map(line => line.indexOf(';'))).toEqual([38, 38, 38, 38]);
+        expect(lines[7]).toMatch(/;  \/\/ 采样坐标$/);
+        expect(lines.slice(4, 7)).toEqual(array.slice(1));
+        expect(await format(output, filename)).toBe(output);
+    });
+
     it('拆分实际下标指定的数组，保留调用中的逗号、尾逗号及选区之外的数组', async () => {
         const declaration = 'int values[] = {[0] = value(1, 2), [4] = 10,};\n';
         const outside = 'int outside[] = {[0] = 1, [1] = 2};\n';
