@@ -2,7 +2,7 @@
 
 面向 FPGA 与嵌入式开发的 VS Code 工具集，支持 Verilog / SystemVerilog、C / C++、MATLAB 和 Tcl。
 
-> 版本：v2.7.7　日期：2026/11/26
+> 版本：v2.7.8　日期：2026/11/28
 
 [快速开始](#快速开始) · [功能总览](#功能总览) · [详细功能](#详细功能) · [配置与开发](#配置与开发)
 
@@ -552,8 +552,8 @@ npm run compile
 当前安装包面向 Windows x64，包含 MATLAB 运行组件和 Windows ripgrep。发布时上传生成的 `.vsix` 文件；修改记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ```bash
-npm run package -- --target win32-x64 --out hanxuyao-plugin-2.7.7-win32-x64.vsix
-code --install-extension hanxuyao-plugin-2.7.7-win32-x64.vsix --force
+npm run package -- --target win32-x64 --out hanxuyao-plugin-2.7.8-win32-x64.vsix
+code --install-extension hanxuyao-plugin-2.7.8-win32-x64.vsix --force
 ```
 
 MATLAB、highlight-words、Rainbow CSV、indent-rainbow、tcl-navigate 上游源码、固定提交和本地适配说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。`npm run compile` 会构建全部内置组件；仅构建高亮、CSV、彩虹缩进和 Tcl 组件可运行 `npm run compile:editor-tools`。
@@ -604,6 +604,7 @@ GitHub 自动测试、打包和发布的配置及使用方法见 [自动发布](
 
 | 版本 | 日期 | 修改内容 |
 |------|------|---------|
+| v2.7.8 | 2026/11/28 | 修正 MATLAB 参数中 `0.1*pi` 等常量乘积的赋值对齐 |
 | v2.7.7 | 2026/11/26 | 修正 C/C++ 多行数组声明旁的变量名和分号对齐 |
 | v2.7.6 | 2026/11/24 | 将 C/C++ 较长数组初始化逐项拆行并保留末尾注释 |
 | v2.7.5 | 2026/11/24 | 在 C/C++ 的完整 if 和 for 与同层下一条语句之间留空行 |

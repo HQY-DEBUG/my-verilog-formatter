@@ -38,6 +38,9 @@ exports.formatMatlab = formatMatlab;
 const vscode = __importStar(require("vscode"));
 const BLOCK_START = /^(?:function|if|for|parfor|while|switch|try|classdef|properties|methods|events|enumeration|arguments|spmd)\b/i;
 const BRANCH_KEYWORD = /^(?:else|elseif|case|otherwise|catch)\b/i;
+const REAL_LITERAL = String.raw `[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eEdD][-+]?\d+)?`;
+const NUMERIC_LITERAL = new RegExp(`^${REAL_LITERAL}[ij]?$`, 'i');
+const PI_PRODUCT = new RegExp(String.raw `^(?:${REAL_LITERAL}\s*\*\s*pi|pi\s*\*\s*${REAL_LITERAL})$`);
 /** 按 MATLAB 块结构使用四空格缩进，并对齐连续简单赋值语句。 */
 function formatMatlab(code) {
     const eol = code.includes('\r\n') ? '\r\n' : '\n';
@@ -197,7 +200,8 @@ function normalizeMatlabValue(value) {
 function isMatlabConfigurationLiteral(value) {
     const literal = value.trim().replace(/;$/, '').trimEnd();
     return /^(?:true|false|nan|inf|pi)$/i.test(literal)
-        || /^[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eEdD][-+]?\d+)?[ij]?$/i.test(literal)
+        || NUMERIC_LITERAL.test(literal)
+        || PI_PRODUCT.test(literal)
         || /^'(?:''|[^'])*'$/.test(literal)
         || /^"(?:""|[^"])*"$/.test(literal)
         || /^(?:\[\s*\]|\{\s*\})$/.test(literal)

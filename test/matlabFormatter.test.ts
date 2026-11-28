@@ -86,6 +86,32 @@ describe('MATLAB formatter', () => {
         expect(formatted).toContain('res_files = findFile(dataDir, fileFormat);');
     });
 
+    it.each([
+        ['0.1*pi', '     '],
+        ['pi * -2e-1', '         '],
+    ])('将常量乘积 %s 与同组赋值对齐', (angle, padding) => {
+        const input = [
+            '%% 参数配置',
+            'dim = 2; % 维数',
+            '',
+            'AxisMode = 0; % 坐标模式',
+            `alpha = ${angle}; % 弧度`,
+            'computedAngle   = gain * pi; % 计算角度',
+        ].join('\n');
+
+        const expected = [
+            '%% 参数配置',
+            `dim      = 2${padding}; % 维数`,
+            '',
+            `AxisMode = 0${padding}; % 坐标模式`,
+            `alpha    = ${angle}; % 弧度`,
+            'computedAngle = gain * pi; % 计算角度',
+        ].join('\n');
+
+        expect(formatMatlab(input)).toBe(expected);
+        expect(formatMatlab(expected)).toBe(expected);
+    });
+
     it('函数调用赋值语句只缩进，不参与配置变量对齐', () => {
         const input = [
             'if WEIGHTED_XY_PLOT',
