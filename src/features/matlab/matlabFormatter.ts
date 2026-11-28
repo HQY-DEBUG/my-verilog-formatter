@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { alignMatlabArgumentDeclarations } from './matlabArgumentsAlignment';
 import { matlabDisplayWidth } from './matlabDisplayWidth';
 import { alignMatlabPlotCalls } from './matlabPlotAlignment';
 
@@ -24,12 +25,13 @@ const ARRAY_SEPARATOR = String.raw`(?:\s*[,;]\s*|\s+)`;
 const NUMERIC_ARRAY = new RegExp(String.raw`^\[\s*${NUMERIC_VALUE}(?:${ARRAY_SEPARATOR}${NUMERIC_VALUE})*\s*\]$`, 'i');
 const PI_PRODUCT = new RegExp(String.raw`^(?:${REAL_LITERAL}\s*\*\s*pi|pi\s*\*\s*${REAL_LITERAL})$`);
 
-/** 按 MATLAB 块结构使用四空格缩进，并对齐配置赋值和相邻 plot 调用。 */
+/** 按 MATLAB 块结构使用四空格缩进，并对齐参数声明、配置赋值和相邻 plot 调用。 */
 export function formatMatlab(code: string): string {
     const eol = code.includes('\r\n') ? '\r\n' : '\n';
     let normalized = code.replace(/\r\n/g, '\n');
     normalized = reindentMatlabBlocks(normalized);
     normalized = alignMatlabAssignments(normalized);
+    normalized = alignMatlabArgumentDeclarations(normalized);
     normalized = alignMatlabPlotCalls(normalized);
     normalized = normalized.split('\n').map(line => line.trimEnd()).join('\n');
     return eol === '\n' ? normalized : normalized.replace(/\n/g, '\r\n');

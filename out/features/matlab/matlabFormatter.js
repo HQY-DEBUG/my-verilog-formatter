@@ -36,6 +36,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.MatlabFormatter = void 0;
 exports.formatMatlab = formatMatlab;
 const vscode = __importStar(require("vscode"));
+const matlabArgumentsAlignment_1 = require("./matlabArgumentsAlignment");
 const matlabDisplayWidth_1 = require("./matlabDisplayWidth");
 const matlabPlotAlignment_1 = require("./matlabPlotAlignment");
 const BLOCK_START = /^(?:function|if|for|parfor|while|switch|try|classdef|properties|methods|events|enumeration|arguments|spmd)\b/i;
@@ -46,12 +47,13 @@ const NUMERIC_LITERAL = new RegExp(`^${NUMERIC_VALUE}$`, 'i');
 const ARRAY_SEPARATOR = String.raw `(?:\s*[,;]\s*|\s+)`;
 const NUMERIC_ARRAY = new RegExp(String.raw `^\[\s*${NUMERIC_VALUE}(?:${ARRAY_SEPARATOR}${NUMERIC_VALUE})*\s*\]$`, 'i');
 const PI_PRODUCT = new RegExp(String.raw `^(?:${REAL_LITERAL}\s*\*\s*pi|pi\s*\*\s*${REAL_LITERAL})$`);
-/** 按 MATLAB 块结构使用四空格缩进，并对齐配置赋值和相邻 plot 调用。 */
+/** 按 MATLAB 块结构使用四空格缩进，并对齐参数声明、配置赋值和相邻 plot 调用。 */
 function formatMatlab(code) {
     const eol = code.includes('\r\n') ? '\r\n' : '\n';
     let normalized = code.replace(/\r\n/g, '\n');
     normalized = reindentMatlabBlocks(normalized);
     normalized = alignMatlabAssignments(normalized);
+    normalized = (0, matlabArgumentsAlignment_1.alignMatlabArgumentDeclarations)(normalized);
     normalized = (0, matlabPlotAlignment_1.alignMatlabPlotCalls)(normalized);
     normalized = normalized.split('\n').map(line => line.trimEnd()).join('\n');
     return eol === '\n' ? normalized : normalized.replace(/\n/g, '\r\n');

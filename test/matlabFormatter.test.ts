@@ -135,6 +135,28 @@ describe('MATLAB formatter', () => {
         expect(formatMatlab(expected)).toBe(expected);
     });
 
+    it('全文格式化对齐 arguments 声明并保留 CRLF 换行', () => {
+        const input = [
+            'function result = calculate(a, other)',
+            'arguments',
+            'a (1,1) double = 1',
+            'other (1,1) double = 2',
+            'end',
+            'result=a + other;',
+            'end',
+        ].join('\r\n');
+
+        expect(formatMatlab(input)).toBe([
+            'function result = calculate(a, other)',
+            '    arguments',
+            '        a     (1,1) double = 1',
+            '        other (1,1) double = 2',
+            '    end',
+            '    result = a + other;',
+            'end',
+        ].join('\r\n'));
+    });
+
     it('函数调用赋值语句只缩进，不参与配置变量对齐', () => {
         const input = [
             'if WEIGHTED_XY_PLOT',
