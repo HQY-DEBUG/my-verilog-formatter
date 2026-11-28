@@ -112,6 +112,29 @@ describe('MATLAB formatter', () => {
         expect(formatMatlab(expected)).toBe(expected);
     });
 
+    it('对齐数值数组和带全角字符的图窗属性', () => {
+        const input = [
+            'fig = figure;',
+            '',
+            'fig.Position = [1 1 1920 866]; % 位置',
+            'fig.NumberTitle = "off" ; % 编号',
+            "fig.Name = '椭圆画图'; % 标题",
+            'fig.UserData   = [x0, y0];',
+        ].join('\n');
+
+        const expected = [
+            'fig = figure;',
+            '',
+            'fig.Position    = [1 1 1920 866]; % 位置',
+            'fig.NumberTitle = "off"         ; % 编号',
+            "fig.Name        = '椭圆画图'    ; % 标题",
+            'fig.UserData = [x0, y0];',
+        ].join('\n');
+
+        expect(formatMatlab(input)).toBe(expected);
+        expect(formatMatlab(expected)).toBe(expected);
+    });
+
     it('函数调用赋值语句只缩进，不参与配置变量对齐', () => {
         const input = [
             'if WEIGHTED_XY_PLOT',

@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import { matlabDisplayWidth } from './matlabDisplayWidth';
+import { alignMatlabPlotCalls } from './matlabPlotAlignment';
 
 interface MatlabAssignmentLine {
     indent: string;
@@ -16,15 +18,19 @@ interface MatlabBlock {
 const BLOCK_START = /^(?:function|if|for|parfor|while|switch|try|classdef|properties|methods|events|enumeration|arguments|spmd)\b/i;
 const BRANCH_KEYWORD = /^(?:else|elseif|case|otherwise|catch)\b/i;
 const REAL_LITERAL = String.raw`[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eEdD][-+]?\d+)?`;
-const NUMERIC_LITERAL = new RegExp(`^${REAL_LITERAL}[ij]?$`, 'i');
+const NUMERIC_VALUE = `${REAL_LITERAL}[ij]?`;
+const NUMERIC_LITERAL = new RegExp(`^${NUMERIC_VALUE}$`, 'i');
+const ARRAY_SEPARATOR = String.raw`(?:\s*[,;]\s*|\s+)`;
+const NUMERIC_ARRAY = new RegExp(String.raw`^\[\s*${NUMERIC_VALUE}(?:${ARRAY_SEPARATOR}${NUMERIC_VALUE})*\s*\]$`, 'i');
 const PI_PRODUCT = new RegExp(String.raw`^(?:${REAL_LITERAL}\s*\*\s*pi|pi\s*\*\s*${REAL_LITERAL})$`);
 
-/** 按 MATLAB 块结构使用四空格缩进，并对齐连续简单赋值语句。 */
+/** 按 MATLAB 块结构使用四空格缩进，并对齐配置赋值和相邻 plot 调用。 */
 export function formatMatlab(code: string): string {
     const eol = code.includes('\r\n') ? '\r\n' : '\n';
     let normalized = code.replace(/\r\n/g, '\n');
     normalized = reindentMatlabBlocks(normalized);
     normalized = alignMatlabAssignments(normalized);
+    normalized = alignMatlabPlotCalls(normalized);
     normalized = normalized.split('\n').map(line => line.trimEnd()).join('\n');
     return eol === '\n' ? normalized : normalized.replace(/\n/g, '\r\n');
 }
@@ -113,11 +119,12 @@ function alignMatlabAssignments(code: string): string {
             result.push(formatMatlabAssignment(block[0]), ...lines.slice(i + 1, end));
         } else {
             const maxName = Math.max(...block.map(item => item.name.length));
-            const maxValue = Math.max(...block.map(item => item.value.length));
-            const statements = block.map(item => (
-                `${item.name.padEnd(maxName)} = ${item.value.padEnd(maxValue)}${item.semicolon ? ';' : ''}`
+            const valueWidths = block.map(item => matlabDisplayWidth(item.value));
+            const maxValue = Math.max(...valueWidths);
+            const statements = block.map((item, index) => (
+                `${item.name.padEnd(maxName)} = ${item.value}${' '.repeat(maxValue - valueWidths[index])}${item.semicolon ? ';' : ''}`
             ));
-            const maxStatement = Math.max(...statements.map(statement => statement.length));
+            const hasSemicolon = block.some(item => item.semicolon);
             let blockIndex = 0;
             for (let lineIndex = i; lineIndex < end; lineIndex++) {
                 const item = parseMatlabAssignment(lines[lineIndex]);
@@ -125,8 +132,9 @@ function alignMatlabAssignments(code: string): string {
                     result.push(lines[lineIndex]);
                     continue;
                 }
-                const comment = item.comment ? ` ${item.comment}` : '';
-                result.push(`${item.indent}${statements[blockIndex].padEnd(maxStatement)}${comment}`);
+                const commentGap = hasSemicolon && !item.semicolon ? '  ' : ' ';
+                const comment = item.comment ? `${commentGap}${item.comment}` : '';
+                result.push(`${item.indent}${statements[blockIndex]}${comment}`);
                 blockIndex++;
             }
         }
@@ -190,6 +198,7 @@ function isMatlabConfigurationLiteral(value: string): boolean {
     return /^(?:true|false|nan|inf|pi)$/i.test(literal)
         || NUMERIC_LITERAL.test(literal)
         || PI_PRODUCT.test(literal)
+        || NUMERIC_ARRAY.test(literal)
         || /^'(?:''|[^'])*'$/.test(literal)
         || /^"(?:""|[^"])*"$/.test(literal)
         || /^(?:\[\s*\]|\{\s*\})$/.test(literal)
